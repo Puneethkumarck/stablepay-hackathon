@@ -1,5 +1,6 @@
 package com.stablepay.infrastructure.persistence;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -19,6 +20,9 @@ class ClaimTokenRepositoryAdapter implements ClaimTokenRepository {
     @Override
     public ClaimToken save(ClaimToken claimToken) {
         var entity = mapper.toEntity(claimToken);
+        if (entity.getCreatedAt() == null) {
+            entity.setCreatedAt(Instant.now());
+        }
         var saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }

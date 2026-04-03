@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,8 +22,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder(toBuilder = true)
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ClaimTokenEntity {
 
     @Id
@@ -38,6 +39,9 @@ public class ClaimTokenEntity {
     @Column(name = "claimed", nullable = false)
     private boolean claimed;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(name = "expires_at")
+    private Instant expiresAt;
 }

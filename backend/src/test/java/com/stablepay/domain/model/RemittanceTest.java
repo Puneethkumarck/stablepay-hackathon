@@ -1,6 +1,7 @@
 package com.stablepay.domain.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -52,6 +53,9 @@ class RemittanceTest {
         // given
         var remittance = Remittance.builder()
                 .remittanceId(UUID.randomUUID())
+                .senderId("user-1")
+                .recipientPhone("+919876543210")
+                .amountUsdc(BigDecimal.valueOf(100))
                 .status(RemittanceStatus.INITIATED)
                 .build();
 
@@ -77,6 +81,9 @@ class RemittanceTest {
         // given
         var remittance = Remittance.builder()
                 .remittanceId(UUID.randomUUID())
+                .senderId("user-1")
+                .recipientPhone("+919876543210")
+                .amountUsdc(BigDecimal.valueOf(100))
                 .status(RemittanceStatus.ESCROWED)
                 .build();
 
@@ -100,6 +107,9 @@ class RemittanceTest {
         // given
         var remittance = Remittance.builder()
                 .remittanceId(UUID.randomUUID())
+                .senderId("user-1")
+                .recipientPhone("+919876543210")
+                .amountUsdc(BigDecimal.valueOf(100))
                 .status(RemittanceStatus.CLAIMED)
                 .build();
 
@@ -116,5 +126,31 @@ class RemittanceTest {
         assertThat(delivered)
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
+    }
+
+    @Test
+    void shouldThrowWhenRemittanceIdIsNull() {
+        // when / then
+        assertThatThrownBy(() -> Remittance.builder()
+                .senderId("user-1")
+                .recipientPhone("+919876543210")
+                .amountUsdc(BigDecimal.valueOf(100))
+                .status(RemittanceStatus.INITIATED)
+                .build())
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("remittanceId");
+    }
+
+    @Test
+    void shouldThrowWhenStatusIsNull() {
+        // when / then
+        assertThatThrownBy(() -> Remittance.builder()
+                .remittanceId(UUID.randomUUID())
+                .senderId("user-1")
+                .recipientPhone("+919876543210")
+                .amountUsdc(BigDecimal.valueOf(100))
+                .build())
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("status");
     }
 }

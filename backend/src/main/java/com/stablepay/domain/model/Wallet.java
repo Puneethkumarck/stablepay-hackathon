@@ -1,7 +1,11 @@
 package com.stablepay.domain.model;
 
+import static java.util.Objects.requireNonNull;
+
 import java.math.BigDecimal;
 import java.time.Instant;
+
+import com.stablepay.domain.exception.InsufficientBalanceException;
 
 import lombok.Builder;
 
@@ -12,14 +16,23 @@ public record Wallet(
     String solanaAddress,
     BigDecimal availableBalance,
     BigDecimal totalBalance,
-    Long version,
     Instant createdAt,
     Instant updatedAt
 ) {
+    public Wallet {
+        requireNonNull(userId, "userId cannot be null");
+        requireNonNull(solanaAddress, "solanaAddress cannot be null");
+        requireNonNull(availableBalance, "availableBalance cannot be null");
+        requireNonNull(totalBalance, "totalBalance cannot be null");
+    }
+
     public Wallet reserveBalance(BigDecimal amount) {
+        requireNonNull(amount, "amount cannot be null");
+        if (amount.signum() <= 0) {
+            throw new IllegalArgumentException("SP-0004: Reserve amount must be positive: " + amount);
+        }
         if (availableBalance.compareTo(amount) < 0) {
-            throw new IllegalStateException(
-                "SP-0002: Insufficient balance. Requested: " + amount + ", Available: " + availableBalance);
+            throw InsufficientBalanceException.forAmount(amount, availableBalance);
         }
         return toBuilder()
                 .availableBalance(availableBalance.subtract(amount))
@@ -27,8 +40,18 @@ public record Wallet(
     }
 
     public Wallet releaseBalance(BigDecimal amount) {
+        requireNonNull(amount, "amount cannot be null");
+        if (amount.signum() <= 0) {
+            throw new IllegalArgumentException("SP-0004: Release amount must be positive: " + amount);
+        }
+        var newAvailable = availableBalance.add(amount);
+        if (newAvailable.compareTo(totalBalance) > 0) {
+            throw new IllegalStateException(
+                    "SP-0005: Released balance would exceed total. Available after release: "
+                            + newAvailable + ", Total: " + totalBalance);
+        }
         return toBuilder()
-                .availableBalance(availableBalance.add(amount))
+                .availableBalance(newAvailable)
                 .build();
     }
 }

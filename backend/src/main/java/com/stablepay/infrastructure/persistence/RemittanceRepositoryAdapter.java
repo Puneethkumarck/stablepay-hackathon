@@ -1,5 +1,6 @@
 package com.stablepay.infrastructure.persistence;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +22,11 @@ class RemittanceRepositoryAdapter implements RemittanceRepository {
     @Override
     public Remittance save(Remittance remittance) {
         var entity = mapper.toEntity(remittance);
+        var now = Instant.now();
+        if (entity.getCreatedAt() == null) {
+            entity.setCreatedAt(now);
+        }
+        entity.setUpdatedAt(now);
         var saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }

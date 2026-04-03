@@ -1,5 +1,6 @@
 package com.stablepay.infrastructure.persistence;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -19,6 +20,11 @@ class WalletRepositoryAdapter implements WalletRepository {
     @Override
     public Wallet save(Wallet wallet) {
         var entity = mapper.toEntity(wallet);
+        var now = Instant.now();
+        if (entity.getCreatedAt() == null) {
+            entity.setCreatedAt(now);
+        }
+        entity.setUpdatedAt(now);
         var saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }

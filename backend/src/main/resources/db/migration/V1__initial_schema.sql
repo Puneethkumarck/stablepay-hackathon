@@ -4,7 +4,6 @@ CREATE TABLE wallets (
     solana_address  VARCHAR(255) NOT NULL UNIQUE,
     available_balance NUMERIC(19, 6) NOT NULL DEFAULT 0,
     total_balance   NUMERIC(19, 6) NOT NULL DEFAULT 0,
-    version         BIGINT NOT NULL DEFAULT 0,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ
 );
@@ -31,10 +30,11 @@ CREATE INDEX idx_remittances_status ON remittances(status);
 
 CREATE TABLE claim_tokens (
     id              BIGSERIAL PRIMARY KEY,
-    remittance_id   UUID NOT NULL,
+    remittance_id   UUID NOT NULL REFERENCES remittances(remittance_id),
     token           VARCHAR(255) NOT NULL UNIQUE,
     claimed         BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at      TIMESTAMPTZ
 );
 
 CREATE INDEX idx_claim_tokens_token ON claim_tokens(token);

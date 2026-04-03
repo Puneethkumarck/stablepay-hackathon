@@ -9,8 +9,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,8 +22,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder(toBuilder = true)
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class WalletEntity {
 
     @Id
@@ -42,11 +42,7 @@ public class WalletEntity {
     @Column(name = "total_balance", nullable = false, precision = 19, scale = 6)
     private BigDecimal totalBalance;
 
-    @Version
-    @Column(name = "version")
-    private Long version;
-
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at")

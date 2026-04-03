@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 
 import com.stablepay.domain.model.RemittanceStatus;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,8 +27,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder(toBuilder = true)
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class RemittanceEntity {
 
     @Id
@@ -65,7 +66,7 @@ public class RemittanceEntity {
     @Column(name = "sms_notification_failed", nullable = false)
     private boolean smsNotificationFailed;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at")

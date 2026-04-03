@@ -22,6 +22,11 @@ class HexagonalArchitectureTest {
                     .allowEmptyShould(true);
 
     @ArchTest
+    static final ArchRule domain_models_should_not_import_spring =
+            noClasses().that().resideInAPackage("..domain.model..")
+                    .should().dependOnClassesThat().resideInAPackage("org.springframework..");
+
+    @ArchTest
     static final ArchRule domain_should_not_import_jpa =
             noClasses().that().resideInAPackage("..domain..")
                     .should().dependOnClassesThat().resideInAPackage("jakarta.persistence..");

@@ -1,5 +1,7 @@
 package com.stablepay.domain.model;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -11,5 +13,11 @@ public record ClaimToken(
     UUID remittanceId,
     String token,
     boolean claimed,
-    Instant createdAt
-) {}
+    Instant createdAt,
+    Instant expiresAt
+) {
+    public ClaimToken {
+        requireNonNull(remittanceId, "remittanceId cannot be null");
+        requireNonNull(token, "token cannot be null");
+    }
+}
