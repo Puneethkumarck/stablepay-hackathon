@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group Spring Boot ecosystem updates",
+      "matchPackagePatterns": ["^org.springframework"],
+      "groupName": "Spring Boot",
+      "automerge": false
+    },
+    {
+      "description": "Group Lombok + MapStruct annotation processors",
+      "matchPackageNames": ["org.projectlombok:lombok", "org.mapstruct:mapstruct", "org.mapstruct:mapstruct-processor"],
+      "groupName": "annotation processors"
+    },
+    {
+      "description": "Group test dependencies",
+      "matchPackagePatterns": ["^com.tngtech.archunit", "^org.testcontainers"],
+      "groupName": "test dependencies"
+    },
+    {
+      "description": "Group Temporal SDK updates",
+      "matchPackagePatterns": ["^io.temporal"],
+      "groupName": "Temporal SDK"
+    }
+  ]
+}
