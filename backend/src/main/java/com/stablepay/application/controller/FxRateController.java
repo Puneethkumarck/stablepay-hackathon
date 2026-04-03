@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.stablepay.application.dto.FxRateResponse;
 import com.stablepay.application.mapper.FxRateApiMapper;
-import com.stablepay.domain.port.outbound.FxRateProvider;
+import com.stablepay.domain.handler.GetFxRateQueryHandler;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,12 +15,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FxRateController {
 
-    private final FxRateProvider fxRateProvider;
+    private final GetFxRateQueryHandler getFxRateQueryHandler;
     private final FxRateApiMapper fxRateApiMapper;
 
     @GetMapping("/usd-inr")
     public FxRateResponse getUsdInrRate() {
-        var quote = fxRateProvider.getRate("USD", "INR");
+        var quote = getFxRateQueryHandler.handle("USD", "INR");
         return fxRateApiMapper.toResponse(quote);
     }
 }

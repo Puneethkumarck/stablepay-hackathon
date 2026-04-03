@@ -15,8 +15,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.stablepay.application.mapper.FxRateApiMapper;
+import com.stablepay.domain.handler.GetFxRateQueryHandler;
 import com.stablepay.domain.model.FxQuote;
-import com.stablepay.domain.port.outbound.FxRateProvider;
 
 @WebMvcTest(FxRateController.class)
 class FxRateControllerTest {
@@ -25,7 +25,7 @@ class FxRateControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private FxRateProvider fxRateProvider;
+    private GetFxRateQueryHandler getFxRateQueryHandler;
 
     @MockitoBean
     private FxRateApiMapper fxRateApiMapper;
@@ -51,7 +51,7 @@ class FxRateControllerTest {
                 .expiresAt(expiresAt)
                 .build();
 
-        given(fxRateProvider.getRate("USD", "INR")).willReturn(quote);
+        given(getFxRateQueryHandler.handle("USD", "INR")).willReturn(quote);
         given(fxRateApiMapper.toResponse(quote)).willReturn(response);
 
         // when / then
@@ -84,7 +84,7 @@ class FxRateControllerTest {
                 .expiresAt(expiresAt)
                 .build();
 
-        given(fxRateProvider.getRate("USD", "INR")).willReturn(quote);
+        given(getFxRateQueryHandler.handle("USD", "INR")).willReturn(quote);
         given(fxRateApiMapper.toResponse(quote)).willReturn(response);
 
         // when / then
