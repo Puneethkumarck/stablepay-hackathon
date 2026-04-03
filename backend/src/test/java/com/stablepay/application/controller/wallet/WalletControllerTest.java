@@ -154,7 +154,7 @@ class WalletControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode").value("SP-0400"));
+                .andExpect(jsonPath("$.errorCode").value("SP-0003"));
     }
 
     @Test

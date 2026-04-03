@@ -1,7 +1,5 @@
 package com.stablepay.application.config;
 
-import java.util.stream.Collectors;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -9,6 +7,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stablepay.application.dto.ErrorResponse;
+import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
 import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
@@ -60,15 +59,26 @@ public class GlobalExceptionHandler {
                 .build();
     }
 
+    @ExceptionHandler(UnsupportedCorridorException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleUnsupportedCorridor(UnsupportedCorridorException ex) {
+        log.warn("Unsupported corridor requested: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0009")
+                .message(ex.getMessage())
+                .build();
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleValidation(MethodArgumentNotValidException ex) {
         var message = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining(", "));
-        log.warn("Validation failed: {}", message);
+                .reduce((a, b) -> a + "; " + b)
+                .orElse("Validation failed");
+        log.warn("Validation error: {}", message);
         return ErrorResponse.builder()
-                .errorCode("SP-0400")
+                .errorCode("SP-0003")
                 .message(message)
                 .build();
     }
