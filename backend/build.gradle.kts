@@ -42,11 +42,23 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+val gitDir: File = rootProject.projectDir.resolve("../.git").let { dotGit ->
+    if (dotGit.isFile) {
+        // Worktree: .git is a file containing "gitdir: <path>". Resolve the main repo hooks dir.
+        val gitdirLine = dotGit.readText().trim()
+        val gitdirPath = gitdirLine.removePrefix("gitdir: ")
+        // Navigate from .git/worktrees/<name> up to .git/hooks
+        file(gitdirPath).resolve("../../hooks")
+    } else {
+        dotGit.resolve("hooks")
+    }
+}
+
 val installGitHooks by tasks.registering(Copy::class) {
     description = "Installs git hooks from backend/.githooks into .git/hooks"
     group = "setup"
     from("${projectDir}/.githooks")
-    into("${rootProject.projectDir}/../.git/hooks")
+    into(gitDir)
     filePermissions {
         unix("rwxr-xr-x")
     }
