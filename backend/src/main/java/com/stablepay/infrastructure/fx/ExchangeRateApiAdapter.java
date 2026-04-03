@@ -25,7 +25,7 @@ public class ExchangeRateApiAdapter implements FxRateProvider {
     private final RestClient exchangeRateRestClient;
 
     @Override
-    @Cacheable("fxRate")
+    @Cacheable(value = "fxRate", unless = "#result.source().equals('fallback')")
     public FxQuote getRate(String fromCurrency, String toCurrency) {
         try {
             return fetchLiveRate(fromCurrency, toCurrency);
@@ -36,14 +36,23 @@ public class ExchangeRateApiAdapter implements FxRateProvider {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private FxQuote fetchLiveRate(String fromCurrency, String toCurrency) {
         var response = exchangeRateRestClient.get()
                 .uri("/v6/latest/{from}", fromCurrency)
                 .retrieve()
                 .body(Map.class);
 
+        if (response == null) {
+            throw new IllegalStateException("Empty response from ExchangeRate API");
+        }
+
+        @SuppressWarnings("unchecked")
         var rates = (Map<String, Object>) response.get("rates");
+
+        if (rates == null || !rates.containsKey(toCurrency)) {
+            throw new IllegalStateException("Currency " + toCurrency + " not found in API response");
+        }
+
         var rateValue = new BigDecimal(rates.get(toCurrency).toString());
         var now = Instant.now();
 

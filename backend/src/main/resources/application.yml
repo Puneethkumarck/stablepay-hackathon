@@ -20,6 +20,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+stablepay:
+  fx:
+    api:
+      base-url: https://open.er-api.com
+
 server:
   port: 8080
 

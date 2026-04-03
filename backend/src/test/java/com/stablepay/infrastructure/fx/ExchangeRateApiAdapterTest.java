@@ -21,6 +21,8 @@ import com.stablepay.domain.model.FxQuote;
 @ExtendWith(MockitoExtension.class)
 class ExchangeRateApiAdapterTest {
 
+    private static final long CACHE_TTL_SECONDS = 60L;
+
     @Mock
     private RestClient exchangeRateRestClient;
 
@@ -57,11 +59,14 @@ class ExchangeRateApiAdapterTest {
                 .rate(new BigDecimal("83.25"))
                 .source("live")
                 .timestamp(result.timestamp())
-                .expiresAt(result.expiresAt())
+                .expiresAt(result.timestamp().plusSeconds(CACHE_TTL_SECONDS))
                 .build();
 
+        assertThat(result.timestamp()).isNotNull();
+        assertThat(result.expiresAt()).isEqualTo(result.timestamp().plusSeconds(CACHE_TTL_SECONDS));
         assertThat(result)
                 .usingRecursiveComparison()
+                .ignoringFields("timestamp", "expiresAt")
                 .isEqualTo(expected);
     }
 
@@ -80,11 +85,14 @@ class ExchangeRateApiAdapterTest {
                 .rate(new BigDecimal("84.50"))
                 .source("fallback")
                 .timestamp(result.timestamp())
-                .expiresAt(result.expiresAt())
+                .expiresAt(result.timestamp().plusSeconds(CACHE_TTL_SECONDS))
                 .build();
 
+        assertThat(result.timestamp()).isNotNull();
+        assertThat(result.expiresAt()).isEqualTo(result.timestamp().plusSeconds(CACHE_TTL_SECONDS));
         assertThat(result)
                 .usingRecursiveComparison()
+                .ignoringFields("timestamp", "expiresAt")
                 .isEqualTo(expected);
     }
 }
