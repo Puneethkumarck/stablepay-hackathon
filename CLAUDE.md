@@ -120,25 +120,32 @@ stablepay-hackathon/
 ```
 com.stablepay/
 ├── application/
-│   ├── controller/     # Spring MVC @RestController
-│   └── config/         # Spring @Configuration
+│   ├── controller/     # Spring MVC @RestController (thin — delegates to handlers)
+│   ├── dto/            # Request/Response records (API models)
+│   ├── mapper/         # MapStruct: API ↔ Domain mapping
+│   └── config/         # Spring @Configuration, @RestControllerAdvice
 ├── domain/
 │   ├── model/          # Records + @Builder — no Spring annotations
+│   ├── command/        # Command records ({Action}{Entity}Command)
+│   ├── handler/        # Command/Query handlers (one handler per use case)
+��   ├── exception/      # Domain exceptions with SP-XXXX codes
 │   ├── port/
-│   │   ├── inbound/    # Service interfaces
+│   │   ├── inbound/    # Service interfaces (optional — handlers can be ports)
 │   │   └── outbound/   # Repository, Client, Provider interfaces
-│   └── service/        # Business logic
+│   └── service/        # Shared domain services (cross-handler logic)
 └── infrastructure/
-    ├── persistence/    # JPA entities + Spring Data repositories
+    ├── persistence/    # JPA entities + entity mappers + Spring Data repos + adapters
     ├── temporal/       # Temporal workflows + activities
     ├── mpc/            # gRPC client to MPC sidecar
-    ├── solana/         # SolanaRpcClient, transaction construction
+    ├── solana/         # SolanaRpcClient, treasury transfers
     ├── stripe/         # Stripe on-ramp adapter
-    ├── fx/             # FX rate provider
+    ├── fx/             # FX rate provider adapter
     └── sms/            # Twilio adapter
 ```
 
-**Dependency rule:** `domain` → nothing. `application` → `domain`. `infrastructure` → `domain`. Never `infrastructure` → `application.controller`.
+**Dependency rule:** `domain` → nothing. `application` → `domain`. `infrastructure` → `domain`. Never `infrastructure` → `application.controller`. **Never `application` → `infrastructure` — always go through domain handlers.**
+
+**Call chain:** `Controller` �� `Handler` → `Outbound Port` → `Adapter`. Never skip the domain layer.
 
 ### Error Code Prefix
 

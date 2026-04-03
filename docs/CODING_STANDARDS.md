@@ -20,6 +20,29 @@ com.stablepay
 - `application` depends on `domain`. It maps API models to domain models and delegates.
 - `infrastructure` depends on `domain`. It implements domain ports and external integrations.
 - Dependencies always point inward: `application` -> `domain` <- `infrastructure`.
+- **Application MUST NOT call infrastructure directly.** The flow is always: `Controller` → `Domain Handler/Service` → `Outbound Port` → `Infrastructure Adapter`. Never skip the domain layer.
+
+### 1.1 Anti-Corruption Layer
+
+Each layer has its own models. MapStruct mappers exist at **each** layer boundary to prevent model leakage:
+
+```
+Application Layer          Domain Layer              Infrastructure Layer
+─────────────────          ────────────              ────────────────────
+CreateWalletRequest   →    (domain model)       →    WalletEntity
+WalletResponse        ←    Wallet               ←    WalletEntity
+FxRateResponse        ←    FxQuote              ←    (external API response)
+
+WalletApiMapper            (no mapper needed      WalletEntityMapper
+(application/mapper/)       when same model)      (infrastructure/persistence/)
+```
+
+**Rules:**
+- Application DTOs (request/response records) live in `application/dto/`
+- Application mappers (API ↔ Domain) live in `application/mapper/`
+- Infrastructure entities live in `infrastructure/persistence/`
+- Infrastructure mappers (Domain ↔ Entity) live in `infrastructure/persistence/`
+- Domain models are the canonical representation — all other layers map to/from them
 
 ## 2. Domain Layer
 
@@ -72,29 +95,63 @@ public interface RemittanceRepository {
 }
 ```
 
-### 2.3 Domain Services
+### 2.3 Command and Query Handlers
 
-Services orchestrate domain logic. They use Spring for DI and transactions.
+Domain logic is organized into **handlers** that separate read and write operations. Handlers are the domain's inbound ports — controllers call them, never outbound ports directly.
+
+**Command Handlers** — mutating operations (create, update, delete):
 
 ```java
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RemittanceServiceImpl implements RemittanceService {
-    private final RemittanceRepository remittanceRepository;
+public class CreateWalletHandler {
     private final WalletRepository walletRepository;
-    private final FxRateProvider fxRateProvider;
+    private final MpcWalletClient mpcWalletClient;
+    private final TreasuryService treasuryService;
+
+    @Transactional
+    public Wallet handle(CreateWalletCommand command) {
+        // orchestrate domain logic
+    }
 }
 ```
 
-**Allowed Spring annotations in domain services:**
+**Query Handlers** — read-only operations (get, list, search):
+
+```java
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class GetFxRateQueryHandler {
+    private final FxRateProvider fxRateProvider;
+
+    public FxQuote handle(String fromCurrency, String toCurrency) {
+        return fxRateProvider.getRate(fromCurrency, toCurrency);
+    }
+}
+```
+
+**Naming conventions:**
+- Commands: `{Action}{Entity}Handler` (e.g., `CreateWalletHandler`, `FundWalletHandler`)
+- Queries: `{Get|List}{Entity}QueryHandler` (e.g., `GetFxRateQueryHandler`, `ListRemittancesQueryHandler`)
+- Command records: `{Action}{Entity}Command` (e.g., `CreateWalletCommand`)
+
+**Rules:**
+- Controllers call handlers. Handlers call outbound ports. **Never skip the handler layer.**
+- Command handlers use `@Transactional`. Query handlers typically do not.
+- Each handler has a single `handle()` method — one handler per use case.
+- Handlers depend only on outbound ports (interfaces), never on infrastructure classes.
+
+**Allowed Spring annotations in domain handlers:**
 - `@Service`, `@Component` — for DI registration
-- `@Transactional` — for transaction management
+- `@Transactional` — for transaction management (commands)
 
 **NOT allowed in domain:**
 - `@RestController`, `@GetMapping`, etc. (application layer only)
 - `@Entity`, `@Table`, `@Column` (infrastructure layer only)
 - `@Autowired` (use `@RequiredArgsConstructor` instead)
+- `@Cacheable` (infrastructure concern — caching belongs in adapters)
 
 ### 2.4 Error Handling
 
@@ -121,25 +178,54 @@ public class InsufficientBalanceException extends RuntimeException {
 
 ### 3.1 REST Controllers
 
-- Delegate all business logic to domain services. Controllers are thin.
-- Use Spring MVC annotations (`@RestController`, `@GetMapping`, etc.).
-- Use `@Valid` for request validation.
-- Return standard types — no `Mono<>` or `Flux<>`.
+Controllers are thin adapters: validate input, map to domain, delegate to handler, map response. **Controllers call domain handlers — never outbound ports or infrastructure directly.**
 
 ```java
 @RestController
-@RequestMapping("/api/remittances")
+@RequestMapping("/api/wallets")
 @RequiredArgsConstructor
-public class RemittanceController {
-    private final RemittanceService remittanceService;
+public class WalletController {
+    private final CreateWalletHandler createWalletHandler;
+    private final FundWalletHandler fundWalletHandler;
+    private final WalletApiMapper mapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RemittanceResponse createRemittance(@Valid @RequestBody CreateRemittanceRequest request) {
-        return remittanceService.create(request);
+    public WalletResponse createWallet(@Valid @RequestBody CreateWalletRequest request) {
+        var command = mapper.toCommand(request);
+        var wallet = createWalletHandler.handle(command);
+        return mapper.toResponse(wallet);
     }
 }
 ```
+
+**Call chain (always):**
+```
+HTTP Request → Controller → Mapper.toDomain() → Handler.handle() → Outbound Port → Adapter
+HTTP Response ← Controller ← Mapper.toResponse() ← Handler result
+```
+
+**Rules:**
+- Use Spring MVC annotations (`@RestController`, `@GetMapping`, etc.)
+- Use `@Valid` for request validation
+- Return standard types — no `Mono<>` or `Flux<>`
+- **Inject domain handlers**, not outbound ports or infrastructure beans
+- Map API DTOs to domain commands/models using application-layer MapStruct mappers
+- Map domain results to API responses using application-layer MapStruct mappers
+
+### 3.2 Application Mappers
+
+Application-layer mappers convert between API DTOs and domain models. They live in `application/mapper/`.
+
+```java
+@Mapper(componentModel = "spring")
+public interface WalletApiMapper {
+    CreateWalletCommand toCommand(CreateWalletRequest request);
+    WalletResponse toResponse(Wallet wallet);
+}
+```
+
+These are separate from infrastructure mappers (which convert domain ↔ entity).
 
 ## 4. Infrastructure Layer
 
@@ -195,23 +281,44 @@ class RemittanceRepositoryAdapter implements RemittanceRepository {
 
 ## 5. Object Mapping
 
-Use **MapStruct** for all layer-boundary mapping. No manual field-by-field mapping.
+Use **MapStruct** for all layer-boundary mapping. No manual field-by-field mapping. **Separate mappers per layer boundary** — never combine application and infrastructure mapping in one mapper.
+
+### 5.1 Application-Layer Mappers (`application/mapper/`)
+
+Convert between API DTOs and domain models:
 
 | Direction | Method name |
 |-----------|-------------|
-| API -> Domain | `toDomain(apiModel)` |
-| Domain -> API | `toResponse(domainModel)` |
-| Entity -> Domain | `toDomain(entity)` |
-| Domain -> Entity | `toEntity(domainModel)` |
+| API Request → Domain Command | `toCommand(request)` |
+| API Request → Domain Model | `toDomain(request)` |
+| Domain Model → API Response | `toResponse(domainModel)` |
 
 ```java
 @Mapper(componentModel = "spring")
-public interface RemittanceMapper {
-    Remittance toDomain(RemittanceEntity entity);
-    RemittanceEntity toEntity(Remittance domain);
-    RemittanceResponse toResponse(Remittance domain);
+public interface WalletApiMapper {
+    CreateWalletCommand toCommand(CreateWalletRequest request);
+    WalletResponse toResponse(Wallet wallet);
 }
 ```
+
+### 5.2 Infrastructure-Layer Mappers (`infrastructure/persistence/`)
+
+Convert between domain models and JPA entities:
+
+| Direction | Method name |
+|-----------|-------------|
+| Entity → Domain | `toDomain(entity)` |
+| Domain → Entity | `toEntity(domainModel)` |
+
+```java
+@Mapper(componentModel = "spring")
+interface RemittanceEntityMapper {
+    Remittance toDomain(RemittanceEntity entity);
+    RemittanceEntity toEntity(Remittance domain);
+}
+```
+
+**Never combine these** — application mapper and infrastructure mapper are separate interfaces in separate packages.
 
 ## 6. Java Conventions
 
@@ -259,8 +366,11 @@ No wildcard imports.
 
 Before submitting code, verify:
 
+- [ ] **Call chain**: Controller → Handler → Outbound Port → Adapter (never skip domain)
+- [ ] **Controllers inject handlers**, not outbound ports or infrastructure beans
+- [ ] **Separate mappers per boundary**: application mapper (API ↔ domain) and infrastructure mapper (domain ↔ entity)
 - [ ] Domain models have zero Spring imports (Lombok only)
-- [ ] Domain services use only `@Service`/`@Transactional` from Spring
+- [ ] Domain handlers use only `@Service`/`@Transactional` from Spring
 - [ ] Domain layer does not import from `application` or `infrastructure`
 - [ ] All mapping uses MapStruct, not manual field copying
 - [ ] Repository interfaces are in `domain/port/outbound/`, implementations in `infrastructure/persistence/`
