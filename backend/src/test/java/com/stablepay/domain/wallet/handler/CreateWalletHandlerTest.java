@@ -6,7 +6,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -19,12 +18,10 @@ import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.wallet.model.Wallet;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 import com.stablepay.domain.wallet.port.WalletRepository;
+import com.stablepay.testutil.WalletFixtures;
 
 @ExtendWith(MockitoExtension.class)
 class CreateWalletHandlerTest {
-
-    private static final String SOME_USER_ID = "user-123";
-    private static final String SOME_SOLANA_ADDRESS = "SoLaNaAdDrEsS123456789";
 
     @Mock
     private WalletRepository walletRepository;
@@ -38,36 +35,36 @@ class CreateWalletHandlerTest {
     @Test
     void shouldCreateWallet() {
         // given
-        given(walletRepository.findByUserId(SOME_USER_ID)).willReturn(Optional.empty());
-        given(mpcWalletClient.generateKey()).willReturn(SOME_SOLANA_ADDRESS);
+        given(walletRepository.findByUserId(WalletFixtures.SOME_USER_ID)).willReturn(Optional.empty());
+        given(mpcWalletClient.generateKey()).willReturn(WalletFixtures.SOME_SOLANA_ADDRESS);
 
         var walletToSave = Wallet.builder()
-                .userId(SOME_USER_ID)
-                .solanaAddress(SOME_SOLANA_ADDRESS)
+                .userId(WalletFixtures.SOME_USER_ID)
+                .solanaAddress(WalletFixtures.SOME_SOLANA_ADDRESS)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .build();
 
         var savedWallet = walletToSave.toBuilder()
-                .id(1L)
-                .createdAt(Instant.parse("2026-04-03T10:00:00Z"))
-                .updatedAt(Instant.parse("2026-04-03T10:00:00Z"))
+                .id(WalletFixtures.SOME_WALLET_ID)
+                .createdAt(WalletFixtures.SOME_CREATED_AT)
+                .updatedAt(WalletFixtures.SOME_UPDATED_AT)
                 .build();
 
         given(walletRepository.save(walletToSave)).willReturn(savedWallet);
 
         // when
-        var result = createWalletHandler.handle(SOME_USER_ID);
+        var result = createWalletHandler.handle(WalletFixtures.SOME_USER_ID);
 
         // then
         var expected = Wallet.builder()
-                .id(1L)
-                .userId(SOME_USER_ID)
-                .solanaAddress(SOME_SOLANA_ADDRESS)
+                .id(WalletFixtures.SOME_WALLET_ID)
+                .userId(WalletFixtures.SOME_USER_ID)
+                .solanaAddress(WalletFixtures.SOME_SOLANA_ADDRESS)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
-                .createdAt(Instant.parse("2026-04-03T10:00:00Z"))
-                .updatedAt(Instant.parse("2026-04-03T10:00:00Z"))
+                .createdAt(WalletFixtures.SOME_CREATED_AT)
+                .updatedAt(WalletFixtures.SOME_UPDATED_AT)
                 .build();
 
         assertThat(result)
@@ -81,20 +78,18 @@ class CreateWalletHandlerTest {
     @Test
     void shouldThrowWhenWalletAlreadyExists() {
         // given
-        var existingWallet = Wallet.builder()
-                .id(1L)
-                .userId(SOME_USER_ID)
-                .solanaAddress(SOME_SOLANA_ADDRESS)
+        var existingWallet = WalletFixtures.walletBuilder()
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .build();
 
-        given(walletRepository.findByUserId(SOME_USER_ID)).willReturn(Optional.of(existingWallet));
+        given(walletRepository.findByUserId(WalletFixtures.SOME_USER_ID))
+                .willReturn(Optional.of(existingWallet));
 
         // when / then
-        assertThatThrownBy(() -> createWalletHandler.handle(SOME_USER_ID))
+        assertThatThrownBy(() -> createWalletHandler.handle(WalletFixtures.SOME_USER_ID))
                 .isInstanceOf(WalletAlreadyExistsException.class)
                 .hasMessageContaining("SP-0008")
-                .hasMessageContaining(SOME_USER_ID);
+                .hasMessageContaining(WalletFixtures.SOME_USER_ID);
     }
 }

@@ -4,9 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,8 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
-import com.stablepay.domain.fx.model.FxQuote;
 import com.stablepay.domain.fx.port.FxRateProvider;
+import com.stablepay.testutil.FxQuoteFixtures;
 
 @ExtendWith(MockitoExtension.class)
 class GetFxRateQueryHandlerTest {
@@ -29,12 +26,8 @@ class GetFxRateQueryHandlerTest {
     @Test
     void shouldReturnFxQuoteForSupportedCorridor() {
         // given
-        var now = Instant.now();
-        var expectedQuote = FxQuote.builder()
-                .rate(BigDecimal.valueOf(83.25))
+        var expectedQuote = FxQuoteFixtures.fxQuoteBuilder()
                 .source("open.er-api.com")
-                .timestamp(now)
-                .expiresAt(now.plusSeconds(60))
                 .build();
         given(fxRateProvider.getRate("USD", "INR")).willReturn(expectedQuote);
 

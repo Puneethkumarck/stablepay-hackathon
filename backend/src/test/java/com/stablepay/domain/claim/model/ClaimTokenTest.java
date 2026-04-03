@@ -3,39 +3,21 @@ package com.stablepay.domain.claim.model;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+
+import com.stablepay.testutil.ClaimTokenFixtures;
 
 class ClaimTokenTest {
 
     @Test
     void shouldCreateClaimTokenWithExpiry() {
-        // given
-        var token = UUID.randomUUID().toString();
-        var remittanceId = UUID.randomUUID();
-        var now = Instant.now();
-        var expiresAt = now.plus(48, ChronoUnit.HOURS);
-
-        // when
-        var claimToken = ClaimToken.builder()
-                .remittanceId(remittanceId)
-                .token(token)
-                .claimed(false)
-                .createdAt(now)
-                .expiresAt(expiresAt)
-                .build();
+        // given / when
+        var claimToken = ClaimTokenFixtures.claimTokenBuilder().build();
 
         // then
-        var expected = ClaimToken.builder()
-                .remittanceId(remittanceId)
-                .token(token)
-                .claimed(false)
-                .createdAt(now)
-                .expiresAt(expiresAt)
-                .build();
+        var expected = ClaimTokenFixtures.claimTokenBuilder().build();
 
         assertThat(claimToken)
                 .usingRecursiveComparison()
@@ -48,8 +30,7 @@ class ClaimTokenTest {
         var token = UUID.randomUUID().toString();
 
         // when
-        var claimToken = ClaimToken.builder()
-                .remittanceId(UUID.randomUUID())
+        var claimToken = ClaimTokenFixtures.claimTokenBuilder()
                 .token(token)
                 .build();
 
@@ -62,7 +43,7 @@ class ClaimTokenTest {
     void shouldThrowWhenRemittanceIdIsNull() {
         // when / then
         assertThatThrownBy(() -> ClaimToken.builder()
-                .token("some-token")
+                .token(ClaimTokenFixtures.SOME_TOKEN)
                 .build())
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("remittanceId");
@@ -72,7 +53,7 @@ class ClaimTokenTest {
     void shouldThrowWhenTokenIsNull() {
         // when / then
         assertThatThrownBy(() -> ClaimToken.builder()
-                .remittanceId(UUID.randomUUID())
+                .remittanceId(ClaimTokenFixtures.SOME_REMITTANCE_ID)
                 .build())
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("token");

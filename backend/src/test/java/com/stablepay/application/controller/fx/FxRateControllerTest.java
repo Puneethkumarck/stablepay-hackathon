@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +17,7 @@ import com.stablepay.application.controller.fx.mapper.FxRateApiMapper;
 import com.stablepay.application.dto.FxRateResponse;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.fx.handler.GetFxRateQueryHandler;
-import com.stablepay.domain.fx.model.FxQuote;
+import com.stablepay.testutil.FxQuoteFixtures;
 
 @WebMvcTest(FxRateController.class)
 class FxRateControllerTest {
@@ -35,19 +34,14 @@ class FxRateControllerTest {
     @Test
     void shouldReturnLiveFxRate() throws Exception {
         // given
-        var now = Instant.parse("2026-04-03T10:00:00Z");
-        var expiresAt = now.plusSeconds(60);
-        var quote = FxQuote.builder()
-                .rate(BigDecimal.valueOf(83.25))
+        var quote = FxQuoteFixtures.fxQuoteBuilder()
                 .source("open.er-api.com")
-                .timestamp(now)
-                .expiresAt(expiresAt)
                 .build();
         var response = FxRateResponse.builder()
-                .rate(BigDecimal.valueOf(83.25))
+                .rate(FxQuoteFixtures.SOME_RATE)
                 .source("open.er-api.com")
-                .timestamp(now)
-                .expiresAt(expiresAt)
+                .timestamp(FxQuoteFixtures.SOME_TIMESTAMP)
+                .expiresAt(FxQuoteFixtures.SOME_EXPIRES_AT)
                 .build();
 
         given(getFxRateQueryHandler.handle("USD", "INR")).willReturn(quote);
@@ -63,19 +57,15 @@ class FxRateControllerTest {
     @Test
     void shouldReturnFallbackFxRate() throws Exception {
         // given
-        var now = Instant.parse("2026-04-03T10:00:00Z");
-        var expiresAt = now.plusSeconds(60);
-        var quote = FxQuote.builder()
+        var quote = FxQuoteFixtures.fxQuoteBuilder()
                 .rate(BigDecimal.valueOf(84.50))
                 .source("fallback")
-                .timestamp(now)
-                .expiresAt(expiresAt)
                 .build();
         var response = FxRateResponse.builder()
                 .rate(BigDecimal.valueOf(84.50))
                 .source("fallback")
-                .timestamp(now)
-                .expiresAt(expiresAt)
+                .timestamp(FxQuoteFixtures.SOME_TIMESTAMP)
+                .expiresAt(FxQuoteFixtures.SOME_EXPIRES_AT)
                 .build();
 
         given(getFxRateQueryHandler.handle("USD", "INR")).willReturn(quote);
