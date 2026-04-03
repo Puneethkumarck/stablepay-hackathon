@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Pre-push hook: runs unit tests.
+# Rejects push if any test fails.
+#
+
+cd "$(git rev-parse --show-toplevel)/backend" || exit 1
+
+echo "Running unit tests..."
+./gradlew test --quiet 2>&1
+TEST_EXIT=$?
+
+if [ $TEST_EXIT -ne 0 ]; then
+    echo ""
+    echo "PUSH REJECTED: Unit tests failed."
+    echo "Run: cd backend && ./gradlew test"
+    echo ""
+    exit 1
+fi

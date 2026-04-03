@@ -42,6 +42,20 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+val installGitHooks by tasks.registering(Copy::class) {
+    description = "Installs git hooks from backend/.githooks into .git/hooks"
+    group = "setup"
+    from("${projectDir}/.githooks")
+    into("${rootProject.projectDir}/../.git/hooks")
+    filePermissions {
+        unix("rwxr-xr-x")
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn(installGitHooks)
+}
+
 val integrationTest by sourceSets.creating {
     java.srcDir("src/integration-test/java")
     resources.srcDir("src/integration-test/resources")

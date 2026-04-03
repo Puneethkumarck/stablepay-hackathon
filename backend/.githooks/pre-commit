@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Pre-commit hook: runs Spotless format check.
+# Rejects commit if code formatting violations are found.
+# Fix with: ./gradlew spotlessApply
+#
+
+cd "$(git rev-parse --show-toplevel)/backend" || exit 1
+
+echo "Running spotlessCheck..."
+./gradlew spotlessCheck --quiet 2>&1
+SPOTLESS_EXIT=$?
+
+if [ $SPOTLESS_EXIT -ne 0 ]; then
+    echo ""
+    echo "COMMIT REJECTED: Spotless formatting violations found."
+    echo "Run: cd backend && ./gradlew spotlessApply"
+    echo ""
+    exit 1
+fi
