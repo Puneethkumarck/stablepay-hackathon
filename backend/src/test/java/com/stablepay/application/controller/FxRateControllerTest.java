@@ -55,7 +55,7 @@ class FxRateControllerTest {
         given(fxRateApiMapper.toResponse(quote)).willReturn(response);
 
         // when / then
-        mockMvc.perform(get("/api/fx/usd-inr"))
+        mockMvc.perform(get("/api/fx/USD-INR"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rate").value(83.25))
                 .andExpect(jsonPath("$.source").value("live"))
@@ -88,7 +88,7 @@ class FxRateControllerTest {
         given(fxRateApiMapper.toResponse(quote)).willReturn(response);
 
         // when / then
-        mockMvc.perform(get("/api/fx/usd-inr"))
+        mockMvc.perform(get("/api/fx/USD-INR"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rate").value(84.50))
                 .andExpect(jsonPath("$.source").value("fallback"))
