@@ -1,0 +1,88 @@
+{
+  "permissions": {
+    "defaultMode": "auto",
+    "allow": [
+      "Edit",
+      "Write",
+
+      "Bash(./gradlew *)",
+      "Bash(./gradlew)",
+
+      "Bash(anchor *)",
+      "Bash(solana *)",
+
+      "Bash(go *)",
+      "Bash(go build *)",
+      "Bash(go test *)",
+
+      "Bash(npx *)",
+      "Bash(npm *)",
+      "Bash(node *)",
+
+      "Bash(git *)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log)",
+
+      "Bash(gh *)",
+
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(docker compose *)",
+
+      "Bash(java *)",
+      "Bash(javac *)",
+
+      "Bash(psql *)",
+      "Bash(redis-cli *)",
+      "Bash(temporal *)",
+
+      "Bash(curl *)",
+      "Bash(jq *)",
+      "Bash(base64 *)",
+
+      "Bash(ls *)",
+      "Bash(ls)",
+      "Bash(pwd)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(rm *)",
+      "Bash(touch *)",
+      "Bash(chmod *)",
+      "Bash(wc *)",
+      "Bash(which *)",
+      "Bash(cd *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(find *)",
+      "Bash(sort *)",
+      "Bash(diff *)",
+      "Bash(echo *)",
+      "Bash(env *)",
+      "Bash(printenv *)",
+      "Bash(printenv)",
+      "Bash(date *)",
+      "Bash(date)",
+      "Bash(ps *)",
+      "Bash(ps)",
+      "Bash(kill *)",
+      "Bash(lsof *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | grep -q 'git commit' && echo '{\"decision\":\"block\",\"reason\":\"PRE-COMMIT REVIEW REQUIRED. Verify the Pre-Commit Self-Review Checklist before committing:\\n- No wildcard imports\\n- Use var for local variables where type is obvious from RHS\\n- @Slf4j on all production classes\\n- All records have @Builder(toBuilder = true)\\n- Controllers use Spring MVC @RestController — no WebFlux\\n- JPA @Entity on persistence entities — not in domain models\\n- MockMvc for controller tests — not WebTestClient\\n- Single-assert pattern with recursive comparison\\n- BDDMockito only (given/then, never when/verify)\\n- No generic matchers (never any(), anyString(), eq())\\n- MapStruct for all layer-boundary mapping\\n- Domain imports: only @Service, @Transactional, Lombok\\n- Constructor injection via @RequiredArgsConstructor only\\n- No @Autowired anywhere\\n- Error codes follow SP-XXXX pattern\\n- ./gradlew build passes\\n\\nIf you have verified all items, re-run the commit.\"}' || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

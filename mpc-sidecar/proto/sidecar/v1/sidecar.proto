@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package sidecar.v1;
+
+option go_package = "github.com/stablepay/mpc-sidecar/gen/sidecar/v1;sidecarv1";
+
+service TssSidecar {
+  rpc GenerateKey(GenerateKeyRequest) returns (GenerateKeyResponse);
+  rpc Sign(SignRequest) returns (SignResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message GenerateKeyRequest {
+  string ceremony_id = 1;
+  int32 party_id = 2;
+  int32 threshold = 3;
+  int32 total_parties = 4;
+  map<int32, string> peer_addresses = 5;
+}
+
+message GenerateKeyResponse {
+  string ceremony_id = 1;
+  string solana_address = 2;
+  bytes public_key = 3;
+  bytes key_share_data = 4;
+  Status status = 5;
+  string error_message = 6;
+}
+
+message SignRequest {
+  string ceremony_id = 1;
+  int32 party_id = 2;
+  int32 threshold = 3;
+  repeated int32 signing_party_ids = 4;
+  bytes key_share_data = 5;
+  bytes message = 6;
+  map<int32, string> peer_addresses = 7;
+}
+
+message SignResponse {
+  string ceremony_id = 1;
+  bytes signature = 2;
+  Status status = 3;
+  string error_message = 4;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool ready = 1;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_COMPLETED = 1;
+  STATUS_FAILED = 2;
+  STATUS_TIMED_OUT = 3;
+}
