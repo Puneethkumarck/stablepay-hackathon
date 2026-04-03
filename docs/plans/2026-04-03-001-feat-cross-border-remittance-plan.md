@@ -77,7 +77,7 @@ Indian diaspora in the US (18M people) send $125B annually to India through slow
 - **Double-claim prevention:** Anchor program must close escrow account on claim (on-chain idempotency). Backend-only enforcement is insufficient.
 - **SMS as tracked activity:** If SMS fails after escrow lock, recipient never learns about the remittance. SMS delivery must be a retriable Temporal activity. On failure: user-facing status remains ESCROWED with a `smsNotificationFailed: true` flag in the remittance details API response. Sender sees "Recipient not reached" with a "Resend" option.
 - **Blockhash expiry:** Solana blockhashes expire in ~60s. Retry strategy must re-sign with fresh blockhash, not re-submit stale signed tx. MPC signing latency (~1-3s) is acceptable per retry.
-- **Balance reservation:** `available_balance` is a stored column on the `wallets` table, decremented in the same database transaction that inserts the remittance record. Use `@Version` optimistic locking or `SELECT ... FOR UPDATE` to prevent concurrent double-spend.
+- **Balance reservation:** `available_balance` is a stored column on the `wallets` table, decremented in the same database transaction that inserts the remittance record. Use pessimistic locking (`SELECT ... FOR UPDATE` via `@Lock(PESSIMISTIC_WRITE)`) with 4s lock timeout to prevent concurrent double-spend (see ADR-021).
 - **Claim link security:** Bearer token (cryptographically random UUID) in URL for hackathon. UPI entry serves as weak second factor. Basic UPI format validation on claim endpoint (non-empty, contains @). OTP verification mentioned in pitch as production enhancement.
 - **Claim-after-timeout resolution:** Temporal workflow uses a mutex flag — after the 48h timer fires, workflow checks a `claimReceived` flag before starting refund. If claim signal arrives during refund, claim wins only if refund tx hasn't been submitted yet.
 
@@ -356,7 +356,7 @@ cancel(sender signs, status == Pending) → transfers Vault → sender, closes E
 - Create: `backend/src/main/java/com/stablepay/domain/port/outbound/FxRateProvider.java`
 - Create: `backend/src/main/java/com/stablepay/domain/port/outbound/SmsProvider.java`
 - Create: `backend/src/main/java/com/stablepay/infrastructure/persistence/RemittanceEntity.java` (JPA @Entity)
-- Create: `backend/src/main/java/com/stablepay/infrastructure/persistence/WalletEntity.java` (JPA @Entity with @Version)
+- Create: `backend/src/main/java/com/stablepay/infrastructure/persistence/WalletEntity.java` (JPA @Entity with pessimistic locking)
 - Create: `backend/src/main/resources/db/migration/V1__initial_schema.sql`
 - Create: `backend/src/main/resources/application.yml`
 - Create: `backend/src/main/resources/application-dev.yml`
@@ -372,7 +372,7 @@ cancel(sender signs, status == Pending) → transfers Vault → sender, closes E
   - `RemittanceStatus` enum: INITIATED, ESCROWED, CLAIMED, DELIVERED, REFUNDED, CANCELLED
   - `FxQuote`: usdToInr rate, source, timestamp, expiresAt
   - `ClaimToken`: id, remittanceId, token (random UUID), claimed (boolean)
-  - `Wallet`: id, userId, solanaAddress, availableBalance (stored column), totalBalance, version (@Version for optimistic locking)
+  - `Wallet`: id, userId, solanaAddress, availableBalance (stored column), totalBalance
 - Balance reservation: `available_balance` is a stored column, decremented atomically in the same transaction that creates the remittance. Released on workflow failure/cancel/refund.
 - Docker Compose: PostgreSQL 16 + Temporal server + Redis
 - Flyway V1: remittances table (with sms_notification_failed column), wallets table (with available_balance + version columns), claim_tokens table
@@ -515,7 +515,7 @@ Workflow: RemittanceLifecycleWorkflow
   - `POST /api/claims/{token}` → submit claim (UPI ID with basic format validation → signals Temporal workflow)
 - Treasury transfer: `TreasuryTransferService` signs SPL token transfers from treasury hot wallet to sender wallets using sol4k. Treasury keypair stored as `TREASURY_PRIVATE_KEY` env var. This is a direct SPL transfer, not an escrow operation and not MPC-signed.
 - FX rate: ExchangeRateApiAdapter calls ExchangeRate-API.com with Redis caching (60s TTL). Fallback to hardcoded 84.50 if API fails.
-- Balance reservation: On `POST /remittances`, decrement `available_balance` column atomically within the same transaction that inserts the remittance. Uses `@Version` optimistic locking on WalletEntity.
+- Balance reservation: On `POST /remittances`, decrement `available_balance` column atomically within the same transaction that inserts the remittance. Uses pessimistic locking (`@Lock(PESSIMISTIC_WRITE)`) on wallet queries (see ADR-021).
 - API stubs: Create stub responses for all endpoints early in Phase 2 (hardcoded JSON) to unblock frontend development (Units 6, 7) before Temporal workflow is complete.
 
 **Patterns to follow:**
@@ -534,7 +534,7 @@ Workflow: RemittanceLifecycleWorkflow
 - Error path: POST /claims/{token} on expired remittance → 410 Gone
 - Error path: GET /claims/{invalid-token} → 404
 - Edge case: FX rate API down → fallback rate returned with "fallback" source indicator
-- Edge case: Concurrent POST /remittances depleting balance → only one succeeds (optimistic lock)
+- Edge case: Concurrent POST /remittances depleting balance → only one succeeds (pessimistic lock serializes access)
 - Happy path: POST /wallets/{id}/fund → treasury USDC transferred to sender wallet, balance updated
 - Error path: POST /wallets/{id}/fund when treasury balance low → 503 with "treasury depleted" message
 - Error path: POST /claims/{token} with empty/invalid UPI format → 400 with validation error

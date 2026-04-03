@@ -174,3 +174,15 @@
 - Records + `@Builder(toBuilder = true)` for all domain models
 - Functional style — streams over loops, Optional over null checks
 - Error codes: `SP-XXXX`
+
+## ADR-021: Pessimistic Locking for Wallet Balance
+
+**Status:** Accepted
+**Context:** Wallet balance updates (reserve on send, release on cancel/refund) must be serialized to prevent lost updates. Optimistic locking (`@Version`) causes retry storms under concurrent access to the same wallet.
+**Decision:** Use pessimistic locking (`@Lock(PESSIMISTIC_WRITE)` / `SELECT ... FOR UPDATE`) on all wallet read-for-update queries. 4-second lock timeout prevents indefinite waits.
+**Rationale:**
+- Matches production-grade pattern from stablebridge transfer-service (10-transfer).
+- Guarantees serialized access to wallet balance — no lost updates.
+- Lock timeout (4s) bounds worst-case wait, preventing thread starvation.
+- `READ_COMMITTED` isolation is sufficient when combined with pessimistic locks.
+**Consequences:** Wallet reads that precede updates will block concurrent transactions. Acceptable for a single-corridor remittance system. Future sorted-lock-acquisition pattern may be needed if multi-wallet transfers are introduced.

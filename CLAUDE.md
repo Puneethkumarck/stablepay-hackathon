@@ -182,6 +182,27 @@ com.stablepay/
 - **Corridor:** USD → INR only
 - **Stablecoin:** USDC on Solana devnet only
 
+## Git Workflow (MANDATORY)
+
+**Never commit or push directly to `main`.** All work goes through feature branches and PRs.
+
+```
+1. Pick an issue (STA-N)
+2. Create branch:  git checkout -b feature/STA-{N}-description
+3. Implement + test on the feature branch
+4. Push:           git push -u origin feature/STA-{N}-description
+5. Create PR:      gh pr create --title "STA-{N}: Description" --body "Closes #{N}"
+6. Get review → squash merge to main
+```
+
+**Branch naming:** `feature/STA-{issue-number}-description` (e.g., `feature/STA-23-spring-boot-setup`)
+**Commit messages:** `feat(STA-{N}): description` (conventional commits)
+**PR titles:** `STA-{N}: Description`
+
+Hooks in `.claude/settings.json` enforce this — commits on `main` or non-conforming branches are blocked.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full conventions.
+
 ## Design Principles
 
 1. **One corridor, one persona** — don't build "payments for everyone"
