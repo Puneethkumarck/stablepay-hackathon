@@ -3,45 +3,19 @@ package com.stablepay.domain.remittance.model;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.UUID;
-
 import org.junit.jupiter.api.Test;
+
+import com.stablepay.testutil.RemittanceFixtures;
 
 class RemittanceTest {
 
     @Test
     void shouldCreateRemittanceWithInitiatedStatus() {
-        // given
-        var remittanceId = UUID.randomUUID();
-        var now = Instant.now();
-
-        // when
-        var remittance = Remittance.builder()
-                .remittanceId(remittanceId)
-                .senderId("user-1")
-                .recipientPhone("+919876543210")
-                .amountUsdc(BigDecimal.valueOf(100))
-                .amountInr(BigDecimal.valueOf(8450))
-                .fxRate(BigDecimal.valueOf(84.50))
-                .status(RemittanceStatus.INITIATED)
-                .smsNotificationFailed(false)
-                .createdAt(now)
-                .build();
+        // given / when
+        var remittance = RemittanceFixtures.remittanceBuilder().build();
 
         // then
-        var expected = Remittance.builder()
-                .remittanceId(remittanceId)
-                .senderId("user-1")
-                .recipientPhone("+919876543210")
-                .amountUsdc(BigDecimal.valueOf(100))
-                .amountInr(BigDecimal.valueOf(8450))
-                .fxRate(BigDecimal.valueOf(84.50))
-                .status(RemittanceStatus.INITIATED)
-                .smsNotificationFailed(false)
-                .createdAt(now)
-                .build();
+        var expected = RemittanceFixtures.remittanceBuilder().build();
 
         assertThat(remittance)
                 .usingRecursiveComparison()
@@ -51,13 +25,7 @@ class RemittanceTest {
     @Test
     void shouldTransitionFromInitiatedToEscrowed() {
         // given
-        var remittance = Remittance.builder()
-                .remittanceId(UUID.randomUUID())
-                .senderId("user-1")
-                .recipientPhone("+919876543210")
-                .amountUsdc(BigDecimal.valueOf(100))
-                .status(RemittanceStatus.INITIATED)
-                .build();
+        var remittance = RemittanceFixtures.remittanceBuilder().build();
 
         // when
         var escrowed = remittance.toBuilder()
@@ -79,11 +47,7 @@ class RemittanceTest {
     @Test
     void shouldTransitionFromEscrowedToClaimed() {
         // given
-        var remittance = Remittance.builder()
-                .remittanceId(UUID.randomUUID())
-                .senderId("user-1")
-                .recipientPhone("+919876543210")
-                .amountUsdc(BigDecimal.valueOf(100))
+        var remittance = RemittanceFixtures.remittanceBuilder()
                 .status(RemittanceStatus.ESCROWED)
                 .build();
 
@@ -105,11 +69,7 @@ class RemittanceTest {
     @Test
     void shouldTransitionFromClaimedToDelivered() {
         // given
-        var remittance = Remittance.builder()
-                .remittanceId(UUID.randomUUID())
-                .senderId("user-1")
-                .recipientPhone("+919876543210")
-                .amountUsdc(BigDecimal.valueOf(100))
+        var remittance = RemittanceFixtures.remittanceBuilder()
                 .status(RemittanceStatus.CLAIMED)
                 .build();
 
@@ -132,9 +92,9 @@ class RemittanceTest {
     void shouldThrowWhenRemittanceIdIsNull() {
         // when / then
         assertThatThrownBy(() -> Remittance.builder()
-                .senderId("user-1")
-                .recipientPhone("+919876543210")
-                .amountUsdc(BigDecimal.valueOf(100))
+                .senderId(RemittanceFixtures.SOME_SENDER_ID)
+                .recipientPhone(RemittanceFixtures.SOME_RECIPIENT_PHONE)
+                .amountUsdc(RemittanceFixtures.SOME_AMOUNT_USDC)
                 .status(RemittanceStatus.INITIATED)
                 .build())
                 .isInstanceOf(NullPointerException.class)
@@ -145,10 +105,10 @@ class RemittanceTest {
     void shouldThrowWhenStatusIsNull() {
         // when / then
         assertThatThrownBy(() -> Remittance.builder()
-                .remittanceId(UUID.randomUUID())
-                .senderId("user-1")
-                .recipientPhone("+919876543210")
-                .amountUsdc(BigDecimal.valueOf(100))
+                .remittanceId(RemittanceFixtures.SOME_REMITTANCE_ID)
+                .senderId(RemittanceFixtures.SOME_SENDER_ID)
+                .recipientPhone(RemittanceFixtures.SOME_RECIPIENT_PHONE)
+                .amountUsdc(RemittanceFixtures.SOME_AMOUNT_USDC)
                 .build())
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("status");

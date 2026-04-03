@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,16 +24,12 @@ import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 import com.stablepay.domain.wallet.handler.CreateWalletHandler;
 import com.stablepay.domain.wallet.handler.FundWalletHandler;
-import com.stablepay.domain.wallet.model.Wallet;
+import com.stablepay.testutil.WalletFixtures;
 
 @WebMvcTest(WalletController.class)
 class WalletControllerTest {
 
-    private static final String SOME_USER_ID = "user-123";
-    private static final String SOME_SOLANA_ADDRESS = "SoLaNaAdDrEsS123456789";
-    private static final Long SOME_WALLET_ID = 1L;
-    private static final Instant SOME_CREATED_AT = Instant.parse("2026-04-03T10:00:00Z");
-    private static final Instant SOME_UPDATED_AT = Instant.parse("2026-04-03T10:00:00Z");
+    private static final BigDecimal SOME_FUND_AMOUNT = BigDecimal.valueOf(500);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -53,91 +48,81 @@ class WalletControllerTest {
     @Test
     void shouldCreateWallet() throws Exception {
         // given
-        var wallet = Wallet.builder()
-                .id(SOME_WALLET_ID)
-                .userId(SOME_USER_ID)
-                .solanaAddress(SOME_SOLANA_ADDRESS)
+        var wallet = WalletFixtures.walletBuilder()
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
-                .createdAt(SOME_CREATED_AT)
-                .updatedAt(SOME_UPDATED_AT)
                 .build();
 
         var response = WalletResponse.builder()
-                .id(SOME_WALLET_ID)
-                .userId(SOME_USER_ID)
-                .solanaAddress(SOME_SOLANA_ADDRESS)
+                .id(WalletFixtures.SOME_WALLET_ID)
+                .userId(WalletFixtures.SOME_USER_ID)
+                .solanaAddress(WalletFixtures.SOME_SOLANA_ADDRESS)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
-                .createdAt(SOME_CREATED_AT)
-                .updatedAt(SOME_UPDATED_AT)
+                .createdAt(WalletFixtures.SOME_CREATED_AT)
+                .updatedAt(WalletFixtures.SOME_UPDATED_AT)
                 .build();
 
-        given(createWalletHandler.handle(SOME_USER_ID)).willReturn(wallet);
+        given(createWalletHandler.handle(WalletFixtures.SOME_USER_ID)).willReturn(wallet);
         given(walletApiMapper.toResponse(wallet)).willReturn(response);
 
-        var request = CreateWalletRequest.builder().userId(SOME_USER_ID).build();
+        var request = CreateWalletRequest.builder()
+                .userId(WalletFixtures.SOME_USER_ID)
+                .build();
 
         // when / then
         mockMvc.perform(post("/api/wallets")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
-                .andExpect(jsonPath("$.userId").value(SOME_USER_ID))
-                .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS));
+                .andExpect(jsonPath("$.id").value(WalletFixtures.SOME_WALLET_ID))
+                .andExpect(jsonPath("$.userId").value(WalletFixtures.SOME_USER_ID))
+                .andExpect(jsonPath("$.solanaAddress").value(WalletFixtures.SOME_SOLANA_ADDRESS));
     }
 
     @Test
     void shouldFundWallet() throws Exception {
         // given
-        var fundAmount = BigDecimal.valueOf(500);
-
-        var wallet = Wallet.builder()
-                .id(SOME_WALLET_ID)
-                .userId(SOME_USER_ID)
-                .solanaAddress(SOME_SOLANA_ADDRESS)
-                .availableBalance(fundAmount)
-                .totalBalance(fundAmount)
-                .createdAt(SOME_CREATED_AT)
-                .updatedAt(SOME_UPDATED_AT)
+        var wallet = WalletFixtures.walletBuilder()
+                .availableBalance(SOME_FUND_AMOUNT)
+                .totalBalance(SOME_FUND_AMOUNT)
                 .build();
 
         var response = WalletResponse.builder()
-                .id(SOME_WALLET_ID)
-                .userId(SOME_USER_ID)
-                .solanaAddress(SOME_SOLANA_ADDRESS)
-                .availableBalance(fundAmount)
-                .totalBalance(fundAmount)
-                .createdAt(SOME_CREATED_AT)
-                .updatedAt(SOME_UPDATED_AT)
+                .id(WalletFixtures.SOME_WALLET_ID)
+                .userId(WalletFixtures.SOME_USER_ID)
+                .solanaAddress(WalletFixtures.SOME_SOLANA_ADDRESS)
+                .availableBalance(SOME_FUND_AMOUNT)
+                .totalBalance(SOME_FUND_AMOUNT)
+                .createdAt(WalletFixtures.SOME_CREATED_AT)
+                .updatedAt(WalletFixtures.SOME_UPDATED_AT)
                 .build();
 
-        given(fundWalletHandler.handle(SOME_WALLET_ID, fundAmount)).willReturn(wallet);
+        given(fundWalletHandler.handle(WalletFixtures.SOME_WALLET_ID, SOME_FUND_AMOUNT))
+                .willReturn(wallet);
         given(walletApiMapper.toResponse(wallet)).willReturn(response);
 
-        var request = FundWalletRequest.builder().amount(fundAmount).build();
+        var request = FundWalletRequest.builder().amount(SOME_FUND_AMOUNT).build();
 
         // when / then
-        mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
+        mockMvc.perform(post("/api/wallets/{id}/fund", WalletFixtures.SOME_WALLET_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
+                .andExpect(jsonPath("$.id").value(WalletFixtures.SOME_WALLET_ID))
                 .andExpect(jsonPath("$.availableBalance").value(500));
     }
 
     @Test
     void shouldReturn404WhenWalletNotFound() throws Exception {
         // given
-        var fundAmount = BigDecimal.valueOf(500);
-        given(fundWalletHandler.handle(SOME_WALLET_ID, fundAmount))
-                .willThrow(WalletNotFoundException.byId(SOME_WALLET_ID));
+        given(fundWalletHandler.handle(WalletFixtures.SOME_WALLET_ID, SOME_FUND_AMOUNT))
+                .willThrow(WalletNotFoundException.byId(WalletFixtures.SOME_WALLET_ID));
 
-        var request = FundWalletRequest.builder().amount(fundAmount).build();
+        var request = FundWalletRequest.builder().amount(SOME_FUND_AMOUNT).build();
 
         // when / then
-        mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
+        mockMvc.perform(post("/api/wallets/{id}/fund", WalletFixtures.SOME_WALLET_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -160,15 +145,14 @@ class WalletControllerTest {
     @Test
     void shouldReturn503WhenTreasuryDepleted() throws Exception {
         // given
-        var fundAmount = BigDecimal.valueOf(500);
-        given(fundWalletHandler.handle(SOME_WALLET_ID, fundAmount))
+        given(fundWalletHandler.handle(WalletFixtures.SOME_WALLET_ID, SOME_FUND_AMOUNT))
                 .willThrow(TreasuryDepletedException.insufficientTreasury(
-                        fundAmount, BigDecimal.valueOf(100)));
+                        SOME_FUND_AMOUNT, BigDecimal.valueOf(100)));
 
-        var request = FundWalletRequest.builder().amount(fundAmount).build();
+        var request = FundWalletRequest.builder().amount(SOME_FUND_AMOUNT).build();
 
         // when / then
-        mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
+        mockMvc.perform(post("/api/wallets/{id}/fund", WalletFixtures.SOME_WALLET_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isServiceUnavailable())
@@ -178,10 +162,12 @@ class WalletControllerTest {
     @Test
     void shouldReturn409WhenWalletAlreadyExists() throws Exception {
         // given
-        given(createWalletHandler.handle(SOME_USER_ID))
-                .willThrow(WalletAlreadyExistsException.forUserId(SOME_USER_ID));
+        given(createWalletHandler.handle(WalletFixtures.SOME_USER_ID))
+                .willThrow(WalletAlreadyExistsException.forUserId(WalletFixtures.SOME_USER_ID));
 
-        var request = CreateWalletRequest.builder().userId(SOME_USER_ID).build();
+        var request = CreateWalletRequest.builder()
+                .userId(WalletFixtures.SOME_USER_ID)
+                .build();
 
         // when / then
         mockMvc.perform(post("/api/wallets")
