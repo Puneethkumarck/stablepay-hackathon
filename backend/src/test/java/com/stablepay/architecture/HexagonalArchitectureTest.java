@@ -23,7 +23,7 @@ class HexagonalArchitectureTest {
 
     @ArchTest
     static final ArchRule domain_models_should_not_import_spring =
-            noClasses().that().resideInAPackage("..domain.model..")
+            noClasses().that().resideInAPackage("..domain..model..")
                     .should().dependOnClassesThat().resideInAPackage("org.springframework..");
 
     @ArchTest
