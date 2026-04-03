@@ -4,22 +4,71 @@ Instructions for coding agents developing the StablePay Java/Spring Boot backend
 
 ## 1. Architecture: Hexagonal (Ports and Adapters)
 
-The backend follows a strict three-layer package structure under `com.stablepay`:
+The backend follows a strict three-layer package structure under `com.stablepay`, with the **domain layer organized by subdomain/aggregate** (not by type):
 
 ```
 com.stablepay
-  ├── domain/           # Core business logic, services, models, ports
-  ├── application/      # Input adapters: REST controllers, config
-  └── infrastructure/   # Output adapters: database, Temporal, MPC, Solana, Stripe, Twilio
+  ├── application/                 # Input adapters: REST controllers, DTOs, mappers, config
+  │   ├── controller/
+  │   │   └── {domain}/            # e.g., wallet/, fx/ — controller + mapper co-located
+  │   │       ├── WalletController.java
+  │   │       └── mapper/
+  │   │           └── WalletApiMapper.java
+  │   ├── dto/                     # Request/Response records shared across controllers
+  │   └── config/                  # @Configuration, @RestControllerAdvice
+  │
+  ├── domain/                      # Core business logic — organized by subdomain
+  │   ├── wallet/                  # Wallet aggregate
+  │   │   ├── model/               # Wallet.java
+  │   │   ├── handler/             # CreateWalletHandler, FundWalletHandler
+  │   │   ├── port/                # WalletRepository, MpcWalletClient, TreasuryService
+  │   │   └── exception/           # WalletNotFoundException, WalletAlreadyExistsException
+  │   ├── remittance/              # Remittance aggregate
+  │   │   ├── model/               # Remittance.java, RemittanceStatus.java
+  │   │   ├── handler/             # CreateRemittanceHandler, etc.
+  │   │   ├── port/                # RemittanceRepository
+  │   │   └── exception/           # RemittanceNotFoundException
+  │   ├── claim/                   # Claim aggregate
+  │   │   ├── model/               # ClaimToken.java
+  │   │   ├── handler/             # GetClaimQueryHandler, SubmitClaimHandler
+  │   │   ├── port/                # ClaimTokenRepository
+  │   │   └── exception/           # ClaimTokenExpiredException
+  │   ├── fx/                      # FX aggregate
+  │   │   ├── model/               # FxQuote.java, Corridor.java
+  │   │   ├── handler/             # GetFxRateQueryHandler
+  │   │   ├── port/                # FxRateProvider
+  │   │   └── exception/           # UnsupportedCorridorException
+  │   └── common/                  # Shared across subdomains
+  │       ├── model/               # Shared value objects
+  │       └── port/                # SmsProvider, shared ports
+  │
+  └── infrastructure/              # Output adapters — organized by concern
+      ├── db/                      # Database adapters — by subdomain
+      │   ├── wallet/              # WalletEntity, WalletEntityMapper, WalletJpaRepository, WalletRepositoryAdapter
+      │   ├── remittance/          # RemittanceEntity, mapper, repo, adapter
+      │   └── claim/               # ClaimTokenEntity, mapper, repo, adapter
+      ├── temporal/                # Temporal workflows + activities
+      ├── mpc/                     # gRPC client to MPC sidecar
+      ├── solana/                  # SolanaRpcClient, treasury transfers
+      ├── fx/                      # ExchangeRateApiAdapter, FxRateConfig
+      ├── sms/                     # Twilio adapter
+      └── config/                  # Infrastructure-wide config (Redis, etc.)
 ```
+
+**Key principles (from stablebridge-tx-recovery reference):**
+- **Domain organized by subdomain**, not by type. Each subdomain (wallet, remittance, claim, fx) is a self-contained package with its own model/, handler/, port/, exception/.
+- **Infrastructure DB organized by subdomain** (`infrastructure/db/wallet/`, not `infrastructure/persistence/`).
+- **Application controllers co-locate their mappers** (`controller/wallet/mapper/`).
+- Cross-subdomain shared code goes in `domain/common/`.
 
 **Rules:**
 - `domain` MUST NOT import from `application` or `infrastructure`.
-- `domain` services use Spring for DI (`@Service`) and transactions (`@Transactional`). This is an accepted pragmatic choice.
+- `domain` handlers use Spring for DI (`@Service`) and transactions (`@Transactional`). This is an accepted pragmatic choice.
 - `domain` models (records, value objects, enums) MUST NOT import Spring. Only Lombok is allowed on models.
-- `application` depends on `domain`. It maps API models to domain models and delegates.
+- `application` depends on `domain`. It maps API models to domain models and delegates to handlers.
 - `infrastructure` depends on `domain`. It implements domain ports and external integrations.
 - Dependencies always point inward: `application` -> `domain` <- `infrastructure`.
+- **Application MUST NOT call infrastructure directly.** The flow is always: `Controller` → `Domain Handler` → `Outbound Port` → `Infrastructure Adapter`. Never skip the domain layer.
 
 ## 2. Domain Layer
 

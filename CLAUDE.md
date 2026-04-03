@@ -120,25 +120,47 @@ stablepay-hackathon/
 ```
 com.stablepay/
 ├── application/
-│   ├── controller/     # Spring MVC @RestController
-│   └── config/         # Spring @Configuration
-├── domain/
-│   ├── model/          # Records + @Builder — no Spring annotations
-│   ├── port/
-│   │   ├── inbound/    # Service interfaces
-│   │   └── outbound/   # Repository, Client, Provider interfaces
-│   └── service/        # Business logic
+│   ├── controller/{domain}/       # Controller + co-located mapper/
+│   ├── dto/                       # Request/Response records
+│   └── config/                    # @Configuration, @RestControllerAdvice
+├── domain/                        # Organized by subdomain (not by type)
+│   ├── wallet/
+│   │   ├── model/                 # Wallet.java
+│   │   ├── handler/               # CreateWalletHandler, FundWalletHandler
+│   │   ├── port/                  # WalletRepository, MpcWalletClient, TreasuryService
+│   │   └── exception/             # WalletNotFoundException
+│   ├── remittance/
+│   │   ├── model/                 # Remittance.java, RemittanceStatus.java
+│   │   ├── handler/               # CreateRemittanceHandler, etc.
+│   │   ├── port/                  # RemittanceRepository
+│   │   └── exception/
+│   ├── claim/
+│   │   ├── model/                 # ClaimToken.java
+│   │   ├── handler/               # GetClaimQueryHandler, SubmitClaimHandler
+│   │   ├── port/                  # ClaimTokenRepository
+│   │   └── exception/
+│   ├── fx/
+│   │   ├── model/                 # FxQuote.java, Corridor.java
+│   │   ├── handler/               # GetFxRateQueryHandler
+│   │   ├── port/                  # FxRateProvider
+│   │   └── exception/             # UnsupportedCorridorException
+│   └── common/                    # Shared ports, value objects
+│       └── port/                  # SmsProvider
 └── infrastructure/
-    ├── persistence/    # JPA entities + Spring Data repositories
-    ├── temporal/       # Temporal workflows + activities
-    ├── mpc/            # gRPC client to MPC sidecar
-    ├── solana/         # SolanaRpcClient, transaction construction
-    ├── stripe/         # Stripe on-ramp adapter
-    ├── fx/             # FX rate provider
-    └── sms/            # Twilio adapter
+    ├── db/{domain}/               # JPA entities + mappers + repos + adapters per subdomain
+    ├── temporal/                  # Temporal workflows + activities
+    ├── mpc/                       # gRPC client to MPC sidecar
+    ├── solana/                    # SolanaRpcClient, treasury transfers
+    ├── fx/                        # ExchangeRateApiAdapter, FxRateConfig
+    ├── sms/                       # Twilio adapter
+    └── config/                    # Infrastructure-wide config (Redis, etc.)
 ```
 
-**Dependency rule:** `domain` → nothing. `application` → `domain`. `infrastructure` → `domain`. Never `infrastructure` → `application.controller`.
+**Dependency rule:** `domain` → nothing. `application` → `domain`. `infrastructure` → `domain`. Never `infrastructure` → `application.controller`. **Never `application` → `infrastructure` — always go through domain handlers.**
+
+**Call chain:** `Controller` → `Handler` → `Outbound Port` → `Adapter`. Never skip the domain layer.
+
+**Reference:** Package structure follows [stablebridge-tx-recovery](https://github.com/Puneethkumarck/stablebridge-tx-recovery) conventions — domain by subdomain, infrastructure DB by subdomain, co-located controller mappers.
 
 ### Error Code Prefix
 
