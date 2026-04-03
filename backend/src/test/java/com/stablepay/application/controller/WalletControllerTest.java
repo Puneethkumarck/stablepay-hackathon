@@ -17,6 +17,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.stablepay.application.mapper.WalletApiMapperImpl;
+import com.stablepay.domain.exception.TreasuryDepletedException;
+import com.stablepay.domain.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.exception.WalletNotFoundException;
 import com.stablepay.domain.model.Wallet;
 import com.stablepay.domain.port.inbound.WalletService;
@@ -112,7 +114,7 @@ class WalletControllerTest {
 
     @Test
     void shouldReturn400WhenUserIdBlank() throws Exception {
-        // given — blank userId in request body
+        // given -- blank userId in request body
 
         // when / then
         mockMvc.perform(post("/api/wallets")
@@ -122,6 +124,41 @@ class WalletControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("SP-0003"))
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void shouldReturn503WhenTreasuryDepleted() throws Exception {
+        // given
+        given(walletService.fund(WALLET_ID, BigDecimal.valueOf(50)))
+                .willThrow(TreasuryDepletedException.insufficientTreasury(
+                        BigDecimal.valueOf(50), BigDecimal.valueOf(10)));
+
+        // when / then
+        mockMvc.perform(post("/api/wallets/{id}/fund", WALLET_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"amount": 50}
+                                """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.errorCode").value("SP-0007"))
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void shouldReturn409WhenWalletAlreadyExists() throws Exception {
+        // given
+        given(walletService.create(USER_ID))
+                .willThrow(WalletAlreadyExistsException.forUserId(USER_ID));
+
+        // when / then
+        mockMvc.perform(post("/api/wallets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"userId": "user-42"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("SP-0008"))
                 .andExpect(jsonPath("$.message").exists());
     }
 }

@@ -15,6 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.stablepay.domain.exception.TreasuryDepletedException;
+import com.stablepay.domain.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.exception.WalletNotFoundException;
 import com.stablepay.domain.model.Wallet;
 import com.stablepay.domain.port.outbound.MpcWalletClient;
@@ -28,6 +30,7 @@ class WalletServiceImplTest {
     private static final String SOLANA_ADDRESS = "SoLaNa1234567890AbCdEfGhIjKlMnOpQrStUvWx";
     private static final Long WALLET_ID = 1L;
     private static final BigDecimal FUND_AMOUNT = BigDecimal.valueOf(50);
+    private static final BigDecimal TREASURY_BALANCE = BigDecimal.valueOf(1_000_000);
 
     @Mock
     private WalletRepository walletRepository;
@@ -56,6 +59,7 @@ class WalletServiceImplTest {
                 .updatedAt(Instant.parse("2026-04-03T10:00:00Z"))
                 .build();
 
+        given(walletRepository.findByUserId(USER_ID)).willReturn(Optional.empty());
         given(mpcWalletClient.generateKey()).willReturn(SOLANA_ADDRESS);
         given(walletRepository.save(newWallet)).willReturn(savedWallet);
 
@@ -102,6 +106,7 @@ class WalletServiceImplTest {
                 .build();
 
         given(walletRepository.findById(WALLET_ID)).willReturn(Optional.of(existingWallet));
+        given(treasuryService.getBalance()).willReturn(TREASURY_BALANCE);
         given(walletRepository.save(fundedWallet)).willReturn(savedWallet);
 
         // when
@@ -135,5 +140,50 @@ class WalletServiceImplTest {
         assertThatThrownBy(() -> walletService.fund(WALLET_ID, FUND_AMOUNT))
                 .isInstanceOf(WalletNotFoundException.class)
                 .hasMessageContaining("SP-0006");
+    }
+
+    @Test
+    void shouldThrowTreasuryDepletedWhenTreasuryBalanceLow() {
+        // given
+        var lowTreasuryBalance = BigDecimal.valueOf(10);
+        var requestedAmount = BigDecimal.valueOf(100);
+        var existingWallet = Wallet.builder()
+                .id(WALLET_ID)
+                .userId(USER_ID)
+                .solanaAddress(SOLANA_ADDRESS)
+                .availableBalance(BigDecimal.valueOf(200))
+                .totalBalance(BigDecimal.valueOf(200))
+                .createdAt(Instant.parse("2026-04-03T10:00:00Z"))
+                .updatedAt(Instant.parse("2026-04-03T10:00:00Z"))
+                .build();
+
+        given(walletRepository.findById(WALLET_ID)).willReturn(Optional.of(existingWallet));
+        given(treasuryService.getBalance()).willReturn(lowTreasuryBalance);
+
+        // when / then
+        assertThatThrownBy(() -> walletService.fund(WALLET_ID, requestedAmount))
+                .isInstanceOf(TreasuryDepletedException.class)
+                .hasMessageContaining("SP-0007");
+    }
+
+    @Test
+    void shouldThrowWhenWalletAlreadyExistsForUserId() {
+        // given
+        var existingWallet = Wallet.builder()
+                .id(WALLET_ID)
+                .userId(USER_ID)
+                .solanaAddress(SOLANA_ADDRESS)
+                .availableBalance(BigDecimal.ZERO)
+                .totalBalance(BigDecimal.ZERO)
+                .createdAt(Instant.parse("2026-04-03T10:00:00Z"))
+                .updatedAt(Instant.parse("2026-04-03T10:00:00Z"))
+                .build();
+
+        given(walletRepository.findByUserId(USER_ID)).willReturn(Optional.of(existingWallet));
+
+        // when / then
+        assertThatThrownBy(() -> walletService.create(USER_ID))
+                .isInstanceOf(WalletAlreadyExistsException.class)
+                .hasMessageContaining("SP-0008");
     }
 }

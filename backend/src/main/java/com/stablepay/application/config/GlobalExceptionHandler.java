@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.domain.exception.InsufficientBalanceException;
+import com.stablepay.domain.exception.TreasuryDepletedException;
+import com.stablepay.domain.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.exception.WalletNotFoundException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,26 @@ public class GlobalExceptionHandler {
         log.warn("Insufficient balance: {}", ex.getMessage());
         return ErrorResponse.builder()
                 .errorCode("SP-0002")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(TreasuryDepletedException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleTreasuryDepleted(TreasuryDepletedException ex) {
+        log.warn("Treasury depleted: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0007")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(WalletAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleWalletAlreadyExists(WalletAlreadyExistsException ex) {
+        log.warn("Wallet already exists: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0008")
                 .message(ex.getMessage())
                 .build();
     }

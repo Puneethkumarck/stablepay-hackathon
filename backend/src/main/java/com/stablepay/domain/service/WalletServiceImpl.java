@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.exception.TreasuryDepletedException;
+import com.stablepay.domain.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.exception.WalletNotFoundException;
 import com.stablepay.domain.model.Wallet;
 import com.stablepay.domain.port.inbound.WalletService;
@@ -28,6 +30,9 @@ public class WalletServiceImpl implements WalletService {
     @Override
     public Wallet create(String userId) {
         log.info("Creating wallet for user: {}", userId);
+        walletRepository.findByUserId(userId).ifPresent(existing -> {
+            throw WalletAlreadyExistsException.forUserId(userId);
+        });
         var solanaAddress = mpcWalletClient.generateKey();
         var wallet = Wallet.builder()
                 .userId(userId)
@@ -45,6 +50,10 @@ public class WalletServiceImpl implements WalletService {
         log.info("Funding wallet {} with {} USDC", walletId, amount);
         var wallet = walletRepository.findById(walletId)
                 .orElseThrow(() -> WalletNotFoundException.byId(walletId));
+        var treasuryBalance = treasuryService.getBalance();
+        if (treasuryBalance.compareTo(amount) < 0) {
+            throw TreasuryDepletedException.insufficientTreasury(amount, treasuryBalance);
+        }
         treasuryService.transferFromTreasury(wallet.solanaAddress(), amount);
         var funded = wallet.toBuilder()
                 .availableBalance(wallet.availableBalance().add(amount))
