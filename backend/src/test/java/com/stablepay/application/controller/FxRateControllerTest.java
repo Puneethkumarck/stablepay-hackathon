@@ -15,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.stablepay.application.mapper.FxRateApiMapper;
+import com.stablepay.domain.exception.UnsupportedCorridorException;
 import com.stablepay.domain.handler.GetFxRateQueryHandler;
 import com.stablepay.domain.model.FxQuote;
 
@@ -94,5 +95,18 @@ class FxRateControllerTest {
                 .andExpect(jsonPath("$.source").value("fallback"))
                 .andExpect(jsonPath("$.timestamp").value("2026-04-03T10:00:00Z"))
                 .andExpect(jsonPath("$.expiresAt").value("2026-04-03T10:01:00Z"));
+    }
+
+    @Test
+    void shouldReturn400ForUnsupportedCorridor() throws Exception {
+        // given
+        given(getFxRateQueryHandler.handle("EUR", "GBP"))
+                .willThrow(UnsupportedCorridorException.forPair("EUR", "GBP"));
+
+        // when / then
+        mockMvc.perform(get("/api/fx/EUR-GBP"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("SP-0009"))
+                .andExpect(jsonPath("$.message").value("SP-0009: Unsupported corridor: EUR/GBP"));
     }
 }

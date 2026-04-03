@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.domain.exception.InsufficientBalanceException;
+import com.stablepay.domain.exception.UnsupportedCorridorException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,6 +22,16 @@ public class GlobalExceptionHandler {
         log.warn("Domain error: {}", ex.getMessage());
         return ErrorResponse.builder()
                 .errorCode("SP-0002")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(UnsupportedCorridorException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleUnsupportedCorridor(UnsupportedCorridorException ex) {
+        log.warn("Unsupported corridor: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0009")
                 .message(ex.getMessage())
                 .build();
     }
