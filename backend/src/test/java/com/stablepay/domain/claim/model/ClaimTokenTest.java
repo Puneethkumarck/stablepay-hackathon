@@ -1,5 +1,8 @@
 package com.stablepay.domain.claim.model;
 
+import static com.stablepay.testutil.ClaimTokenFixtures.SOME_REMITTANCE_ID;
+import static com.stablepay.testutil.ClaimTokenFixtures.SOME_TOKEN;
+import static com.stablepay.testutil.ClaimTokenFixtures.claimTokenBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -7,17 +10,15 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.stablepay.testutil.ClaimTokenFixtures;
-
 class ClaimTokenTest {
 
     @Test
     void shouldCreateClaimTokenWithExpiry() {
         // given / when
-        var claimToken = ClaimTokenFixtures.claimTokenBuilder().build();
+        var claimToken = claimTokenBuilder().build();
 
         // then
-        var expected = ClaimTokenFixtures.claimTokenBuilder().build();
+        var expected = claimTokenBuilder().build();
 
         assertThat(claimToken)
                 .usingRecursiveComparison()
@@ -30,7 +31,7 @@ class ClaimTokenTest {
         var token = UUID.randomUUID().toString();
 
         // when
-        var claimToken = ClaimTokenFixtures.claimTokenBuilder()
+        var claimToken = claimTokenBuilder()
                 .token(token)
                 .build();
 
@@ -43,7 +44,7 @@ class ClaimTokenTest {
     void shouldThrowWhenRemittanceIdIsNull() {
         // when / then
         assertThatThrownBy(() -> ClaimToken.builder()
-                .token(ClaimTokenFixtures.SOME_TOKEN)
+                .token(SOME_TOKEN)
                 .build())
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("remittanceId");
@@ -53,7 +54,7 @@ class ClaimTokenTest {
     void shouldThrowWhenTokenIsNull() {
         // when / then
         assertThatThrownBy(() -> ClaimToken.builder()
-                .remittanceId(ClaimTokenFixtures.SOME_REMITTANCE_ID)
+                .remittanceId(SOME_REMITTANCE_ID)
                 .build())
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("token");
