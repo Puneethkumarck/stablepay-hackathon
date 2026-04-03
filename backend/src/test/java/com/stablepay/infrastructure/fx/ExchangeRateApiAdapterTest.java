@@ -1,5 +1,6 @@
 package com.stablepay.infrastructure.fx;
 
+import static com.stablepay.testutil.FxQuoteFixtures.SOME_RATE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
@@ -16,7 +17,6 @@ import org.springframework.web.client.RestClient;
 
 import com.stablepay.domain.fx.model.FxQuote;
 import com.stablepay.infrastructure.fx.ExchangeRateApiAdapter.ExchangeRateResponse;
-import com.stablepay.testutil.FxQuoteFixtures;
 
 @ExtendWith(MockitoExtension.class)
 class ExchangeRateApiAdapterTest {
@@ -46,7 +46,7 @@ class ExchangeRateApiAdapterTest {
         // given
         var apiResponse = new ExchangeRateResponse(
                 "success",
-                Map.of("INR", FxQuoteFixtures.SOME_RATE));
+                Map.of("INR", SOME_RATE));
 
         given(fxRestClient.get()).willReturn(requestHeadersUriSpec);
         given(requestHeadersUriSpec.uri("/v6/latest/{from}", "USD")).willReturn(requestHeadersSpec);
@@ -58,7 +58,7 @@ class ExchangeRateApiAdapterTest {
 
         // then
         var expected = FxQuote.builder()
-                .rate(FxQuoteFixtures.SOME_RATE)
+                .rate(SOME_RATE)
                 .source("open.er-api.com")
                 .timestamp(result.timestamp())
                 .expiresAt(result.timestamp().plusSeconds(60))

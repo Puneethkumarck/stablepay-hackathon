@@ -22,7 +22,7 @@ repositories {
 spotless {
     java {
         removeUnusedImports()
-        importOrder("java|javax", "jakarta", "org", "com", "")
+        importOrder("\\#", "java|javax", "jakarta", "org", "com", "")
         trimTrailingWhitespace()
         endWithNewline()
     }
@@ -95,6 +95,7 @@ dependencies {
     annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 
     // Flyway
+    implementation("org.springframework.boot:spring-boot-flyway")
     implementation("org.flywaydb:flyway-core:12.1.1")
     implementation("org.flywaydb:flyway-database-postgresql:12.1.1")
 
@@ -119,4 +120,8 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("org.testcontainers:postgresql:1.21.4")
     testImplementation("io.temporal:temporal-testing:1.33.0")
+
+    // Integration test dependencies
+    "integrationTestImplementation"(testFixtures(project))
+    "integrationTestImplementation"("org.wiremock:wiremock-standalone:3.13.0")
 }

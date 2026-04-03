@@ -6,4 +6,4 @@ out/
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
 *.war
-backend/.idea/
+.idea/

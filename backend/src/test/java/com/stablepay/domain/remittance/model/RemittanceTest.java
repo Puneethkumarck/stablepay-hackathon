@@ -1,21 +1,24 @@
 package com.stablepay.domain.remittance.model;
 
+import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
+import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_PHONE;
+import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
+import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
+import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
-
-import com.stablepay.testutil.RemittanceFixtures;
 
 class RemittanceTest {
 
     @Test
     void shouldCreateRemittanceWithInitiatedStatus() {
         // given / when
-        var remittance = RemittanceFixtures.remittanceBuilder().build();
+        var remittance = remittanceBuilder().build();
 
         // then
-        var expected = RemittanceFixtures.remittanceBuilder().build();
+        var expected = remittanceBuilder().build();
 
         assertThat(remittance)
                 .usingRecursiveComparison()
@@ -25,7 +28,7 @@ class RemittanceTest {
     @Test
     void shouldTransitionFromInitiatedToEscrowed() {
         // given
-        var remittance = RemittanceFixtures.remittanceBuilder().build();
+        var remittance = remittanceBuilder().build();
 
         // when
         var escrowed = remittance.toBuilder()
@@ -47,7 +50,7 @@ class RemittanceTest {
     @Test
     void shouldTransitionFromEscrowedToClaimed() {
         // given
-        var remittance = RemittanceFixtures.remittanceBuilder()
+        var remittance = remittanceBuilder()
                 .status(RemittanceStatus.ESCROWED)
                 .build();
 
@@ -69,7 +72,7 @@ class RemittanceTest {
     @Test
     void shouldTransitionFromClaimedToDelivered() {
         // given
-        var remittance = RemittanceFixtures.remittanceBuilder()
+        var remittance = remittanceBuilder()
                 .status(RemittanceStatus.CLAIMED)
                 .build();
 
@@ -92,9 +95,9 @@ class RemittanceTest {
     void shouldThrowWhenRemittanceIdIsNull() {
         // when / then
         assertThatThrownBy(() -> Remittance.builder()
-                .senderId(RemittanceFixtures.SOME_SENDER_ID)
-                .recipientPhone(RemittanceFixtures.SOME_RECIPIENT_PHONE)
-                .amountUsdc(RemittanceFixtures.SOME_AMOUNT_USDC)
+                .senderId(SOME_SENDER_ID)
+                .recipientPhone(SOME_RECIPIENT_PHONE)
+                .amountUsdc(SOME_AMOUNT_USDC)
                 .status(RemittanceStatus.INITIATED)
                 .build())
                 .isInstanceOf(NullPointerException.class)
@@ -105,10 +108,10 @@ class RemittanceTest {
     void shouldThrowWhenStatusIsNull() {
         // when / then
         assertThatThrownBy(() -> Remittance.builder()
-                .remittanceId(RemittanceFixtures.SOME_REMITTANCE_ID)
-                .senderId(RemittanceFixtures.SOME_SENDER_ID)
-                .recipientPhone(RemittanceFixtures.SOME_RECIPIENT_PHONE)
-                .amountUsdc(RemittanceFixtures.SOME_AMOUNT_USDC)
+                .remittanceId(SOME_REMITTANCE_ID)
+                .senderId(SOME_SENDER_ID)
+                .recipientPhone(SOME_RECIPIENT_PHONE)
+                .amountUsdc(SOME_AMOUNT_USDC)
                 .build())
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("status");

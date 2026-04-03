@@ -1,5 +1,6 @@
 package com.stablepay.domain.fx.handler;
 
+import static com.stablepay.testutil.FxQuoteFixtures.fxQuoteBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
@@ -12,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.fx.port.FxRateProvider;
-import com.stablepay.testutil.FxQuoteFixtures;
 
 @ExtendWith(MockitoExtension.class)
 class GetFxRateQueryHandlerTest {
@@ -26,7 +26,7 @@ class GetFxRateQueryHandlerTest {
     @Test
     void shouldReturnFxQuoteForSupportedCorridor() {
         // given
-        var expectedQuote = FxQuoteFixtures.fxQuoteBuilder()
+        var expectedQuote = fxQuoteBuilder()
                 .source("open.er-api.com")
                 .build();
         given(fxRateProvider.getRate("USD", "INR")).willReturn(expectedQuote);

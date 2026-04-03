@@ -1,5 +1,8 @@
 package com.stablepay.domain.wallet.model;
 
+import static com.stablepay.testutil.WalletFixtures.SOME_SOLANA_ADDRESS;
+import static com.stablepay.testutil.WalletFixtures.SOME_USER_ID;
+import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -9,7 +12,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
-import com.stablepay.testutil.WalletFixtures;
 
 class WalletTest {
 
@@ -19,7 +21,7 @@ class WalletTest {
         @Test
         void shouldReserveBalanceSuccessfully() {
             // given
-            var wallet = WalletFixtures.walletBuilder().build();
+            var wallet = walletBuilder().build();
 
             // when
             var reserved = wallet.reserveBalance(BigDecimal.valueOf(60));
@@ -37,7 +39,7 @@ class WalletTest {
         @Test
         void shouldThrowWhenReservingMoreThanAvailable() {
             // given
-            var wallet = WalletFixtures.walletBuilder()
+            var wallet = walletBuilder()
                     .availableBalance(BigDecimal.valueOf(40))
                     .build();
 
@@ -50,7 +52,7 @@ class WalletTest {
         @Test
         void shouldThrowWhenReservingNegativeAmount() {
             // given
-            var wallet = WalletFixtures.walletBuilder().build();
+            var wallet = walletBuilder().build();
 
             // when / then
             assertThatThrownBy(() -> wallet.reserveBalance(BigDecimal.valueOf(-10)))
@@ -61,7 +63,7 @@ class WalletTest {
         @Test
         void shouldThrowWhenReservingZeroAmount() {
             // given
-            var wallet = WalletFixtures.walletBuilder().build();
+            var wallet = walletBuilder().build();
 
             // when / then
             assertThatThrownBy(() -> wallet.reserveBalance(BigDecimal.ZERO))
@@ -76,7 +78,7 @@ class WalletTest {
         @Test
         void shouldReleaseBalanceSuccessfully() {
             // given
-            var wallet = WalletFixtures.walletBuilder()
+            var wallet = walletBuilder()
                     .availableBalance(BigDecimal.valueOf(40))
                     .build();
 
@@ -96,7 +98,7 @@ class WalletTest {
         @Test
         void shouldThrowWhenReleasingExceedsTotalBalance() {
             // given
-            var wallet = WalletFixtures.walletBuilder()
+            var wallet = walletBuilder()
                     .availableBalance(BigDecimal.valueOf(40))
                     .build();
 
@@ -109,7 +111,7 @@ class WalletTest {
         @Test
         void shouldThrowWhenReleasingNegativeAmount() {
             // given
-            var wallet = WalletFixtures.walletBuilder()
+            var wallet = walletBuilder()
                     .availableBalance(BigDecimal.valueOf(40))
                     .build();
 
@@ -127,7 +129,7 @@ class WalletTest {
         void shouldThrowWhenUserIdIsNull() {
             // when / then
             assertThatThrownBy(() -> Wallet.builder()
-                    .solanaAddress(WalletFixtures.SOME_SOLANA_ADDRESS)
+                    .solanaAddress(SOME_SOLANA_ADDRESS)
                     .availableBalance(BigDecimal.ZERO)
                     .totalBalance(BigDecimal.ZERO)
                     .build())
@@ -139,8 +141,8 @@ class WalletTest {
         void shouldThrowWhenAvailableBalanceIsNull() {
             // when / then
             assertThatThrownBy(() -> Wallet.builder()
-                    .userId(WalletFixtures.SOME_USER_ID)
-                    .solanaAddress(WalletFixtures.SOME_SOLANA_ADDRESS)
+                    .userId(SOME_USER_ID)
+                    .solanaAddress(SOME_SOLANA_ADDRESS)
                     .totalBalance(BigDecimal.ZERO)
                     .build())
                     .isInstanceOf(NullPointerException.class)
