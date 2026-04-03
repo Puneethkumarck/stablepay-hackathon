@@ -86,7 +86,13 @@ class RemittanceTest {
                 .build();
 
         // then
-        assertThat(claimed.status()).isEqualTo(RemittanceStatus.CLAIMED);
+        var expected = remittance.toBuilder()
+                .status(RemittanceStatus.CLAIMED)
+                .build();
+
+        assertThat(claimed)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
     }
 
     @Test
@@ -103,6 +109,12 @@ class RemittanceTest {
                 .build();
 
         // then
-        assertThat(delivered.status()).isEqualTo(RemittanceStatus.DELIVERED);
+        var expected = remittance.toBuilder()
+                .status(RemittanceStatus.DELIVERED)
+                .build();
+
+        assertThat(delivered)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
     }
 }

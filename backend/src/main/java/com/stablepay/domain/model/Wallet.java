@@ -15,4 +15,20 @@ public record Wallet(
     Long version,
     Instant createdAt,
     Instant updatedAt
-) {}
+) {
+    public Wallet reserveBalance(BigDecimal amount) {
+        if (availableBalance.compareTo(amount) < 0) {
+            throw new IllegalStateException(
+                "SP-0002: Insufficient balance. Requested: " + amount + ", Available: " + availableBalance);
+        }
+        return toBuilder()
+                .availableBalance(availableBalance.subtract(amount))
+                .build();
+    }
+
+    public Wallet releaseBalance(BigDecimal amount) {
+        return toBuilder()
+                .availableBalance(availableBalance.add(amount))
+                .build();
+    }
+}

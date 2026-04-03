@@ -38,3 +38,4 @@ CREATE TABLE claim_tokens (
 );
 
 CREATE INDEX idx_claim_tokens_token ON claim_tokens(token);
+CREATE INDEX idx_claim_tokens_remittance_id ON claim_tokens(remittance_id);

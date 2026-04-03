@@ -1,0 +1,30 @@
+package com.stablepay.infrastructure.persistence;
+
+import java.util.Optional;
+
+import org.springframework.stereotype.Component;
+
+import com.stablepay.domain.model.ClaimToken;
+import com.stablepay.domain.port.outbound.ClaimTokenRepository;
+
+import lombok.RequiredArgsConstructor;
+
+@Component
+@RequiredArgsConstructor
+class ClaimTokenRepositoryAdapter implements ClaimTokenRepository {
+
+    private final ClaimTokenJpaRepository jpaRepository;
+    private final ClaimTokenEntityMapper mapper;
+
+    @Override
+    public ClaimToken save(ClaimToken claimToken) {
+        var entity = mapper.toEntity(claimToken);
+        var saved = jpaRepository.save(entity);
+        return mapper.toDomain(saved);
+    }
+
+    @Override
+    public Optional<ClaimToken> findByToken(String token) {
+        return jpaRepository.findByToken(token).map(mapper::toDomain);
+    }
+}
