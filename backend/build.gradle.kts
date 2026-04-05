@@ -3,7 +3,7 @@ plugins {
     `java-test-fixtures`
     id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
-    id("com.diffplug.spotless") version "7.2.1"
+    id("com.diffplug.spotless") version "8.4.0"
 }
 
 group = "com.stablepay"
