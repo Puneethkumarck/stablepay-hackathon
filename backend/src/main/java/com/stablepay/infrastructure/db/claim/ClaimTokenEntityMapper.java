@@ -4,7 +4,7 @@ import org.mapstruct.Mapper;
 
 import com.stablepay.domain.claim.model.ClaimToken;
 
-@Mapper(componentModel = "spring")
+@Mapper
 public interface ClaimTokenEntityMapper {
     ClaimToken toDomain(ClaimTokenEntity entity);
     ClaimTokenEntity toEntity(ClaimToken domain);

@@ -30,8 +30,11 @@ spotless {
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
+    options.compilerArgs.add("-parameters")
+}
+
+tasks.named<JavaCompile>("compileJava") {
     options.compilerArgs.addAll(listOf(
-        "-parameters",
         "-Amapstruct.defaultComponentModel=spring",
         "-Amapstruct.defaultInjectionStrategy=constructor",
         "-Amapstruct.unmappedTargetPolicy=ERROR"

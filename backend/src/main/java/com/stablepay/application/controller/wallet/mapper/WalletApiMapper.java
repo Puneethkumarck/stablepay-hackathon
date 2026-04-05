@@ -5,7 +5,7 @@ import org.mapstruct.Mapper;
 import com.stablepay.application.dto.WalletResponse;
 import com.stablepay.domain.wallet.model.Wallet;
 
-@Mapper(componentModel = "spring")
+@Mapper
 public interface WalletApiMapper {
     WalletResponse toResponse(Wallet wallet);
 }

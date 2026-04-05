@@ -5,7 +5,7 @@ import org.mapstruct.Mapper;
 import com.stablepay.application.dto.RemittanceResponse;
 import com.stablepay.domain.remittance.model.Remittance;
 
-@Mapper(componentModel = "spring")
+@Mapper
 public interface RemittanceApiMapper {
     RemittanceResponse toResponse(Remittance remittance);
 }
