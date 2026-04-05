@@ -30,6 +30,11 @@ stablepay:
   fx:
     api:
       base-url: https://open.er-api.com
+  solana:
+    rpc-url: https://api.devnet.solana.com
+    escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:11111111111111111111111111111111}
+    usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
+    claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
   temporal:
     workflow-execution-timeout: PT48H
     workflow-run-timeout: PT2H
