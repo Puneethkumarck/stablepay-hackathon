@@ -10,6 +10,7 @@ import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.claim.model.ClaimDetails;
 import com.stablepay.domain.claim.port.ClaimTokenRepository;
+import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
@@ -38,13 +39,18 @@ public class SubmitClaimHandler {
             throw ClaimTokenExpiredException.forToken(token);
         }
 
-        var updatedClaim = claimToken.toBuilder()
-                .claimed(true)
-                .build();
-        var savedClaim = claimTokenRepository.save(updatedClaim);
-
         var remittance = remittanceRepository.findByRemittanceId(claimToken.remittanceId())
                 .orElseThrow(() -> RemittanceNotFoundException.byId(claimToken.remittanceId()));
+
+        if (remittance.status() != RemittanceStatus.ESCROWED) {
+            throw InvalidRemittanceStateException.forClaim(remittance.status());
+        }
+
+        var updatedClaim = claimToken.toBuilder()
+                .claimed(true)
+                .upiId(upiId)
+                .build();
+        var savedClaim = claimTokenRepository.save(updatedClaim);
 
         var updatedRemittance = remittance.toBuilder()
                 .status(RemittanceStatus.CLAIMED)

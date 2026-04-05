@@ -22,7 +22,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
+import com.stablepay.domain.claim.model.ClaimDetails;
 import com.stablepay.domain.claim.port.ClaimTokenRepository;
+import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
 
@@ -47,11 +49,10 @@ class SubmitClaimHandlerTest {
                 .build();
 
         given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
-
-        var updatedClaim = claimToken.toBuilder().claimed(true).build();
-        given(claimTokenRepository.save(updatedClaim)).willReturn(updatedClaim);
-
         given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+
+        var updatedClaim = claimToken.toBuilder().claimed(true).upiId(SOME_UPI_ID).build();
+        given(claimTokenRepository.save(updatedClaim)).willReturn(updatedClaim);
 
         var updatedRemittance = remittance.toBuilder().status(RemittanceStatus.CLAIMED).build();
         given(remittanceRepository.save(updatedRemittance)).willReturn(updatedRemittance);
@@ -60,8 +61,13 @@ class SubmitClaimHandlerTest {
         var result = submitClaimHandler.handle(SOME_TOKEN, SOME_UPI_ID);
 
         // then
-        assertThat(result.claimToken().claimed()).isTrue();
-        assertThat(result.remittance().status()).isEqualTo(RemittanceStatus.CLAIMED);
+        var expected = ClaimDetails.builder()
+                .claimToken(updatedClaim)
+                .remittance(updatedRemittance)
+                .build();
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
 
         then(claimTokenRepository).should().save(updatedClaim);
         then(remittanceRepository).should().save(updatedRemittance);
@@ -88,6 +94,23 @@ class SubmitClaimHandlerTest {
         assertThatThrownBy(() -> submitClaimHandler.handle(SOME_TOKEN, SOME_UPI_ID))
                 .isInstanceOf(ClaimAlreadyClaimedException.class)
                 .hasMessageContaining("SP-0012");
+    }
+
+    @Test
+    void shouldThrowWhenRemittanceNotEscrowed() {
+        // given
+        var claimToken = claimTokenBuilder().build();
+        var remittance = remittanceBuilder()
+                .status(RemittanceStatus.CANCELLED)
+                .build();
+
+        given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+
+        // when / then
+        assertThatThrownBy(() -> submitClaimHandler.handle(SOME_TOKEN, SOME_UPI_ID))
+                .isInstanceOf(InvalidRemittanceStateException.class)
+                .hasMessageContaining("SP-0014");
     }
 
     @Test

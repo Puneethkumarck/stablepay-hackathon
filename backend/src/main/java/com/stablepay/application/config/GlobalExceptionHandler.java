@@ -11,6 +11,7 @@ import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
+import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
@@ -99,6 +100,16 @@ public class GlobalExceptionHandler {
         log.warn("Claim token expired: {}", ex.getMessage());
         return ErrorResponse.builder()
                 .errorCode("SP-0013")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(InvalidRemittanceStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleInvalidRemittanceState(InvalidRemittanceStateException ex) {
+        log.warn("Invalid remittance state: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0014")
                 .message(ex.getMessage())
                 .build();
     }

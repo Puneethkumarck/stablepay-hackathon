@@ -32,6 +32,7 @@ import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.claim.handler.GetClaimQueryHandler;
 import com.stablepay.domain.claim.handler.SubmitClaimHandler;
 import com.stablepay.domain.claim.model.ClaimDetails;
+import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 
 import lombok.SneakyThrows;
@@ -165,6 +166,23 @@ class ClaimControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isGone())
                 .andExpect(jsonPath("$.errorCode").value("SP-0013"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn409WhenRemittanceNotEscrowed() {
+        // given
+        given(submitClaimHandler.handle(SOME_TOKEN, SOME_UPI_ID))
+                .willThrow(InvalidRemittanceStateException.forClaim(RemittanceStatus.CANCELLED));
+
+        var request = SubmitClaimRequest.builder().upiId(SOME_UPI_ID).build();
+
+        // when / then
+        mockMvc.perform(post("/api/claims/{token}", SOME_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("SP-0014"));
     }
 
     @Test
