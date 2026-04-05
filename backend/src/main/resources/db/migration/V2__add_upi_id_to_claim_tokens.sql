@@ -1,0 +1,1 @@
+ALTER TABLE claim_tokens ADD COLUMN upi_id VARCHAR(100);

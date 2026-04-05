@@ -39,6 +39,9 @@ public class ClaimTokenEntity {
     @Column(name = "claimed", nullable = false)
     private boolean claimed;
 
+    @Column(name = "upi_id", length = 100)
+    private String upiId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

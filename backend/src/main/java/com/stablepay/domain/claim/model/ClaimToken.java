@@ -13,6 +13,7 @@ public record ClaimToken(
     UUID remittanceId,
     String token,
     boolean claimed,
+    String upiId,
     Instant createdAt,
     Instant expiresAt
 ) {
