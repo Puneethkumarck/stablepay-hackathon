@@ -1,5 +1,6 @@
 package com.stablepay.application.controller.remittance;
 
+import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_CREATED_AT;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_FX_RATE;
@@ -69,7 +70,7 @@ class RemittanceControllerTest {
                 .senderId(SOME_SENDER_ID)
                 .recipientPhone(SOME_RECIPIENT_PHONE)
                 .amountUsdc(SOME_AMOUNT_USDC)
-                .amountInr(new BigDecimal("8325.00"))
+                .amountInr(SOME_AMOUNT_INR)
                 .fxRate(SOME_FX_RATE)
                 .status(RemittanceStatus.INITIATED)
                 .smsNotificationFailed(false)
