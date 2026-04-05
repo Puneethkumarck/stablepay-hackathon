@@ -1,0 +1,6 @@
+stablepay:
+  temporal:
+    workflow-execution-timeout: PT48H
+    workflow-run-timeout: PT2H
+    claim-expiry-timeout: PT48H
+    claim-base-url: https://claim.stablepay.app/

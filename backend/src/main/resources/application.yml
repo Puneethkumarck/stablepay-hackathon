@@ -1,6 +1,9 @@
 spring:
   application:
     name: stablepay
+  autoconfigure:
+    exclude:
+      - io.temporal.spring.boot.autoconfigure.TemporalAutoConfiguration
   cache:
     type: redis
     redis:
@@ -27,6 +30,11 @@ stablepay:
   fx:
     api:
       base-url: https://open.er-api.com
+  temporal:
+    workflow-execution-timeout: PT48H
+    workflow-run-timeout: PT2H
+    claim-expiry-timeout: PT48H
+    claim-base-url: https://claim.stablepay.app/
 
 management:
   endpoints:
