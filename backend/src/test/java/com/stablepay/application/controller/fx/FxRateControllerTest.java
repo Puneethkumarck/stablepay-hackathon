@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,10 +22,12 @@ import com.stablepay.application.controller.fx.mapper.FxRateApiMapper;
 import com.stablepay.application.dto.FxRateResponse;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.fx.handler.GetFxRateQueryHandler;
+import com.stablepay.testutil.TestClockConfig;
 
 import lombok.SneakyThrows;
 
 @WebMvcTest(FxRateController.class)
+@Import(TestClockConfig.class)
 class FxRateControllerTest {
 
     @Autowired
