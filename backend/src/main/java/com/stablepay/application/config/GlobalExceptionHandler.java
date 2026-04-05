@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stablepay.application.dto.ErrorResponse;
+import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
+import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
+import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
@@ -66,6 +69,36 @@ public class GlobalExceptionHandler {
         log.warn("Unsupported corridor requested: {}", ex.getMessage());
         return ErrorResponse.builder()
                 .errorCode("SP-0009")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(ClaimTokenNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleClaimTokenNotFound(ClaimTokenNotFoundException ex) {
+        log.warn("Claim token not found: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0011")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(ClaimAlreadyClaimedException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleClaimAlreadyClaimed(ClaimAlreadyClaimedException ex) {
+        log.warn("Claim already submitted: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0012")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(ClaimTokenExpiredException.class)
+    @ResponseStatus(HttpStatus.GONE)
+    public ErrorResponse handleClaimTokenExpired(ClaimTokenExpiredException ex) {
+        log.warn("Claim token expired: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0013")
                 .message(ex.getMessage())
                 .build();
     }
