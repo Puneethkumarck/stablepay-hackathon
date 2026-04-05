@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.solana;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.MessageDigest;
@@ -98,7 +99,9 @@ public class EscrowInstructionBuilder {
         return new BaseInstruction(data, keys, solanaProperties.escrowProgramId());
     }
 
-    public Instruction buildRefundInstruction(UUID remittanceId, PublicKey senderWallet) {
+    public Instruction buildRefundInstruction(
+            UUID remittanceId, PublicKey claimAuthority, PublicKey senderWallet) {
+
         var remittanceIdBytes = uuidToBytes(remittanceId);
         var escrowPda = deriveEscrowPda(remittanceIdBytes);
         var vaultAta = deriveAssociatedTokenAddress(escrowPda, solanaProperties.usdcMint());
@@ -107,6 +110,7 @@ public class EscrowInstructionBuilder {
         var data = buildRefundData();
 
         var keys = List.of(
+                AccountMeta.signerAndWritable(claimAuthority),
                 AccountMeta.writable(senderWallet),
                 AccountMeta.writable(escrowPda),
                 AccountMeta.writable(vaultAta),
@@ -209,25 +213,35 @@ public class EscrowInstructionBuilder {
         }
     }
 
+    private static final BigInteger ED25519_P =
+            BigInteger.TWO.pow(255).subtract(BigInteger.valueOf(19));
+    private static final BigInteger ED25519_D = BigInteger.valueOf(-121665)
+            .multiply(BigInteger.valueOf(121666).modInverse(ED25519_P))
+            .mod(ED25519_P);
+
     private static boolean isOnCurve(byte[] point) {
-        try {
-            // Attempt to create a PublicKey and verify a dummy signature.
-            // If the point is on the Ed25519 curve, verify() will not throw.
-            // For PDA derivation, we need off-curve points.
-            // A simpler heuristic: try to use the bytes as a public key
-            // and check using TweetNaCl verify. But since we don't have
-            // direct access to TweetNaCl from Java, we rely on sol4k's
-            // PublicKey construction (which accepts any 32 bytes) and
-            // use a verification attempt as a proxy check.
-            //
-            // In practice, the probability of SHA-256 output landing on
-            // the Ed25519 curve is negligible (~1/2^128), so most nonces
-            // will work on the first try. We still iterate for correctness.
-            var pk = new PublicKey(point);
-            return pk.verify(new byte[64], new byte[32]);
-        } catch (Exception e) {
+        var yBytes = point.clone();
+        yBytes[31] &= 0x7f;
+
+        var reversed = new byte[32];
+        for (var i = 0; i < 32; i++) {
+            reversed[i] = yBytes[31 - i];
+        }
+        var y = new BigInteger(1, reversed);
+
+        if (y.compareTo(ED25519_P) >= 0) {
             return false;
         }
+
+        var y2 = y.modPow(BigInteger.TWO, ED25519_P);
+        var numerator = y2.subtract(BigInteger.ONE).mod(ED25519_P);
+        var denominator = ED25519_D.multiply(y2).add(BigInteger.ONE).mod(ED25519_P);
+        var x2 = numerator.multiply(denominator.modInverse(ED25519_P)).mod(ED25519_P);
+
+        var exp = ED25519_P.subtract(BigInteger.ONE).shiftRight(1);
+        var legendreSymbol = x2.modPow(exp, ED25519_P);
+
+        return legendreSymbol.equals(BigInteger.ONE) || x2.equals(BigInteger.ZERO);
     }
 
     static byte[] uuidToBytes(UUID uuid) {

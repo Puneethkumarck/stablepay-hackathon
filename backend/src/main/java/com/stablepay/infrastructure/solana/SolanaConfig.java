@@ -11,7 +11,7 @@ public class SolanaConfig {
 
     @Bean
     public Connection solanaConnection(
-            @Value("${stablepay.solana.rpc-url:#{T(org.sol4k.RpcUrl).DEVNET.getUrl()}}") String rpcUrl) {
+            @Value("${stablepay.solana.rpc-url:https://api.devnet.solana.com}") String rpcUrl) {
         return new Connection(rpcUrl);
     }
 

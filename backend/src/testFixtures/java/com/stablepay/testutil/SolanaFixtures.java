@@ -30,4 +30,10 @@ public final class SolanaFixtures {
 
     public static final String SOME_BLOCKHASH =
             "GHtXQBsoZHVnNFa9YevAzFr17DJjgHXk3ycTKD5xD3Zi";
+
+    public static final String SOME_CLAIM_AUTHORITY_PRIVATE_KEY =
+            "TuncLi5MKiNXH2BG3m2wnPsMLyXkx41zwouStjE8bRmJEZ6SxxsHN21sR8RFdTQXJMBif4pBkkfX17JSPtYVZmp";
+
+    public static final String SOME_CLAIM_AUTHORITY_PUBLIC_KEY =
+            "HKqwNCgGAtg4TXmQCeMURZNpMdbz6QbvJSBVQzwQ5TC";
 }

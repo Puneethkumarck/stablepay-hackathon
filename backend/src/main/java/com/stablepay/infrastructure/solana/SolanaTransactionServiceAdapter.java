@@ -38,14 +38,20 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
 
         try {
             var senderWallet = new PublicKey(senderWalletAddress);
-            var claimAuthority = deriveClaimAuthorityPublicKey();
+            var claimAuthority = resolveClaimAuthorityKeypair().getPublicKey();
 
             var instruction = escrowInstructionBuilder.buildDepositInstruction(
                     remittanceId, senderWallet, claimAuthority, amountUsdc, expiryTimestamp);
 
+            // TODO: Deposit requires sender wallet signature via MPC sidecar (STA-7).
+            // For now, build the transaction unsigned — it will fail on sendTransaction
+            // until MPC signing is integrated.
             var blockhash = solanaConnection.getLatestBlockhash();
             var message = TransactionMessage.newMessage(senderWallet, blockhash, instruction);
             var transaction = new VersionedTransaction(message);
+
+            log.warn("Deposit transaction for remittance {} is unsigned — MPC signing not yet integrated",
+                    remittanceId);
 
             var signature = solanaConnection.sendTransaction(transaction);
             log.info("Escrow deposit submitted for remittance {} with signature {}",
@@ -91,15 +97,15 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
     }
 
     @Override
-    public String refundEscrow(UUID remittanceId) {
+    public String refundEscrow(UUID remittanceId, String senderWalletAddress) {
         log.info("Submitting escrow refund for remittance {}", remittanceId);
 
         try {
             var claimAuthorityKeypair = resolveClaimAuthorityKeypair();
-            var senderWallet = claimAuthorityKeypair.getPublicKey();
+            var senderWallet = new PublicKey(senderWalletAddress);
 
             var instruction = escrowInstructionBuilder.buildRefundInstruction(
-                    remittanceId, senderWallet);
+                    remittanceId, claimAuthorityKeypair.getPublicKey(), senderWallet);
 
             var blockhash = solanaConnection.getLatestBlockhash();
             var message = TransactionMessage.newMessage(
@@ -131,19 +137,10 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
         return "CONFIRMED";
     }
 
-    private PublicKey deriveClaimAuthorityPublicKey() {
-        var privateKeyStr = solanaProperties.claimAuthorityPrivateKey();
-        if (privateKeyStr == null || privateKeyStr.isBlank()) {
-            return Keypair.generate().getPublicKey();
-        }
-        return Keypair.fromSecretKey(Base58.decode(privateKeyStr)).getPublicKey();
-    }
-
     private Keypair resolveClaimAuthorityKeypair() {
         var privateKeyStr = solanaProperties.claimAuthorityPrivateKey();
         if (privateKeyStr == null || privateKeyStr.isBlank()) {
-            log.warn("No claim authority private key configured, generating ephemeral keypair");
-            return Keypair.generate();
+            throw SolanaTransactionException.claimAuthorityNotConfigured();
         }
         return Keypair.fromSecretKey(Base58.decode(privateKeyStr));
     }

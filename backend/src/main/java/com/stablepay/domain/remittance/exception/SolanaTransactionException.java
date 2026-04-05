@@ -29,4 +29,9 @@ public class SolanaTransactionException extends RuntimeException {
         return new SolanaTransactionException(
                 "SP-0013: Failed to derive PDA with seeds: " + seeds, cause);
     }
+
+    public static SolanaTransactionException claimAuthorityNotConfigured() {
+        return new SolanaTransactionException(
+                "SP-0014: Claim authority private key is not configured");
+    }
 }

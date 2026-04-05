@@ -13,7 +13,7 @@ public interface SolanaTransactionService {
 
     String claimEscrow(UUID remittanceId, String destinationTokenAccount);
 
-    String refundEscrow(UUID remittanceId);
+    String refundEscrow(UUID remittanceId, String senderWalletAddress);
 
     String getTransactionStatus(String transactionSignature);
 }
