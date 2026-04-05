@@ -1,5 +1,10 @@
 package com.stablepay.application.config;
 
+import java.time.Clock;
+import java.time.Instant;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,123 +23,115 @@ import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
 import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final Clock clock;
 
     @ExceptionHandler(WalletNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleWalletNotFound(WalletNotFoundException ex) {
+    public ErrorResponse handleWalletNotFound(
+            WalletNotFoundException ex, HttpServletRequest request) {
         log.warn("Wallet not found: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0006")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0006", ex.getMessage(), request);
     }
 
     @ExceptionHandler(InsufficientBalanceException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleInsufficientBalance(InsufficientBalanceException ex) {
+    public ErrorResponse handleInsufficientBalance(
+            InsufficientBalanceException ex, HttpServletRequest request) {
         log.warn("Insufficient balance: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0002")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0002", ex.getMessage(), request);
     }
 
     @ExceptionHandler(TreasuryDepletedException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public ErrorResponse handleTreasuryDepleted(TreasuryDepletedException ex) {
+    public ErrorResponse handleTreasuryDepleted(
+            TreasuryDepletedException ex, HttpServletRequest request) {
         log.warn("Treasury depleted: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0007")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0007", ex.getMessage(), request);
     }
 
     @ExceptionHandler(WalletAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse handleWalletAlreadyExists(WalletAlreadyExistsException ex) {
+    public ErrorResponse handleWalletAlreadyExists(
+            WalletAlreadyExistsException ex, HttpServletRequest request) {
         log.warn("Wallet already exists: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0008")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0008", ex.getMessage(), request);
     }
 
     @ExceptionHandler(UnsupportedCorridorException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleUnsupportedCorridor(UnsupportedCorridorException ex) {
+    public ErrorResponse handleUnsupportedCorridor(
+            UnsupportedCorridorException ex, HttpServletRequest request) {
         log.warn("Unsupported corridor requested: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0009")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0009", ex.getMessage(), request);
     }
 
     @ExceptionHandler(ClaimTokenNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleClaimTokenNotFound(ClaimTokenNotFoundException ex) {
+    public ErrorResponse handleClaimTokenNotFound(
+            ClaimTokenNotFoundException ex, HttpServletRequest request) {
         log.warn("Claim token not found: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0011")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0011", ex.getMessage(), request);
     }
 
     @ExceptionHandler(ClaimAlreadyClaimedException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse handleClaimAlreadyClaimed(ClaimAlreadyClaimedException ex) {
+    public ErrorResponse handleClaimAlreadyClaimed(
+            ClaimAlreadyClaimedException ex, HttpServletRequest request) {
         log.warn("Claim already submitted: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0012")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0012", ex.getMessage(), request);
     }
 
     @ExceptionHandler(ClaimTokenExpiredException.class)
     @ResponseStatus(HttpStatus.GONE)
-    public ErrorResponse handleClaimTokenExpired(ClaimTokenExpiredException ex) {
+    public ErrorResponse handleClaimTokenExpired(
+            ClaimTokenExpiredException ex, HttpServletRequest request) {
         log.warn("Claim token expired: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0013")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0013", ex.getMessage(), request);
     }
 
     @ExceptionHandler(InvalidRemittanceStateException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse handleInvalidRemittanceState(InvalidRemittanceStateException ex) {
+    public ErrorResponse handleInvalidRemittanceState(
+            InvalidRemittanceStateException ex, HttpServletRequest request) {
         log.warn("Invalid remittance state: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0014")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0014", ex.getMessage(), request);
     }
 
     @ExceptionHandler(RemittanceNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleRemittanceNotFound(RemittanceNotFoundException ex) {
+    public ErrorResponse handleRemittanceNotFound(
+            RemittanceNotFoundException ex, HttpServletRequest request) {
         log.warn("Remittance not found: {}", ex.getMessage());
-        return ErrorResponse.builder()
-                .errorCode("SP-0010")
-                .message(ex.getMessage())
-                .build();
+        return buildResponse("SP-0010", ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleValidation(MethodArgumentNotValidException ex) {
+    public ErrorResponse handleValidation(
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
         var message = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .reduce((a, b) -> a + "; " + b)
                 .orElse("Validation failed");
         log.warn("Validation error: {}", message);
+        return buildResponse("SP-0003", message, request);
+    }
+
+    private ErrorResponse buildResponse(
+            String errorCode, String message, HttpServletRequest request) {
         return ErrorResponse.builder()
-                .errorCode("SP-0003")
+                .errorCode(errorCode)
                 .message(message)
+                .timestamp(Instant.now(clock))
+                .path(request.getRequestURI())
                 .build();
     }
 }
