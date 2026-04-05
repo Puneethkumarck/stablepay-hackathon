@@ -1,21 +1,28 @@
 package com.stablepay.application.config;
 
+import static com.stablepay.testutil.TestClockConfig.FIXED_INSTANT;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,18 +43,18 @@ import lombok.SneakyThrows;
 
 class GlobalExceptionHandlerTest {
 
-    private static final Instant FIXED_INSTANT = Instant.parse("2026-04-05T12:00:00Z");
     private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC);
 
     private MockMvc mockMvc;
 
+    @SuppressWarnings("removal")
     @BeforeEach
     void setUp() {
         var objectMapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        @SuppressWarnings("removal")
-        var converter = new MappingJackson2HttpMessageConverter(objectMapper);
+        var converter = new MappingJackson2HttpMessageConverter();
+        converter.setObjectMapper(objectMapper);
 
         mockMvc = MockMvcBuilders.standaloneSetup(new StubController())
                 .setControllerAdvice(new GlobalExceptionHandler(FIXED_CLOCK))
@@ -110,6 +117,11 @@ class GlobalExceptionHandlerTest {
             throw RemittanceNotFoundException.byId(
                     UUID.fromString("11111111-1111-1111-1111-111111111111"));
         }
+
+        @PostMapping("/test/validation")
+        public void validation(@Valid @RequestBody ValidationRequest request) {}
+
+        record ValidationRequest(@NotBlank String name) {}
     }
 
     @Test
@@ -259,5 +271,21 @@ class GlobalExceptionHandlerTest {
                         "SP-0010: Remittance not found: 11111111-1111-1111-1111-111111111111"))
                 .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
                 .andExpect(jsonPath("$.path").value("/test/remittance-not-found"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn400WithEnrichedResponseForValidationError() {
+        // given
+        var body = "{\"name\": \"\"}";
+
+        // when / then
+        mockMvc.perform(post("/test/validation")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("SP-0003"))
+                .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
+                .andExpect(jsonPath("$.path").value("/test/validation"));
     }
 }
