@@ -4,6 +4,7 @@ plugins {
     id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
     id("com.diffplug.spotless") version "8.4.0"
+    id("com.google.protobuf") version "0.9.4"
 }
 
 group = "com.stablepay"
@@ -25,6 +26,33 @@ spotless {
         importOrder("\\#", "java|javax", "jakarta", "org", "com", "")
         trimTrailingWhitespace()
         endWithNewline()
+        targetExclude("build/generated/**")
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.8"
+    }
+    plugins {
+        create("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.72.0"
+        }
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.plugins {
+                create("grpc")
+            }
+        }
+    }
+}
+
+sourceSets {
+    main {
+        proto {
+            srcDir("${rootProject.projectDir}/../mpc-sidecar/proto")
+        }
     }
 }
 
@@ -45,11 +73,14 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+val gitDir = file("${rootProject.projectDir}/../.git")
+
 val installGitHooks by tasks.registering(Copy::class) {
     description = "Installs git hooks from backend/.githooks into .git/hooks"
     group = "setup"
+    enabled = gitDir.isDirectory
     from("${projectDir}/.githooks")
-    into("${rootProject.projectDir}/../.git/hooks")
+    into("${gitDir}/hooks")
     filePermissions {
         unix("rwxr-xr-x")
     }
@@ -104,6 +135,12 @@ dependencies {
 
     // Temporal
     implementation("io.temporal:temporal-spring-boot-starter:1.34.0")
+
+    // gRPC
+    implementation("io.grpc:grpc-netty-shaded:1.72.0")
+    implementation("io.grpc:grpc-protobuf:1.72.0")
+    implementation("io.grpc:grpc-stub:1.72.0")
+    compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 
     // Resilience4j
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")

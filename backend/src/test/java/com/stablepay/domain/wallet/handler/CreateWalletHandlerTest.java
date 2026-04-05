@@ -1,6 +1,8 @@
 package com.stablepay.domain.wallet.handler;
 
 import static com.stablepay.testutil.WalletFixtures.SOME_CREATED_AT;
+import static com.stablepay.testutil.WalletFixtures.SOME_KEY_SHARE_DATA;
+import static com.stablepay.testutil.WalletFixtures.SOME_PUBLIC_KEY;
 import static com.stablepay.testutil.WalletFixtures.SOME_SOLANA_ADDRESS;
 import static com.stablepay.testutil.WalletFixtures.SOME_UPDATED_AT;
 import static com.stablepay.testutil.WalletFixtures.SOME_USER_ID;
@@ -21,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
+import com.stablepay.domain.wallet.model.GeneratedKey;
 import com.stablepay.domain.wallet.model.Wallet;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 import com.stablepay.domain.wallet.port.WalletRepository;
@@ -41,11 +44,19 @@ class CreateWalletHandlerTest {
     void shouldCreateWallet() {
         // given
         given(walletRepository.findByUserId(SOME_USER_ID)).willReturn(Optional.empty());
-        given(mpcWalletClient.generateKey()).willReturn(SOME_SOLANA_ADDRESS);
+
+        var generatedKey = GeneratedKey.builder()
+                .solanaAddress(SOME_SOLANA_ADDRESS)
+                .publicKey(SOME_PUBLIC_KEY)
+                .keyShareData(SOME_KEY_SHARE_DATA)
+                .build();
+        given(mpcWalletClient.generateKey()).willReturn(generatedKey);
 
         var walletToSave = Wallet.builder()
                 .userId(SOME_USER_ID)
                 .solanaAddress(SOME_SOLANA_ADDRESS)
+                .publicKey(SOME_PUBLIC_KEY)
+                .keyShareData(SOME_KEY_SHARE_DATA)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .build();
@@ -66,6 +77,8 @@ class CreateWalletHandlerTest {
                 .id(SOME_WALLET_ID)
                 .userId(SOME_USER_ID)
                 .solanaAddress(SOME_SOLANA_ADDRESS)
+                .publicKey(SOME_PUBLIC_KEY)
+                .keyShareData(SOME_KEY_SHARE_DATA)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .createdAt(SOME_CREATED_AT)

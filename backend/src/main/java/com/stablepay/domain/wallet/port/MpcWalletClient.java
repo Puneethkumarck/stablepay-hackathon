@@ -1,6 +1,8 @@
 package com.stablepay.domain.wallet.port;
 
+import com.stablepay.domain.wallet.model.GeneratedKey;
+
 public interface MpcWalletClient {
-    String generateKey();
+    GeneratedKey generateKey();
     byte[] signTransaction(byte[] transactionBytes, byte[] keyShareData);
 }

@@ -27,12 +27,14 @@ public class CreateWalletHandler {
             throw WalletAlreadyExistsException.forUserId(userId);
         });
 
-        var solanaAddress = mpcWalletClient.generateKey();
-        log.info("Generated MPC wallet for userId={}, solanaAddress={}", userId, solanaAddress);
+        var generatedKey = mpcWalletClient.generateKey();
+        log.info("Generated MPC wallet for userId={}, solanaAddress={}", userId, generatedKey.solanaAddress());
 
         var wallet = Wallet.builder()
                 .userId(userId)
-                .solanaAddress(solanaAddress)
+                .solanaAddress(generatedKey.solanaAddress())
+                .publicKey(generatedKey.publicKey())
+                .keyShareData(generatedKey.keyShareData())
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .build();
