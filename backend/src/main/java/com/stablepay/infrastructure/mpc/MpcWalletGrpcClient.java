@@ -6,8 +6,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 import com.google.protobuf.ByteString;
 import com.stablepay.domain.wallet.exception.MpcKeyGenerationException;
@@ -25,8 +23,6 @@ import sidecar.v1.Sidecar.Status;
 import sidecar.v1.TssSidecarGrpc;
 
 @Slf4j
-@Component
-@ConditionalOnProperty(name = "stablepay.mpc.enabled", havingValue = "true", matchIfMissing = true)
 public class MpcWalletGrpcClient implements MpcWalletClient {
 
     private static final int DEFAULT_PARTY_ID = 1;

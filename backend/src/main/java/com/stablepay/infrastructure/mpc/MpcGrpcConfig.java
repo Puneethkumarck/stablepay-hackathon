@@ -37,6 +37,13 @@ public class MpcGrpcConfig implements DisposableBean {
         return TssSidecarGrpc.newBlockingStub(mpcManagedChannel);
     }
 
+    @Bean
+    public MpcWalletGrpcClient mpcWalletGrpcClient(
+            TssSidecarGrpc.TssSidecarBlockingStub tssSidecarBlockingStub,
+            @Value("${stablepay.mpc.sidecar.deadline-ms:30000}") long deadlineMs) {
+        return new MpcWalletGrpcClient(tssSidecarBlockingStub, deadlineMs);
+    }
+
     @Override
     public void destroy() throws InterruptedException {
         if (channel != null && !channel.isShutdown()) {
