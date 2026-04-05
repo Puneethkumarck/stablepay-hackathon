@@ -9,7 +9,3 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-
-stablepay:
-  temporal:
-    enabled: false
