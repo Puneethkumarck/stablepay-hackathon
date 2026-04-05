@@ -14,5 +14,6 @@ public record RemittanceWorkflowRequest(
     BigDecimal amountUsdc,
     String claimToken,
     String claimBaseUrl,
-    Duration claimExpiryTimeout
+    Duration claimExpiryTimeout,
+    long escrowExpiryTimestamp
 ) {}

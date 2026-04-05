@@ -1,5 +1,7 @@
 package com.stablepay.infrastructure.temporal;
 
+import java.math.BigDecimal;
+
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 
 import io.temporal.activity.ActivityInterface;
@@ -7,11 +9,15 @@ import io.temporal.activity.ActivityInterface;
 @ActivityInterface
 public interface RemittanceLifecycleActivities {
 
-    byte[] signEscrowDeposit(byte[] unsignedTxBytes);
+    String depositEscrow(
+            String remittanceId,
+            String senderWalletAddress,
+            BigDecimal amountUsdc,
+            long expiryTimestamp);
 
-    byte[] signEscrowRelease(byte[] unsignedTxBytes);
+    String releaseEscrow(String remittanceId, String destinationTokenAccount);
 
-    String submitToSolana(byte[] signedTxBytes);
+    String refundEscrow(String remittanceId, String senderWalletAddress);
 
     void sendClaimSms(String recipientPhone, String claimUrl);
 
