@@ -100,7 +100,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:12.3.0")
 
     // Temporal
-    implementation("io.temporal:temporal-spring-boot-starter:1.33.0")
+    implementation("io.temporal:temporal-spring-boot-starter:1.34.0")
 
     // Resilience4j
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
@@ -119,7 +119,7 @@ dependencies {
     testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
     testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("org.testcontainers:postgresql:1.21.4")
-    testImplementation("io.temporal:temporal-testing:1.33.0")
+    testImplementation("io.temporal:temporal-testing:1.34.0")
 
     // Integration test dependencies
     "integrationTestImplementation"(testFixtures(project))
