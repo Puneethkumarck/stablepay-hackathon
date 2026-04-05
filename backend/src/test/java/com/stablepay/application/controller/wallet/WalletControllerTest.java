@@ -31,6 +31,8 @@ import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 import com.stablepay.domain.wallet.handler.CreateWalletHandler;
 import com.stablepay.domain.wallet.handler.FundWalletHandler;
 
+import lombok.SneakyThrows;
+
 @WebMvcTest(WalletController.class)
 class WalletControllerTest {
 
@@ -51,7 +53,8 @@ class WalletControllerTest {
     private WalletApiMapper walletApiMapper;
 
     @Test
-    void shouldCreateWallet() throws Exception {
+    @SneakyThrows
+    void shouldCreateWallet() {
         // given
         var wallet = walletBuilder()
                 .availableBalance(BigDecimal.ZERO)
@@ -86,7 +89,8 @@ class WalletControllerTest {
     }
 
     @Test
-    void shouldFundWallet() throws Exception {
+    @SneakyThrows
+    void shouldFundWallet() {
         // given
         var wallet = walletBuilder()
                 .availableBalance(SOME_FUND_AMOUNT)
@@ -119,7 +123,8 @@ class WalletControllerTest {
     }
 
     @Test
-    void shouldReturn404WhenWalletNotFound() throws Exception {
+    @SneakyThrows
+    void shouldReturn404WhenWalletNotFound() {
         // given
         given(fundWalletHandler.handle(SOME_WALLET_ID, SOME_FUND_AMOUNT))
                 .willThrow(WalletNotFoundException.byId(SOME_WALLET_ID));
@@ -135,7 +140,8 @@ class WalletControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenValidationFails() throws Exception {
+    @SneakyThrows
+    void shouldReturn400WhenValidationFails() {
         // given
         var request = CreateWalletRequest.builder().userId("").build();
 
@@ -148,7 +154,8 @@ class WalletControllerTest {
     }
 
     @Test
-    void shouldReturn503WhenTreasuryDepleted() throws Exception {
+    @SneakyThrows
+    void shouldReturn503WhenTreasuryDepleted() {
         // given
         given(fundWalletHandler.handle(SOME_WALLET_ID, SOME_FUND_AMOUNT))
                 .willThrow(TreasuryDepletedException.insufficientTreasury(
@@ -165,7 +172,8 @@ class WalletControllerTest {
     }
 
     @Test
-    void shouldReturn409WhenWalletAlreadyExists() throws Exception {
+    @SneakyThrows
+    void shouldReturn409WhenWalletAlreadyExists() {
         // given
         given(createWalletHandler.handle(SOME_USER_ID))
                 .willThrow(WalletAlreadyExistsException.forUserId(SOME_USER_ID));

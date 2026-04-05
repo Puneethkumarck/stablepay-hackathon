@@ -22,6 +22,8 @@ import com.stablepay.application.dto.FxRateResponse;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.fx.handler.GetFxRateQueryHandler;
 
+import lombok.SneakyThrows;
+
 @WebMvcTest(FxRateController.class)
 class FxRateControllerTest {
 
@@ -35,7 +37,8 @@ class FxRateControllerTest {
     private FxRateApiMapper fxRateApiMapper;
 
     @Test
-    void shouldReturnLiveFxRate() throws Exception {
+    @SneakyThrows
+    void shouldReturnLiveFxRate() {
         // given
         var quote = fxQuoteBuilder()
                 .source("open.er-api.com")
@@ -58,7 +61,8 @@ class FxRateControllerTest {
     }
 
     @Test
-    void shouldReturnFallbackFxRate() throws Exception {
+    @SneakyThrows
+    void shouldReturnFallbackFxRate() {
         // given
         var quote = fxQuoteBuilder()
                 .rate(BigDecimal.valueOf(84.50))
@@ -82,7 +86,8 @@ class FxRateControllerTest {
     }
 
     @Test
-    void shouldReturn400ForUnsupportedCorridor() throws Exception {
+    @SneakyThrows
+    void shouldReturn400ForUnsupportedCorridor() {
         // given
         given(getFxRateQueryHandler.handle("EUR", "INR"))
                 .willThrow(UnsupportedCorridorException.forPair("EUR", "INR"));

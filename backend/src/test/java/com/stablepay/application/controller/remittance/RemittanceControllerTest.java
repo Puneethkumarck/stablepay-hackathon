@@ -40,6 +40,8 @@ import com.stablepay.domain.remittance.handler.ListRemittancesQueryHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 
+import lombok.SneakyThrows;
+
 @WebMvcTest(RemittanceController.class)
 class RemittanceControllerTest {
 
@@ -61,7 +63,8 @@ class RemittanceControllerTest {
     private RemittanceApiMapper remittanceApiMapper;
 
     @Test
-    void shouldCreateRemittance() throws Exception {
+    @SneakyThrows
+    void shouldCreateRemittance() {
         // given
         var domain = remittanceBuilder().build();
         var response = RemittanceResponse.builder()
@@ -101,7 +104,8 @@ class RemittanceControllerTest {
     }
 
     @Test
-    void shouldGetRemittanceById() throws Exception {
+    @SneakyThrows
+    void shouldGetRemittanceById() {
         // given
         var domain = remittanceBuilder().build();
         var response = RemittanceResponse.builder()
@@ -128,7 +132,8 @@ class RemittanceControllerTest {
     }
 
     @Test
-    void shouldListRemittancesBySenderId() throws Exception {
+    @SneakyThrows
+    void shouldListRemittancesBySenderId() {
         // given
         var pageable = PageRequest.of(0, 20);
         var domain = remittanceBuilder().build();
@@ -156,7 +161,8 @@ class RemittanceControllerTest {
     }
 
     @Test
-    void shouldReturn404WhenRemittanceNotFound() throws Exception {
+    @SneakyThrows
+    void shouldReturn404WhenRemittanceNotFound() {
         // given
         var unknownId = UUID.fromString("00000000-0000-0000-0000-000000000099");
         given(getRemittanceQueryHandler.handle(unknownId))
@@ -169,7 +175,8 @@ class RemittanceControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenInsufficientBalance() throws Exception {
+    @SneakyThrows
+    void shouldReturn400WhenInsufficientBalance() {
         // given
         given(createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
                 .willThrow(InsufficientBalanceException.forAmount(SOME_AMOUNT_USDC, BigDecimal.valueOf(50)));
@@ -189,7 +196,8 @@ class RemittanceControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenValidationFails() throws Exception {
+    @SneakyThrows
+    void shouldReturn400WhenValidationFails() {
         // given
         var request = CreateRemittanceRequest.builder()
                 .senderId("")
