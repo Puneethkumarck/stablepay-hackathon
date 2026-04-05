@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
+import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
 import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
@@ -65,6 +66,16 @@ public class GlobalExceptionHandler {
         log.warn("Unsupported corridor requested: {}", ex.getMessage());
         return ErrorResponse.builder()
                 .errorCode("SP-0009")
+                .message(ex.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(RemittanceNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleRemittanceNotFound(RemittanceNotFoundException ex) {
+        log.warn("Remittance not found: {}", ex.getMessage());
+        return ErrorResponse.builder()
+                .errorCode("SP-0010")
                 .message(ex.getMessage())
                 .build();
     }

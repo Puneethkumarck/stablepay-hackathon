@@ -1,10 +1,11 @@
 package com.stablepay.infrastructure.db.remittance;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import com.stablepay.domain.remittance.model.Remittance;
@@ -37,7 +38,7 @@ class RemittanceRepositoryAdapter implements RemittanceRepository {
     }
 
     @Override
-    public List<Remittance> findBySenderId(String senderId) {
-        return jpaRepository.findBySenderId(senderId).stream().map(mapper::toDomain).toList();
+    public Page<Remittance> findBySenderId(String senderId, Pageable pageable) {
+        return jpaRepository.findBySenderId(senderId, pageable).map(mapper::toDomain);
     }
 }
