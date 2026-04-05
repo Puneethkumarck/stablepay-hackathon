@@ -167,7 +167,15 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                     .getResult(RemittanceWorkflowResult.class);
 
             // then
-            assertThat(result.finalStatus()).isEqualTo(RemittanceStatus.DELIVERED.name());
+            var expected = RemittanceWorkflowResult.builder()
+                    .remittanceId(remittanceId)
+                    .finalStatus(RemittanceStatus.DELIVERED.name())
+                    .build();
+
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("escrowPda", "txSignature")
+                    .isEqualTo(expected);
         }
     }
 
@@ -184,8 +192,16 @@ class RemittanceLifecycleWorkflowIntegrationTest {
             var status = workflow.getStatus();
 
             // then
-            assertThat(status.remittanceId()).isEqualTo(remittanceId);
-            assertThat(status.currentStatus()).isEqualTo(RemittanceStatus.ESCROWED.name());
+            var expected = RemittanceWorkflowStatus.builder()
+                    .remittanceId(remittanceId)
+                    .currentStatus(RemittanceStatus.ESCROWED.name())
+                    .smsNotificationFailed(false)
+                    .build();
+
+            assertThat(status)
+                    .usingRecursiveComparison()
+                    .ignoringFields("escrowPda")
+                    .isEqualTo(expected);
         }
     }
 }

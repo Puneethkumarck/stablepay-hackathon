@@ -5,6 +5,7 @@ import static com.stablepay.testutil.WorkflowFixtures.SOME_CLAIM_TOKEN;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_RECIPIENT_PHONE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_SENDER_ADDRESS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -12,6 +13,8 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +33,9 @@ class TemporalRemittanceWorkflowStarterTest {
 
     @Mock
     private RemittanceLifecycleWorkflow workflowStub;
+
+    @Captor
+    private ArgumentCaptor<RemittanceWorkflowRequest> requestCaptor;
 
     @InjectMocks
     private TemporalRemittanceWorkflowStarter starter;
@@ -56,5 +62,20 @@ class TemporalRemittanceWorkflowStarterTest {
 
         // then
         then(workflowFactory).should().createRemittanceWorkflow(SOME_REMITTANCE_ID);
+        then(workflowStub).should().execute(requestCaptor.capture());
+
+        var expected = RemittanceWorkflowRequest.builder()
+                .remittanceId(SOME_REMITTANCE_ID)
+                .senderAddress(SOME_SENDER_ADDRESS)
+                .recipientPhone(SOME_RECIPIENT_PHONE)
+                .amountUsdc(SOME_AMOUNT_USDC)
+                .claimToken(SOME_CLAIM_TOKEN)
+                .claimBaseUrl("https://claim.stablepay.app/")
+                .claimExpiryTimeout(Duration.ofHours(48))
+                .build();
+
+        assertThat(requestCaptor.getValue())
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
     }
 }
