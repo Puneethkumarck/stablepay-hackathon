@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.temporal;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.UUID;
 
 import lombok.Builder;
@@ -11,5 +12,7 @@ public record RemittanceWorkflowRequest(
     String senderAddress,
     String recipientPhone,
     BigDecimal amountUsdc,
-    String claimToken
+    String claimToken,
+    String claimBaseUrl,
+    Duration claimExpiryTimeout
 ) {}

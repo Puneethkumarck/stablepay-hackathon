@@ -31,34 +31,10 @@ stablepay:
     api:
       base-url: https://open.er-api.com
   temporal:
-    enabled: true
-    target: ${TEMPORAL_FRONTEND_URL:127.0.0.1:7233}
-    namespace: stablepay
-    task-queue: stablepay-remittance-lifecycle
     workflow-execution-timeout: PT48H
     workflow-run-timeout: PT2H
-    non-retryable-exceptions: []
-    activity-options:
-      default-options:
-        start-to-close-timeout: PT30S
-        max-attempts: 3
-        initial-interval: PT1S
-        backoff-coefficient: 2.0
-      signing:
-        start-to-close-timeout: PT10S
-        max-attempts: 3
-        initial-interval: PT1S
-        backoff-coefficient: 2.0
-      solana-submission:
-        start-to-close-timeout: PT60S
-        max-attempts: 3
-        initial-interval: PT2S
-        backoff-coefficient: 2.0
-      sms-delivery:
-        start-to-close-timeout: PT30S
-        max-attempts: 3
-        initial-interval: PT30S
-        backoff-coefficient: 2.0
+    claim-expiry-timeout: PT48H
+    claim-base-url: https://claim.stablepay.app/
 
 management:
   endpoints:

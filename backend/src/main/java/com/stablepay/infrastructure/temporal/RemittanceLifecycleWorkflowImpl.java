@@ -1,17 +1,31 @@
 package com.stablepay.infrastructure.temporal;
 
 import java.time.Duration;
+import java.util.UUID;
 
+import org.slf4j.Logger;
+
+import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.infrastructure.temporal.TaskQueue.Constants;
+
+import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
+import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
+@WorkflowImpl(taskQueues = Constants.TASK_QUEUE_REMITTANCE_LIFECYCLE)
 public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkflow {
 
-    private final RemittanceLifecycleActivities activities =
-            Workflow.newActivityStub(RemittanceLifecycleActivities.class);
+    private static final Logger log = Workflow.getLogger(RemittanceLifecycleWorkflowImpl.class);
 
-    private String currentStatus = "INITIATED";
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
+    private static final int DEFAULT_MAX_ATTEMPTS = 3;
+
+    private final RemittanceLifecycleActivities activities =
+            Workflow.newActivityStub(RemittanceLifecycleActivities.class, defaultActivityOptions());
+
+    private UUID remittanceId;
+    private RemittanceStatus currentStatus = RemittanceStatus.INITIATED;
     private String escrowPda;
     private boolean smsNotificationFailed;
     private boolean claimReceived;
@@ -19,47 +33,42 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
     @Override
     public RemittanceWorkflowResult execute(RemittanceWorkflowRequest request) {
-        log.info("Starting remittance workflow for remittanceId={}", request.remittanceId());
+        this.remittanceId = request.remittanceId();
+        log.info("Starting remittance workflow for remittanceId={}", remittanceId);
 
-        // Phase 1: Escrow deposit (sign + submit)
-        // Activities will be wired in STA-31
-        activities.updateRemittanceStatus(request.remittanceId().toString(), "ESCROWED");
-        currentStatus = "ESCROWED";
+        activities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.ESCROWED);
+        currentStatus = RemittanceStatus.ESCROWED;
 
-        // Phase 2: Send claim SMS
         try {
-            var claimUrl = "https://claim.stablepay.app/" + request.claimToken();
+            var claimUrl = request.claimBaseUrl() + request.claimToken();
             activities.sendClaimSms(request.recipientPhone(), claimUrl);
         } catch (Exception e) {
             smsNotificationFailed = true;
-            log.warn("SMS notification failed for remittanceId={}", request.remittanceId(), e);
+            log.warn("SMS notification failed for remittanceId={}", remittanceId, e);
         }
 
-        // Phase 3: Wait for claim signal or 48h expiry
-        var claimed = Workflow.await(Duration.ofHours(48), () -> claimReceived);
+        var claimed = Workflow.await(request.claimExpiryTimeout(), () -> claimReceived);
 
         if (claimed && pendingClaim != null) {
-            // Phase 4: Process claim (sign release + submit + disburse)
-            activities.updateRemittanceStatus(request.remittanceId().toString(), "CLAIMED");
-            currentStatus = "CLAIMED";
+            activities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.CLAIMED);
+            currentStatus = RemittanceStatus.CLAIMED;
 
-            activities.simulateInrDisbursement(pendingClaim.upiId(), "0");
-            activities.updateRemittanceStatus(request.remittanceId().toString(), "DELIVERED");
-            currentStatus = "DELIVERED";
+            activities.simulateInrDisbursement(pendingClaim.upiId(), request.amountUsdc().toPlainString());
+            activities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.DELIVERED);
+            currentStatus = RemittanceStatus.DELIVERED;
 
             return RemittanceWorkflowResult.builder()
-                    .remittanceId(request.remittanceId())
-                    .finalStatus("DELIVERED")
+                    .remittanceId(remittanceId)
+                    .finalStatus(RemittanceStatus.DELIVERED.name())
                     .escrowPda(escrowPda)
                     .build();
         } else {
-            // Timeout: refund
-            activities.updateRemittanceStatus(request.remittanceId().toString(), "REFUNDED");
-            currentStatus = "REFUNDED";
+            activities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.REFUNDED);
+            currentStatus = RemittanceStatus.REFUNDED;
 
             return RemittanceWorkflowResult.builder()
-                    .remittanceId(request.remittanceId())
-                    .finalStatus("REFUNDED")
+                    .remittanceId(remittanceId)
+                    .finalStatus(RemittanceStatus.REFUNDED.name())
                     .escrowPda(escrowPda)
                     .build();
         }
@@ -75,9 +84,21 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     @Override
     public RemittanceWorkflowStatus getStatus() {
         return RemittanceWorkflowStatus.builder()
-                .currentStatus(currentStatus)
+                .remittanceId(remittanceId)
+                .currentStatus(currentStatus != null ? currentStatus.name() : null)
                 .escrowPda(escrowPda)
                 .smsNotificationFailed(smsNotificationFailed)
+                .build();
+    }
+
+    private static ActivityOptions defaultActivityOptions() {
+        return ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(DEFAULT_TIMEOUT)
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(DEFAULT_MAX_ATTEMPTS)
+                        .setInitialInterval(Duration.ofSeconds(1))
+                        .setBackoffCoefficient(2.0)
+                        .build())
                 .build();
     }
 }
