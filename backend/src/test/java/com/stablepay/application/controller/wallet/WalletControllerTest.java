@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,10 +31,12 @@ import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 import com.stablepay.domain.wallet.handler.CreateWalletHandler;
 import com.stablepay.domain.wallet.handler.FundWalletHandler;
+import com.stablepay.testutil.TestClockConfig;
 
 import lombok.SneakyThrows;
 
 @WebMvcTest(WalletController.class)
+@Import(TestClockConfig.class)
 class WalletControllerTest {
 
     private static final BigDecimal SOME_FUND_AMOUNT = BigDecimal.valueOf(500);
