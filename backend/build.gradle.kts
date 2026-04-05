@@ -36,7 +36,7 @@ protobuf {
     }
     plugins {
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.72.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.80.0"
         }
     }
     generateProtoTasks {
@@ -137,9 +137,9 @@ dependencies {
     implementation("io.temporal:temporal-spring-boot-starter:1.34.0")
 
     // gRPC
-    implementation("io.grpc:grpc-netty-shaded:1.72.0")
-    implementation("io.grpc:grpc-protobuf:1.72.0")
-    implementation("io.grpc:grpc-stub:1.72.0")
+    implementation("io.grpc:grpc-netty-shaded:1.80.0")
+    implementation("io.grpc:grpc-protobuf:1.80.0")
+    implementation("io.grpc:grpc-stub:1.80.0")
     compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 
     // Resilience4j
