@@ -30,6 +30,11 @@ stablepay:
   fx:
     api:
       base-url: https://open.er-api.com
+  mpc:
+    sidecar:
+      host: ${MPC_SIDECAR_HOST:localhost}
+      port: ${MPC_SIDECAR_PORT:50051}
+      deadline-ms: ${MPC_SIDECAR_DEADLINE_MS:30000}
   solana:
     rpc-url: https://api.devnet.solana.com
     escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:11111111111111111111111111111111}
