@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import com.google.protobuf.ByteString;
 import com.stablepay.domain.wallet.exception.MpcKeyGenerationException;
 import com.stablepay.domain.wallet.exception.MpcSigningException;
+import com.stablepay.domain.wallet.model.GeneratedKey;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 
 import io.grpc.StatusRuntimeException;
@@ -52,7 +53,7 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
     }
 
     @Override
-    public String generateKey() {
+    public GeneratedKey generateKey() {
         var ceremonyId = ceremonyIdGenerator.get();
         log.info("Starting MPC key generation ceremony: {}", ceremonyId);
 
@@ -70,7 +71,11 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
 
             log.info("MPC key generation completed for ceremony {}: address={}",
                     ceremonyId, response.getSolanaAddress());
-            return response.getSolanaAddress();
+            return GeneratedKey.builder()
+                    .solanaAddress(response.getSolanaAddress())
+                    .publicKey(response.getPublicKey().toByteArray())
+                    .keyShareData(response.getKeyShareData().toByteArray())
+                    .build();
 
         } catch (StatusRuntimeException ex) {
             log.error("gRPC call failed for key generation ceremony {}: {}", ceremonyId, ex.getStatus());
@@ -111,11 +116,13 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
     }
 
     private void validateGenerateKeyResponse(String ceremonyId, GenerateKeyResponse response) {
-        if (response.getStatus() == Status.STATUS_FAILED) {
-            throw MpcKeyGenerationException.withCeremonyId(ceremonyId, response.getErrorMessage());
-        }
-        if (response.getStatus() == Status.STATUS_TIMED_OUT) {
-            throw MpcKeyGenerationException.withCeremonyId(ceremonyId, "ceremony timed out");
+        if (response.getStatus() != Status.STATUS_COMPLETED) {
+            var reason = switch (response.getStatus()) {
+                case STATUS_FAILED -> response.getErrorMessage();
+                case STATUS_TIMED_OUT -> "ceremony timed out";
+                default -> "unexpected status: " + response.getStatus();
+            };
+            throw MpcKeyGenerationException.withCeremonyId(ceremonyId, reason);
         }
         if (response.getSolanaAddress().isBlank()) {
             throw MpcKeyGenerationException.withCeremonyId(ceremonyId, "empty Solana address in response");
@@ -123,11 +130,13 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
     }
 
     private void validateSignResponse(String ceremonyId, SignResponse response) {
-        if (response.getStatus() == Status.STATUS_FAILED) {
-            throw MpcSigningException.withCeremonyId(ceremonyId, response.getErrorMessage());
-        }
-        if (response.getStatus() == Status.STATUS_TIMED_OUT) {
-            throw MpcSigningException.withCeremonyId(ceremonyId, "ceremony timed out");
+        if (response.getStatus() != Status.STATUS_COMPLETED) {
+            var reason = switch (response.getStatus()) {
+                case STATUS_FAILED -> response.getErrorMessage();
+                case STATUS_TIMED_OUT -> "ceremony timed out";
+                default -> "unexpected status: " + response.getStatus();
+            };
+            throw MpcSigningException.withCeremonyId(ceremonyId, reason);
         }
         if (response.getSignature().isEmpty()) {
             throw MpcSigningException.withCeremonyId(ceremonyId, "empty signature in response");

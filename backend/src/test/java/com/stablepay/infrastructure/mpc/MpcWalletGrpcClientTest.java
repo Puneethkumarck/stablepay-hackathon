@@ -3,6 +3,7 @@ package com.stablepay.infrastructure.mpc;
 import static com.stablepay.testutil.MpcFixtures.SOME_CEREMONY_ID;
 import static com.stablepay.testutil.MpcFixtures.SOME_DEADLINE_MS;
 import static com.stablepay.testutil.MpcFixtures.SOME_KEY_SHARE_DATA;
+import static com.stablepay.testutil.MpcFixtures.SOME_PUBLIC_KEY;
 import static com.stablepay.testutil.MpcFixtures.SOME_SIGNATURE;
 import static com.stablepay.testutil.MpcFixtures.SOME_SOLANA_ADDRESS;
 import static com.stablepay.testutil.MpcFixtures.SOME_TRANSACTION_BYTES;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -22,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.google.protobuf.ByteString;
 import com.stablepay.domain.wallet.exception.MpcKeyGenerationException;
 import com.stablepay.domain.wallet.exception.MpcSigningException;
+import com.stablepay.domain.wallet.model.GeneratedKey;
 
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -65,175 +68,226 @@ class MpcWalletGrpcClientTest {
         client = new MpcWalletGrpcClient(blockingStub, SOME_DEADLINE_MS, () -> SOME_CEREMONY_ID);
     }
 
-    @Test
-    void shouldGenerateKeyAndReturnSolanaAddress() {
-        // given
-        var response = GenerateKeyResponse.newBuilder()
-                .setSolanaAddress(SOME_SOLANA_ADDRESS)
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
-                .build();
+    @Nested
+    class GenerateKey {
 
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+        @Test
+        void shouldGenerateKeyAndReturnGeneratedKey() {
+            // given
+            var response = GenerateKeyResponse.newBuilder()
+                    .setSolanaAddress(SOME_SOLANA_ADDRESS)
+                    .setPublicKey(ByteString.copyFrom(SOME_PUBLIC_KEY))
+                    .setKeyShareData(ByteString.copyFrom(SOME_KEY_SHARE_DATA))
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
+                    .build();
 
-        // when
-        var result = client.generateKey();
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
 
-        // then
-        assertThat(result).isEqualTo(SOME_SOLANA_ADDRESS);
+            // when
+            var result = client.generateKey();
+
+            // then
+            var expected = GeneratedKey.builder()
+                    .solanaAddress(SOME_SOLANA_ADDRESS)
+                    .publicKey(SOME_PUBLIC_KEY)
+                    .keyShareData(SOME_KEY_SHARE_DATA)
+                    .build();
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        void shouldThrowWhenStatusFailed() {
+            // given
+            var response = GenerateKeyResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_FAILED)
+                    .setErrorMessage("keygen protocol error")
+                    .build();
+
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .hasMessageContaining("keygen protocol error");
+        }
+
+        @Test
+        void shouldThrowWhenStatusTimedOut() {
+            // given
+            var response = GenerateKeyResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_TIMED_OUT)
+                    .build();
+
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .hasMessageContaining("ceremony timed out");
+        }
+
+        @Test
+        void shouldThrowWhenStatusUnspecified() {
+            // given
+            var response = GenerateKeyResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_UNSPECIFIED)
+                    .build();
+
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .hasMessageContaining("unexpected status");
+        }
+
+        @Test
+        void shouldThrowWhenEmptyAddress() {
+            // given
+            var response = GenerateKeyResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
+                    .setSolanaAddress("")
+                    .build();
+
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .hasMessageContaining("empty Solana address");
+        }
+
+        @Test
+        void shouldThrowOnGrpcError() {
+            // given
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST))
+                    .willThrow(new StatusRuntimeException(Status.UNAVAILABLE));
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .hasCauseInstanceOf(StatusRuntimeException.class);
+        }
     }
 
-    @Test
-    void shouldThrowMpcKeyGenerationExceptionWhenStatusFailed() {
-        // given
-        var response = GenerateKeyResponse.newBuilder()
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_FAILED)
-                .setErrorMessage("keygen protocol error")
-                .build();
+    @Nested
+    class SignTransaction {
 
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+        @Test
+        void shouldSignTransactionAndReturnSignature() {
+            // given
+            var response = SignResponse.newBuilder()
+                    .setSignature(ByteString.copyFrom(SOME_SIGNATURE))
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
+                    .build();
 
-        // when / then
-        assertThatThrownBy(() -> client.generateKey())
-                .isInstanceOf(MpcKeyGenerationException.class)
-                .hasMessageContaining("keygen protocol error");
-    }
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
-    @Test
-    void shouldThrowMpcKeyGenerationExceptionWhenStatusTimedOut() {
-        // given
-        var response = GenerateKeyResponse.newBuilder()
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_TIMED_OUT)
-                .build();
+            // when
+            var result = client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA);
 
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+            // then
+            assertThat(result).isEqualTo(SOME_SIGNATURE);
+        }
 
-        // when / then
-        assertThatThrownBy(() -> client.generateKey())
-                .isInstanceOf(MpcKeyGenerationException.class)
-                .hasMessageContaining("ceremony timed out");
-    }
+        @Test
+        void shouldThrowWhenStatusFailed() {
+            // given
+            var response = SignResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_FAILED)
+                    .setErrorMessage("signing protocol error")
+                    .build();
 
-    @Test
-    void shouldThrowMpcKeyGenerationExceptionWhenEmptyAddress() {
-        // given
-        var response = GenerateKeyResponse.newBuilder()
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
-                .setSolanaAddress("")
-                .build();
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST)).willReturn(response);
+            // when / then
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+                    .isInstanceOf(MpcSigningException.class)
+                    .hasMessageContaining("signing protocol error");
+        }
 
-        // when / then
-        assertThatThrownBy(() -> client.generateKey())
-                .isInstanceOf(MpcKeyGenerationException.class)
-                .hasMessageContaining("empty Solana address");
-    }
+        @Test
+        void shouldThrowWhenStatusTimedOut() {
+            // given
+            var response = SignResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_TIMED_OUT)
+                    .build();
 
-    @Test
-    void shouldThrowMpcKeyGenerationExceptionOnGrpcError() {
-        // given
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST))
-                .willThrow(new StatusRuntimeException(Status.UNAVAILABLE));
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
-        // when / then
-        assertThatThrownBy(() -> client.generateKey())
-                .isInstanceOf(MpcKeyGenerationException.class)
-                .hasCauseInstanceOf(StatusRuntimeException.class);
-    }
+            // when / then
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+                    .isInstanceOf(MpcSigningException.class)
+                    .hasMessageContaining("ceremony timed out");
+        }
 
-    @Test
-    void shouldSignTransactionAndReturnSignature() {
-        // given
-        var response = SignResponse.newBuilder()
-                .setSignature(ByteString.copyFrom(SOME_SIGNATURE))
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
-                .build();
+        @Test
+        void shouldThrowWhenStatusUnspecified() {
+            // given
+            var response = SignResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_UNSPECIFIED)
+                    .build();
 
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
-        // when
-        var result = client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA);
+            // when / then
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+                    .isInstanceOf(MpcSigningException.class)
+                    .hasMessageContaining("unexpected status");
+        }
 
-        // then
-        assertThat(result).isEqualTo(SOME_SIGNATURE);
-    }
+        @Test
+        void shouldThrowWhenEmptySignature() {
+            // given
+            var response = SignResponse.newBuilder()
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
+                    .setSignature(ByteString.EMPTY)
+                    .build();
 
-    @Test
-    void shouldThrowMpcSigningExceptionWhenStatusFailed() {
-        // given
-        var response = SignResponse.newBuilder()
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_FAILED)
-                .setErrorMessage("signing protocol error")
-                .build();
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
+            // when / then
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+                    .isInstanceOf(MpcSigningException.class)
+                    .hasMessageContaining("empty signature");
+        }
 
-        // when / then
-        assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
-                .isInstanceOf(MpcSigningException.class)
-                .hasMessageContaining("signing protocol error");
-    }
+        @Test
+        void shouldThrowOnGrpcError() {
+            // given
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.sign(EXPECTED_SIGN_REQUEST))
+                    .willThrow(new StatusRuntimeException(Status.UNAVAILABLE));
 
-    @Test
-    void shouldThrowMpcSigningExceptionWhenStatusTimedOut() {
-        // given
-        var response = SignResponse.newBuilder()
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_TIMED_OUT)
-                .build();
-
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
-
-        // when / then
-        assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
-                .isInstanceOf(MpcSigningException.class)
-                .hasMessageContaining("ceremony timed out");
-    }
-
-    @Test
-    void shouldThrowMpcSigningExceptionWhenEmptySignature() {
-        // given
-        var response = SignResponse.newBuilder()
-                .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
-                .setSignature(ByteString.EMPTY)
-                .build();
-
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
-
-        // when / then
-        assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
-                .isInstanceOf(MpcSigningException.class)
-                .hasMessageContaining("empty signature");
-    }
-
-    @Test
-    void shouldThrowMpcSigningExceptionOnGrpcError() {
-        // given
-        given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
-                .willReturn(deadlineStub);
-        given(deadlineStub.sign(EXPECTED_SIGN_REQUEST))
-                .willThrow(new StatusRuntimeException(Status.UNAVAILABLE));
-
-        // when / then
-        assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
-                .isInstanceOf(MpcSigningException.class)
-                .hasCauseInstanceOf(StatusRuntimeException.class);
+            // when / then
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+                    .isInstanceOf(MpcSigningException.class)
+                    .hasCauseInstanceOf(StatusRuntimeException.class);
+        }
     }
 }

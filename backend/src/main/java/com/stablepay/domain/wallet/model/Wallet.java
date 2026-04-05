@@ -14,6 +14,8 @@ public record Wallet(
     Long id,
     String userId,
     String solanaAddress,
+    byte[] publicKey,
+    byte[] keyShareData,
     BigDecimal availableBalance,
     BigDecimal totalBalance,
     Instant createdAt,
