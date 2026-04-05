@@ -123,5 +123,5 @@ dependencies {
 
     // Integration test dependencies
     "integrationTestImplementation"(testFixtures(project))
-    "integrationTestImplementation"("org.wiremock:wiremock-standalone:3.13.0")
+    "integrationTestImplementation"("org.wiremock:wiremock-standalone:3.13.2")
 }
