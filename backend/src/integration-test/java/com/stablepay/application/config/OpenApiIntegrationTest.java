@@ -25,9 +25,11 @@ class OpenApiIntegrationTest {
     void shouldServeOpenApiSpec() {
         // given — springdoc auto-configuration exposes /v3/api-docs
 
-        // when / then
-        mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(status().isOk())
+        // when
+        var result = mockMvc.perform(get("/v3/api-docs"));
+
+        // then
+        result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.openapi").exists())
                 .andExpect(jsonPath("$.info.title").value("StablePay API"))
                 .andExpect(jsonPath("$.info.version").value("0.1.0"))
@@ -39,9 +41,11 @@ class OpenApiIntegrationTest {
     void shouldGroupEndpointsByTag() {
         // given — controllers are annotated with @Tag
 
-        // when / then
-        mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(status().isOk())
+        // when
+        var result = mockMvc.perform(get("/v3/api-docs"));
+
+        // then
+        result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.tags[?(@.name == 'Wallets')]").exists())
                 .andExpect(jsonPath("$.tags[?(@.name == 'Remittances')]").exists())
                 .andExpect(jsonPath("$.tags[?(@.name == 'Claims')]").exists())
@@ -53,9 +57,11 @@ class OpenApiIntegrationTest {
     void shouldDocumentErrorResponseSchema() {
         // given — ErrorResponse is referenced in @ApiResponse annotations
 
-        // when / then
-        mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(status().isOk())
+        // when
+        var result = mockMvc.perform(get("/v3/api-docs"));
+
+        // then
+        result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.components.schemas.ErrorResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.ErrorResponse.properties.errorCode").exists())
                 .andExpect(jsonPath("$.components.schemas.ErrorResponse.properties.message").exists())

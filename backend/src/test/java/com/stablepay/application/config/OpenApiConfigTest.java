@@ -11,69 +11,8 @@ class OpenApiConfigTest {
     private final OpenApiConfig openApiConfig = new OpenApiConfig();
 
     @Test
-    void shouldConfigureApiTitle() {
-        // given
-        var openApi = openApiConfig.stablePayOpenApi();
-
-        // when
-        var title = openApi.getInfo().getTitle();
-
-        // then
-        assertThat(title).isEqualTo("StablePay API");
-    }
-
-    @Test
-    void shouldConfigureApiVersion() {
-        // given
-        var openApi = openApiConfig.stablePayOpenApi();
-
-        // when
-        var version = openApi.getInfo().getVersion();
-
-        // then
-        assertThat(version).isEqualTo("0.1.0");
-    }
-
-    @Test
-    void shouldConfigureApiDescription() {
-        // given
-        var openApi = openApiConfig.stablePayOpenApi();
-
-        // when
-        var description = openApi.getInfo().getDescription();
-
-        // then
-        assertThat(description).contains("Cross-border stablecoin remittance");
-    }
-
-    @Test
-    void shouldConfigureContact() {
-        // given
-        var openApi = openApiConfig.stablePayOpenApi();
-
-        // when
-        var contact = openApi.getInfo().getContact();
-
-        // then
-        assertThat(contact.getName()).isEqualTo("StablePay Team");
-        assertThat(contact.getUrl()).isEqualTo("https://github.com/stablepay");
-    }
-
-    @Test
-    void shouldConfigureLicense() {
-        // given
-        var openApi = openApiConfig.stablePayOpenApi();
-
-        // when
-        var license = openApi.getInfo().getLicense();
-
-        // then
-        assertThat(license.getName()).isEqualTo("MIT");
-    }
-
-    @Test
     void shouldReturnFullyConfiguredOpenApiBean() {
-        // given — expected OpenAPI configuration
+        // given
         var expected = new OpenAPI()
                 .info(new io.swagger.v3.oas.models.info.Info()
                         .title("StablePay API")
