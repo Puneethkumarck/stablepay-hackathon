@@ -99,6 +99,8 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       MPC_SIDECAR_HOST: mpc-sidecar-0
       MPC_SIDECAR_PORT: 50051
+      MPC_SIDECAR_0_URL: mpc-sidecar-0:50051
+      MPC_SIDECAR_1_URL: mpc-sidecar-1:50051
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,6 +109,8 @@ services:
       temporal:
         condition: service_started
       mpc-sidecar-0:
+        condition: service_healthy
+      mpc-sidecar-1:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]

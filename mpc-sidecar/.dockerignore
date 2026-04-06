@@ -1,0 +1,6 @@
+*.dylib
+*.exe
+*.test
+.git
+.gitignore
+README.md
