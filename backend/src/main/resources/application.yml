@@ -40,6 +40,11 @@ stablepay:
     escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:11111111111111111111111111111111}
     usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
+  twilio:
+    enabled: ${TWILIO_ENABLED:false}
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    phone-number: ${TWILIO_PHONE_NUMBER:}
   temporal:
     workflow-execution-timeout: PT48H
     workflow-run-timeout: PT2H
