@@ -3,6 +3,7 @@ package com.stablepay.test;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 
 import com.stablepay.infrastructure.temporal.RemittanceLifecycleActivities;
 import com.stablepay.infrastructure.temporal.RemittanceLifecycleWorkflowImpl;
@@ -26,6 +27,7 @@ public class TemporalTestConfig {
     }
 
     @Bean
+    @Primary
     RemittanceLifecycleActivities remittanceLifecycleActivities() {
         return Mockito.mock(RemittanceLifecycleActivities.class);
     }
