@@ -21,10 +21,10 @@ anchor-spl = "0.32"
 
 # Pin crates whose latest versions require edition 2024 or Rust >= 1.80,
 # which is incompatible with the Solana Platform Tools toolchain (Rust 1.79).
-blake3 = "=1.8.4"
-proc-macro-crate = "=3.5.0"
+blake3 = "=1.8.2"
+proc-macro-crate = "=3.3.0"
 indexmap = "=2.11.4"
-unicode-segmentation = "=1.13.2"
+unicode-segmentation = "=1.12.0"
 
 [profile.release]
 overflow-checks = true
