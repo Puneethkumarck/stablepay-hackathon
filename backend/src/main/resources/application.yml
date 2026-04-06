@@ -20,9 +20,9 @@ spring:
           min-idle: 2
           max-wait: 1000ms
   datasource:
-    url: jdbc:postgresql://localhost:5432/stablepay
-    username: stablepay
-    password: stablepay
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/stablepay}
+    username: ${DATABASE_USERNAME:stablepay}
+    password: ${DATABASE_PASSWORD:stablepay}
   jpa:
     hibernate:
       ddl-auto: validate
