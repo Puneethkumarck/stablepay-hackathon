@@ -1,0 +1,39 @@
+[package]
+name = "stablepay-escrow"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "stablepay_escrow"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "0.32"
+anchor-spl = "0.32"
+
+# Pin crates whose latest versions require edition 2024 or Rust >= 1.80,
+# which is incompatible with the Solana Platform Tools toolchain (Rust 1.79).
+blake3 = "=1.8.2"
+proc-macro-crate = "=3.2.0"
+indexmap = "=2.11.4"
+unicode-segmentation = "=1.12.0"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+
+[lints.clippy]
+cast_possible_truncation = "deny"
+cast_sign_loss = "deny"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(feature, values("anchor-debug", "custom-heap", "custom-panic"))', 'cfg(target_os, values("solana"))'] }
