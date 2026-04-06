@@ -69,8 +69,9 @@ chore(STA-27): add ArchUnit layer boundary rules
 | Doc | What it covers |
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | Tech stack, build commands, project structure |
-| [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Hexagonal architecture, Java conventions, MapStruct |
-| [docs/TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md) | BDDMockito, golden rule, fixtures, ArchUnit |
+| [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Backend (Java): hexagonal architecture, conventions, MapStruct |
+| [docs/TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md) | Backend (Java): BDDMockito, golden rule, fixtures, ArchUnit |
+| [docs/SOLANA_CODING_STANDARDS.md](docs/SOLANA_CODING_STANDARDS.md) | Solana (Rust/Anchor): program structure, security, testing |
 | [docs/ADR.md](docs/ADR.md) | Architecture decisions and rationale |
 
 ## Error Codes
