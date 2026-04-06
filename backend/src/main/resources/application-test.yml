@@ -9,3 +9,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+stablepay:
+  mpc:
+    enabled: false

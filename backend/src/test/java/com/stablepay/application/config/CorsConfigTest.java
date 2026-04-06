@@ -20,10 +20,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.stablepay.testutil.TestClockConfig;
+
 import lombok.SneakyThrows;
 
 @WebMvcTest(CorsConfigTest.TestController.class)
-@Import({CorsConfig.class, CorsConfigTest.CorsTestProperties.class})
+@Import({CorsConfig.class, CorsConfigTest.CorsTestProperties.class, TestClockConfig.class})
 class CorsConfigTest {
 
     private static final String ALLOWED_ORIGIN_WEB_CLAIM = "http://localhost:3000";

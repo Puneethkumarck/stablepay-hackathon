@@ -1,6 +1,9 @@
 spring:
   application:
     name: stablepay
+  autoconfigure:
+    exclude:
+      - io.temporal.spring.boot.autoconfigure.TemporalAutoConfiguration
   cache:
     type: redis
     redis:
@@ -27,6 +30,21 @@ stablepay:
   fx:
     api:
       base-url: https://open.er-api.com
+  mpc:
+    sidecar:
+      host: ${MPC_SIDECAR_HOST:localhost}
+      port: ${MPC_SIDECAR_PORT:50051}
+      deadline-ms: ${MPC_SIDECAR_DEADLINE_MS:30000}
+  solana:
+    rpc-url: https://api.devnet.solana.com
+    escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:11111111111111111111111111111111}
+    usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
+    claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
+  temporal:
+    workflow-execution-timeout: PT48H
+    workflow-run-timeout: PT2H
+    claim-expiry-timeout: PT48H
+    claim-base-url: https://claim.stablepay.app/
   cors:
     allowed-origins:
       - http://localhost:3000
