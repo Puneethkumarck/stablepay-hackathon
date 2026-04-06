@@ -72,10 +72,15 @@ class TemporalRemittanceWorkflowStarterTest {
                 .claimToken(SOME_CLAIM_TOKEN)
                 .claimBaseUrl("https://claim.stablepay.app/")
                 .claimExpiryTimeout(Duration.ofHours(48))
+                .escrowExpiryTimestamp(0L)
                 .build();
 
         assertThat(requestCaptor.getValue())
                 .usingRecursiveComparison()
+                .ignoringFields("escrowExpiryTimestamp")
                 .isEqualTo(expected);
+
+        assertThat(requestCaptor.getValue().escrowExpiryTimestamp())
+                .isPositive();
     }
 }

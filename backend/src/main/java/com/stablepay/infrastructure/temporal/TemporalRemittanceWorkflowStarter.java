@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.temporal;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -33,6 +34,10 @@ public class TemporalRemittanceWorkflowStarter implements RemittanceWorkflowStar
         var temporal = properties.temporal();
         var workflow = workflowFactory.createRemittanceWorkflow(remittanceId);
 
+        var escrowExpiryTimestamp = Instant.now()
+                .plus(temporal.claimExpiryTimeout())
+                .getEpochSecond();
+
         var request = RemittanceWorkflowRequest.builder()
                 .remittanceId(remittanceId)
                 .senderAddress(senderAddress)
@@ -41,6 +46,7 @@ public class TemporalRemittanceWorkflowStarter implements RemittanceWorkflowStar
                 .claimToken(claimToken)
                 .claimBaseUrl(temporal.claimBaseUrl())
                 .claimExpiryTimeout(temporal.claimExpiryTimeout())
+                .escrowExpiryTimestamp(escrowExpiryTimestamp)
                 .build();
 
         try {

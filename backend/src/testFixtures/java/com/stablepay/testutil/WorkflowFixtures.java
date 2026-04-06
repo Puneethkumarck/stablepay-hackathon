@@ -24,6 +24,10 @@ public final class WorkflowFixtures {
     public static final String SOME_DESTINATION_ADDRESS = "DsT1NaTi0nAdDr3sS9876543210AbCdEfGhIjKl";
     public static final String SOME_CLAIM_BASE_URL = "https://claim.stablepay.app/";
     public static final Duration SOME_CLAIM_EXPIRY_TIMEOUT = Duration.ofHours(48);
+    public static final long SOME_ESCROW_EXPIRY_TIMESTAMP = 1743861600L;
+    public static final String SOME_DEPOSIT_TX_SIGNATURE = "DepositTx1234567890AbCdEfGhIjKlMnOp";
+    public static final String SOME_RELEASE_TX_SIGNATURE = "ReleaseTx1234567890AbCdEfGhIjKlMnOp";
+    public static final String SOME_REFUND_TX_SIGNATURE = "RefundTx1234567890AbCdEfGhIjKlMnOpQr";
 
     public static RemittanceWorkflowRequest.RemittanceWorkflowRequestBuilder workflowRequestBuilder() {
         return RemittanceWorkflowRequest.builder()
@@ -33,7 +37,8 @@ public final class WorkflowFixtures {
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .claimToken(SOME_CLAIM_TOKEN)
                 .claimBaseUrl(SOME_CLAIM_BASE_URL)
-                .claimExpiryTimeout(SOME_CLAIM_EXPIRY_TIMEOUT);
+                .claimExpiryTimeout(SOME_CLAIM_EXPIRY_TIMEOUT)
+                .escrowExpiryTimestamp(SOME_ESCROW_EXPIRY_TIMESTAMP);
     }
 
     public static RemittanceWorkflowResult.RemittanceWorkflowResultBuilder workflowResultBuilder() {
