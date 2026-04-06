@@ -18,4 +18,6 @@ interface WalletJpaRepository extends JpaRepository<WalletEntity, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "4000")})
     Optional<WalletEntity> findById(Long id);
+
+    Optional<WalletEntity> findBySolanaAddress(String solanaAddress);
 }

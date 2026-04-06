@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
+import com.stablepay.domain.wallet.port.MpcWalletClient;
+import com.stablepay.domain.wallet.port.WalletRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,8 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
     private final Connection solanaConnection;
     private final EscrowInstructionBuilder escrowInstructionBuilder;
     private final SolanaProperties solanaProperties;
+    private final MpcWalletClient mpcWalletClient;
+    private final WalletRepository walletRepository;
 
     @Override
     public String depositEscrow(
@@ -43,15 +47,25 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
             var instruction = escrowInstructionBuilder.buildDepositInstruction(
                     remittanceId, senderWallet, claimAuthority, amountUsdc, expiryTimestamp);
 
-            // TODO: Deposit requires sender wallet signature via MPC sidecar (STA-7).
-            // For now, build the transaction unsigned — it will fail on sendTransaction
-            // until MPC signing is integrated.
+            var wallet = walletRepository.findBySolanaAddress(senderWalletAddress)
+                    .orElseThrow(() -> SolanaTransactionException.submissionFailed(
+                            "deposit:" + remittanceId,
+                            new IllegalStateException("No wallet found for address: " + senderWalletAddress)));
+
             var blockhash = solanaConnection.getLatestBlockhash();
             var message = TransactionMessage.newMessage(senderWallet, blockhash, instruction);
             var transaction = new VersionedTransaction(message);
 
-            log.warn("Deposit transaction for remittance {} is unsigned — MPC signing not yet integrated",
-                    remittanceId);
+            var messageBytes = message.serialize();
+            var mpcSignature = mpcWalletClient.signTransaction(messageBytes, wallet.keyShareData());
+            if (mpcSignature == null || mpcSignature.length != 64) {
+                throw SolanaTransactionException.submissionFailed(
+                        "deposit:" + remittanceId,
+                        new IllegalStateException("Invalid MPC signature: expected 64 bytes, got "
+                                + (mpcSignature == null ? "null" : mpcSignature.length)));
+            }
+            transaction.addSignature(Base58.encode(mpcSignature));
+            log.info("Deposit transaction for remittance {} signed via MPC", remittanceId);
 
             var signature = solanaConnection.sendTransaction(transaction);
             log.info("Escrow deposit submitted for remittance {} with signature {}",
