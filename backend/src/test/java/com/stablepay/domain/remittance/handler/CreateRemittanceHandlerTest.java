@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -24,6 +25,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.stablepay.domain.claim.model.ClaimToken;
 import com.stablepay.domain.claim.port.ClaimTokenRepository;
 import com.stablepay.domain.fx.port.FxRateProvider;
 import com.stablepay.domain.remittance.model.Remittance;
@@ -54,6 +56,9 @@ class CreateRemittanceHandlerTest {
 
     @Captor
     private ArgumentCaptor<Remittance> remittanceCaptor;
+
+    @Captor
+    private ArgumentCaptor<ClaimToken> claimTokenCaptor;
 
     private CreateRemittanceHandler createRemittanceHandler;
 
@@ -94,15 +99,117 @@ class CreateRemittanceHandlerTest {
         var result = createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC);
 
         // then
-        assertThat(result.senderId()).isEqualTo(SOME_SENDER_ID);
-        assertThat(result.status()).isEqualTo(RemittanceStatus.INITIATED);
-        assertThat(result.amountUsdc()).isEqualByComparingTo(SOME_AMOUNT_USDC);
-        assertThat(result.amountInr()).isEqualByComparingTo(SOME_AMOUNT_INR);
-        assertThat(result.fxRate()).isEqualByComparingTo(SOME_FX_RATE);
-        assertThat(result.claimTokenId()).isNotNull();
+        var expected = result.toBuilder()
+                .id(1L)
+                .senderId(SOME_SENDER_ID)
+                .recipientPhone(SOME_RECIPIENT_PHONE)
+                .amountUsdc(SOME_AMOUNT_USDC)
+                .amountInr(SOME_AMOUNT_INR)
+                .fxRate(SOME_FX_RATE)
+                .status(RemittanceStatus.INITIATED)
+                .smsNotificationFailed(false)
+                .build();
+
+        assertThat(result)
+                .usingRecursiveComparison()
+                .ignoringFields("createdAt", "updatedAt")
+                .isEqualTo(expected);
 
         then(walletRepository).should().save(reservedWallet);
-        then(claimTokenRepository).should().save(argThat(ct -> !ct.claimed() && ct.expiresAt() != null));
+        then(claimTokenRepository).should().save(claimTokenCaptor.capture());
+        var savedClaimToken = claimTokenCaptor.getValue();
+        var expectedClaimToken = ClaimToken.builder()
+                .remittanceId(result.remittanceId())
+                .token(savedClaimToken.token())
+                .claimed(false)
+                .expiresAt(savedClaimToken.expiresAt())
+                .build();
+        assertThat(savedClaimToken)
+                .usingRecursiveComparison()
+                .ignoringFields("id", "createdAt")
+                .isEqualTo(expectedClaimToken);
+        assertThat(savedClaimToken.expiresAt()).isNotNull();
+    }
+
+    @Test
+    void shouldPropagateExceptionWhenWorkflowStarterFails() {
+        // given
+        var wallet = walletBuilder()
+                .availableBalance(BigDecimal.valueOf(500))
+                .totalBalance(BigDecimal.valueOf(500))
+                .build();
+
+        var fxQuote = fxQuoteBuilder().build();
+
+        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+
+        var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
+        given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
+
+        given(fxRateProvider.getRate("USD", "INR")).willReturn(fxQuote);
+
+        given(remittanceRepository.save(argThat(r -> r != null && r.senderId() != null)))
+                .willAnswer(invocation -> invocation.<Remittance>getArgument(0).toBuilder().id(1L).build());
+
+        given(claimTokenRepository.save(argThat(ct -> ct != null && !ct.claimed())))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        willThrow(new RuntimeException("Temporal unavailable"))
+                .given(workflowStarter).startWorkflow(
+                        argThat(id -> id != null),
+                        argThat(addr -> addr != null),
+                        argThat(phone -> phone != null),
+                        argThat(amt -> amt != null),
+                        argThat(tok -> tok != null));
+
+        // when / then
+        assertThatThrownBy(() -> createRemittanceHandler.handle(
+                SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Temporal unavailable");
+    }
+
+    @Test
+    void shouldCreateRemittanceWithoutWorkflowStarterWhenNotConfigured() {
+        // given
+        var handler = new CreateRemittanceHandler(
+                remittanceRepository, walletRepository, fxRateProvider,
+                claimTokenRepository, Optional.empty());
+
+        var wallet = walletBuilder()
+                .availableBalance(BigDecimal.valueOf(500))
+                .totalBalance(BigDecimal.valueOf(500))
+                .build();
+
+        var fxQuote = fxQuoteBuilder().build();
+
+        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+
+        var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
+        given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
+
+        given(fxRateProvider.getRate("USD", "INR")).willReturn(fxQuote);
+
+        given(remittanceRepository.save(argThat(r -> r != null && r.senderId() != null)))
+                .willAnswer(invocation -> invocation.<Remittance>getArgument(0).toBuilder().id(1L).build());
+
+        given(claimTokenRepository.save(argThat(ct -> ct != null && !ct.claimed())))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        var result = handler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC);
+
+        // then
+        var expected = result.toBuilder()
+                .senderId(SOME_SENDER_ID)
+                .status(RemittanceStatus.INITIATED)
+                .build();
+        assertThat(result)
+                .usingRecursiveComparison()
+                .ignoringFields("id", "createdAt", "updatedAt")
+                .isEqualTo(expected);
+
+        then(workflowStarter).shouldHaveNoInteractions();
     }
 
     @Test

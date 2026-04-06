@@ -55,20 +55,15 @@ public class SubmitClaimHandler {
                 .build();
         var savedClaim = claimTokenRepository.save(updatedClaim);
 
-        var updatedRemittance = remittance.toBuilder()
-                .status(RemittanceStatus.CLAIMED)
-                .build();
-        var savedRemittance = remittanceRepository.save(updatedRemittance);
-
-        log.info("Claim submitted for token={}, remittanceId={}, upiId={}",
-                token, claimToken.remittanceId(), upiId);
+        log.info("Claim submitted for remittanceId={}, upiId={}",
+                claimToken.remittanceId(), upiId);
 
         claimSignaler.ifPresent(signaler ->
                 signaler.signalClaim(claimToken.remittanceId(), token, upiId));
 
         return ClaimDetails.builder()
                 .claimToken(savedClaim)
-                .remittance(savedRemittance)
+                .remittance(remittance)
                 .build();
     }
 }

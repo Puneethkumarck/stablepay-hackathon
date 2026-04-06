@@ -58,6 +58,12 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
 
             var messageBytes = message.serialize();
             var mpcSignature = mpcWalletClient.signTransaction(messageBytes, wallet.keyShareData());
+            if (mpcSignature == null || mpcSignature.length != 64) {
+                throw SolanaTransactionException.submissionFailed(
+                        "deposit:" + remittanceId,
+                        new IllegalStateException("Invalid MPC signature: expected 64 bytes, got "
+                                + (mpcSignature == null ? "null" : mpcSignature.length)));
+            }
             transaction.addSignature(Base58.encode(mpcSignature));
             log.info("Deposit transaction for remittance {} signed via MPC", remittanceId);
 

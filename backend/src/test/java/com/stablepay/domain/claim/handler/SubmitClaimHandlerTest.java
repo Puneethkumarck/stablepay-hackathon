@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 
 import java.util.Optional;
 
@@ -63,23 +64,75 @@ class SubmitClaimHandlerTest {
         var updatedClaim = claimToken.toBuilder().claimed(true).upiId(SOME_UPI_ID).build();
         given(claimTokenRepository.save(updatedClaim)).willReturn(updatedClaim);
 
-        var updatedRemittance = remittance.toBuilder().status(RemittanceStatus.CLAIMED).build();
-        given(remittanceRepository.save(updatedRemittance)).willReturn(updatedRemittance);
-
         // when
         var result = submitClaimHandler.handle(SOME_TOKEN, SOME_UPI_ID);
 
         // then
         var expected = ClaimDetails.builder()
                 .claimToken(updatedClaim)
-                .remittance(updatedRemittance)
+                .remittance(remittance)
                 .build();
         assertThat(result)
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
 
         then(claimTokenRepository).should().save(updatedClaim);
-        then(remittanceRepository).should().save(updatedRemittance);
+        then(claimSignaler).should().signalClaim(SOME_REMITTANCE_ID, SOME_TOKEN, SOME_UPI_ID);
+    }
+
+    @Test
+    void shouldPropagateExceptionWhenSignalerFails() {
+        // given
+        var claimToken = claimTokenBuilder().build();
+        var remittance = remittanceBuilder()
+                .status(RemittanceStatus.ESCROWED)
+                .build();
+
+        given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+
+        var updatedClaim = claimToken.toBuilder().claimed(true).upiId(SOME_UPI_ID).build();
+        given(claimTokenRepository.save(updatedClaim)).willReturn(updatedClaim);
+
+        willThrow(new RuntimeException("Temporal unavailable"))
+                .given(claimSignaler).signalClaim(SOME_REMITTANCE_ID, SOME_TOKEN, SOME_UPI_ID);
+
+        // when / then
+        assertThatThrownBy(() -> submitClaimHandler.handle(SOME_TOKEN, SOME_UPI_ID))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Temporal unavailable");
+    }
+
+    @Test
+    void shouldSubmitClaimWithoutSignalerWhenNotConfigured() {
+        // given
+        var handler = new SubmitClaimHandler(
+                claimTokenRepository, remittanceRepository, Optional.empty());
+
+        var claimToken = claimTokenBuilder().build();
+        var remittance = remittanceBuilder()
+                .status(RemittanceStatus.ESCROWED)
+                .build();
+
+        given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+
+        var updatedClaim = claimToken.toBuilder().claimed(true).upiId(SOME_UPI_ID).build();
+        given(claimTokenRepository.save(updatedClaim)).willReturn(updatedClaim);
+
+        // when
+        var result = handler.handle(SOME_TOKEN, SOME_UPI_ID);
+
+        // then
+        var expected = ClaimDetails.builder()
+                .claimToken(updatedClaim)
+                .remittance(remittance)
+                .build();
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+
+        then(claimSignaler).shouldHaveNoInteractions();
     }
 
     @Test

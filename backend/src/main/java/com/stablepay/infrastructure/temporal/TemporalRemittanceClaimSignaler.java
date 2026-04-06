@@ -7,6 +7,7 @@ import org.sol4k.Keypair;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
+import com.stablepay.domain.remittance.exception.SolanaTransactionException;
 import com.stablepay.domain.remittance.port.RemittanceClaimSignaler;
 import com.stablepay.infrastructure.solana.SolanaProperties;
 
@@ -26,7 +27,7 @@ public class TemporalRemittanceClaimSignaler implements RemittanceClaimSignaler 
     @Override
     public void signalClaim(UUID remittanceId, String claimToken, String upiId) {
         var workflowId = RemittanceLifecycleWorkflow.workflowId(remittanceId);
-        log.info("Signaling claim for workflowId={}, claimToken={}", workflowId, claimToken);
+        log.info("Signaling claim for workflowId={}", workflowId);
 
         var workflow = workflowClient.newWorkflowStub(
                 RemittanceLifecycleWorkflow.class, workflowId);
@@ -45,7 +46,7 @@ public class TemporalRemittanceClaimSignaler implements RemittanceClaimSignaler 
     private String resolveClaimDestination() {
         var privateKeyStr = solanaProperties.claimAuthorityPrivateKey();
         if (privateKeyStr == null || privateKeyStr.isBlank()) {
-            return "";
+            throw SolanaTransactionException.claimAuthorityNotConfigured();
         }
         return Keypair.fromSecretKey(Base58.decode(privateKeyStr))
                 .getPublicKey().toBase58();

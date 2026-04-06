@@ -72,16 +72,15 @@ public class CreateRemittanceHandler {
         var finalRemittance = remittanceRepository.save(
                 saved.toBuilder().claimTokenId(savedClaim.token()).build());
 
-        log.info("Created remittance remittanceId={}, senderId={}, amountUsdc={}, fxRate={}, claimToken={}",
-                finalRemittance.remittanceId(), senderId, amountUsdc, fxQuote.rate(), savedClaim.token());
+        log.info("Created remittance remittanceId={}, senderId={}, amountUsdc={}, fxRate={}",
+                finalRemittance.remittanceId(), senderId, amountUsdc, fxQuote.rate());
 
-        workflowStarter.ifPresent(starter ->
-                starter.startWorkflow(
-                        finalRemittance.remittanceId(),
-                        wallet.solanaAddress(),
-                        recipientPhone,
-                        amountUsdc,
-                        savedClaim.token()));
+        workflowStarter.ifPresent(starter -> starter.startWorkflow(
+                finalRemittance.remittanceId(),
+                wallet.solanaAddress(),
+                recipientPhone,
+                amountUsdc,
+                savedClaim.token()));
 
         return finalRemittance;
     }
