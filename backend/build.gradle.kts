@@ -184,7 +184,7 @@ dependencies {
     implementation("org.sol4k:sol4k:0.7.0")
 
     // Twilio SMS
-    implementation("com.twilio.sdk:twilio:10.7.0")
+    implementation("com.twilio.sdk:twilio:10.9.2")
 
     // Test
     testCompileOnly("org.projectlombok:lombok:1.18.44")
