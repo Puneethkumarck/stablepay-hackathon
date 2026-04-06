@@ -32,6 +32,8 @@ import org.sol4k.VersionedTransaction;
 import org.sol4k.instruction.BaseInstruction;
 
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
+import com.stablepay.domain.wallet.port.MpcWalletClient;
+import com.stablepay.domain.wallet.port.WalletRepository;
 
 @ExtendWith(MockitoExtension.class)
 class SolanaTransactionServiceAdapterTest {
@@ -41,6 +43,12 @@ class SolanaTransactionServiceAdapterTest {
 
     @Mock
     private EscrowInstructionBuilder escrowInstructionBuilder;
+
+    @Mock
+    private MpcWalletClient mpcWalletClient;
+
+    @Mock
+    private WalletRepository walletRepository;
 
     private SolanaProperties propertiesWithKey;
     private SolanaProperties propertiesWithoutKey;
@@ -64,7 +72,8 @@ class SolanaTransactionServiceAdapterTest {
         void shouldReturnConfirmedForTransactionStatusStub() {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithKey);
+                    solanaConnection, escrowInstructionBuilder, propertiesWithKey,
+                    mpcWalletClient, walletRepository);
 
             // when
             var result = adapter.getTransactionStatus(SOME_TRANSACTION_SIGNATURE);
@@ -81,7 +90,8 @@ class SolanaTransactionServiceAdapterTest {
         void shouldSubmitClaimTransactionAndReturnSignature() {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithKey);
+                    solanaConnection, escrowInstructionBuilder, propertiesWithKey,
+                    mpcWalletClient, walletRepository);
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
             var destination = new PublicKey(SOME_DESTINATION_TOKEN_ACCOUNT);
             var instruction = new BaseInstruction(
@@ -107,7 +117,8 @@ class SolanaTransactionServiceAdapterTest {
         void shouldThrowWhenClaimAuthorityNotConfigured() {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithoutKey);
+                    solanaConnection, escrowInstructionBuilder, propertiesWithoutKey,
+                    mpcWalletClient, walletRepository);
 
             // when / then
             assertThatThrownBy(() -> adapter.claimEscrow(
@@ -124,7 +135,8 @@ class SolanaTransactionServiceAdapterTest {
         void shouldSubmitRefundTransactionAndReturnSignature() {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithKey);
+                    solanaConnection, escrowInstructionBuilder, propertiesWithKey,
+                    mpcWalletClient, walletRepository);
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
             var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             var instruction = new BaseInstruction(
@@ -150,7 +162,8 @@ class SolanaTransactionServiceAdapterTest {
         void shouldThrowWhenClaimAuthorityNotConfiguredForRefund() {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithoutKey);
+                    solanaConnection, escrowInstructionBuilder, propertiesWithoutKey,
+                    mpcWalletClient, walletRepository);
 
             // when / then
             assertThatThrownBy(() -> adapter.refundEscrow(SOME_REMITTANCE_ID, SOME_SENDER_WALLET))
@@ -166,7 +179,8 @@ class SolanaTransactionServiceAdapterTest {
         void shouldThrowWhenClaimAuthorityNotConfiguredForDeposit() {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithoutKey);
+                    solanaConnection, escrowInstructionBuilder, propertiesWithoutKey,
+                    mpcWalletClient, walletRepository);
 
             // when / then
             assertThatThrownBy(() -> adapter.depositEscrow(
@@ -180,7 +194,8 @@ class SolanaTransactionServiceAdapterTest {
         void shouldThrowSolanaTransactionExceptionWhenDepositBuildFails() {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithKey);
+                    solanaConnection, escrowInstructionBuilder, propertiesWithKey,
+                    mpcWalletClient, walletRepository);
             var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
 

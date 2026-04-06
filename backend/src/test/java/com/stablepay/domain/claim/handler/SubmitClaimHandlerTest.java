@@ -13,9 +13,9 @@ import static org.mockito.BDDMockito.then;
 
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -26,6 +26,7 @@ import com.stablepay.domain.claim.model.ClaimDetails;
 import com.stablepay.domain.claim.port.ClaimTokenRepository;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.port.RemittanceClaimSignaler;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,8 +38,16 @@ class SubmitClaimHandlerTest {
     @Mock
     private RemittanceRepository remittanceRepository;
 
-    @InjectMocks
+    @Mock
+    private RemittanceClaimSignaler claimSignaler;
+
     private SubmitClaimHandler submitClaimHandler;
+
+    @BeforeEach
+    void setUp() {
+        submitClaimHandler = new SubmitClaimHandler(
+                claimTokenRepository, remittanceRepository, Optional.of(claimSignaler));
+    }
 
     @Test
     void shouldSubmitClaimSuccessfully() {

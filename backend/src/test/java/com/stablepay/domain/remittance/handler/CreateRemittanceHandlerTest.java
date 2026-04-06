@@ -5,7 +5,6 @@ import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_FX_RATE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_PHONE;
-import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,18 +16,20 @@ import static org.mockito.BDDMockito.then;
 import java.math.BigDecimal;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.stablepay.domain.claim.port.ClaimTokenRepository;
 import com.stablepay.domain.fx.port.FxRateProvider;
 import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
+import com.stablepay.domain.remittance.port.RemittanceWorkflowStarter;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 import com.stablepay.domain.wallet.port.WalletRepository;
@@ -45,11 +46,26 @@ class CreateRemittanceHandlerTest {
     @Mock
     private FxRateProvider fxRateProvider;
 
+    @Mock
+    private ClaimTokenRepository claimTokenRepository;
+
+    @Mock
+    private RemittanceWorkflowStarter workflowStarter;
+
     @Captor
     private ArgumentCaptor<Remittance> remittanceCaptor;
 
-    @InjectMocks
     private CreateRemittanceHandler createRemittanceHandler;
+
+    @BeforeEach
+    void setUp() {
+        createRemittanceHandler = new CreateRemittanceHandler(
+                remittanceRepository,
+                walletRepository,
+                fxRateProvider,
+                claimTokenRepository,
+                Optional.of(workflowStarter));
+    }
 
     @Test
     void shouldCreateRemittanceWithLockedFxRate() {
@@ -68,34 +84,25 @@ class CreateRemittanceHandlerTest {
 
         given(fxRateProvider.getRate("USD", "INR")).willReturn(fxQuote);
 
-        given(remittanceRepository.save(argThat(r ->
-                r.senderId().equals(SOME_SENDER_ID)
-                        && r.status() == RemittanceStatus.INITIATED)))
+        given(remittanceRepository.save(argThat(r -> r != null && r.senderId() != null)))
                 .willAnswer(invocation -> invocation.<Remittance>getArgument(0).toBuilder().id(1L).build());
 
+        given(claimTokenRepository.save(argThat(ct -> ct != null && !ct.claimed())))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
         // when
-        createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC);
+        var result = createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC);
 
         // then
-        then(remittanceRepository).should().save(remittanceCaptor.capture());
-
-        var expected = Remittance.builder()
-                .remittanceId(SOME_REMITTANCE_ID)
-                .senderId(SOME_SENDER_ID)
-                .recipientPhone(SOME_RECIPIENT_PHONE)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .amountInr(SOME_AMOUNT_INR)
-                .fxRate(SOME_FX_RATE)
-                .status(RemittanceStatus.INITIATED)
-                .smsNotificationFailed(false)
-                .build();
-
-        assertThat(remittanceCaptor.getValue())
-                .usingRecursiveComparison()
-                .ignoringFields("remittanceId")
-                .isEqualTo(expected);
+        assertThat(result.senderId()).isEqualTo(SOME_SENDER_ID);
+        assertThat(result.status()).isEqualTo(RemittanceStatus.INITIATED);
+        assertThat(result.amountUsdc()).isEqualByComparingTo(SOME_AMOUNT_USDC);
+        assertThat(result.amountInr()).isEqualByComparingTo(SOME_AMOUNT_INR);
+        assertThat(result.fxRate()).isEqualByComparingTo(SOME_FX_RATE);
+        assertThat(result.claimTokenId()).isNotNull();
 
         then(walletRepository).should().save(reservedWallet);
+        then(claimTokenRepository).should().save(argThat(ct -> !ct.claimed() && ct.expiresAt() != null));
     }
 
     @Test

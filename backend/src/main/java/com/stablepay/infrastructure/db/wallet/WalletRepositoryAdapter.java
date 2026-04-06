@@ -38,4 +38,9 @@ class WalletRepositoryAdapter implements WalletRepository {
     public Optional<Wallet> findByUserId(String userId) {
         return jpaRepository.findByUserId(userId).map(mapper::toDomain);
     }
+
+    @Override
+    public Optional<Wallet> findBySolanaAddress(String solanaAddress) {
+        return jpaRepository.findBySolanaAddress(solanaAddress).map(mapper::toDomain);
+    }
 }
