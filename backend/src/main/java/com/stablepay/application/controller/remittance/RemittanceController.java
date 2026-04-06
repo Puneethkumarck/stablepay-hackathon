@@ -18,16 +18,24 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.stablepay.application.controller.remittance.mapper.RemittanceApiMapper;
 import com.stablepay.application.dto.CreateRemittanceRequest;
+import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.application.dto.RemittanceResponse;
 import com.stablepay.domain.remittance.handler.CreateRemittanceHandler;
 import com.stablepay.domain.remittance.handler.GetRemittanceQueryHandler;
 import com.stablepay.domain.remittance.handler.ListRemittancesQueryHandler;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/remittances")
 @RequiredArgsConstructor
+@Tag(name = "Remittances", description = "Cross-border remittance creation and tracking")
 public class RemittanceController {
 
     private final CreateRemittanceHandler createRemittanceHandler;
@@ -37,6 +45,12 @@ public class RemittanceController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create remittance", description = "Initiates a new USD to INR remittance with locked FX rate")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Remittance created"),
+        @ApiResponse(responseCode = "400", description = "Validation error or insufficient balance",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     public RemittanceResponse createRemittance(@Valid @RequestBody CreateRemittanceRequest request) {
         var remittance = createRemittanceHandler.handle(
                 request.senderId(), request.recipientPhone(), request.amountUsdc());
@@ -44,12 +58,22 @@ public class RemittanceController {
     }
 
     @GetMapping("/{remittanceId}")
+    @Operation(summary = "Get remittance", description = "Retrieves a remittance by its unique identifier")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Remittance found"),
+        @ApiResponse(responseCode = "404", description = "Remittance not found",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     public RemittanceResponse getRemittance(@PathVariable UUID remittanceId) {
         var remittance = getRemittanceQueryHandler.handle(remittanceId);
         return remittanceApiMapper.toResponse(remittance);
     }
 
     @GetMapping
+    @Operation(summary = "List remittances", description = "Returns a paginated list of remittances for a sender")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Remittances retrieved")
+    })
     public Page<RemittanceResponse> listRemittances(
             @RequestParam String senderId,
             Pageable pageable) {
