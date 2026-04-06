@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:25.0.2_10-jre-alpine
 
 RUN addgroup -g 1000 stablepay && \
     adduser -u 1000 -G stablepay -s /bin/sh -D stablepay
