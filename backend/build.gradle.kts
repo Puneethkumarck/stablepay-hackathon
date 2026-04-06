@@ -5,6 +5,31 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     id("com.diffplug.spotless") version "8.4.0"
     id("com.google.protobuf") version "0.9.6"
+    id("com.google.cloud.tools.jib") version "3.4.5"
+}
+
+jib {
+    from {
+        image = "docker://eclipse-temurin:25-jre-alpine"
+    }
+    to {
+        image = "stablepay-backend"
+        tags = setOf("latest", version.toString())
+    }
+    container {
+        mainClass = "com.stablepay.Application"
+        jvmFlags = listOf(
+            "-XX:+UseG1GC",
+            "-XX:MaxRAMPercentage=75.0",
+            "-Djava.security.egd=file:/dev/./urandom"
+        )
+        ports = listOf("8080")
+        environment = mapOf(
+            "SPRING_PROFILES_ACTIVE" to "docker"
+        )
+        creationTime.set("USE_CURRENT_TIMESTAMP")
+        user = "1000:1000"
+    }
 }
 
 group = "com.stablepay"
