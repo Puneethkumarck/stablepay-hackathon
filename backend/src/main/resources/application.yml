@@ -6,12 +6,23 @@ spring:
       - io.temporal.spring.boot.autoconfigure.TemporalAutoConfiguration
   cache:
     type: redis
+  data:
     redis:
-      time-to-live: 60s
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      connect-timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: 1000ms
   datasource:
-    url: jdbc:postgresql://localhost:5432/stablepay
-    username: stablepay
-    password: stablepay
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/stablepay}
+    username: ${DATABASE_USERNAME:stablepay}
+    password: ${DATABASE_PASSWORD:stablepay}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -70,3 +81,9 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    redis:
+      enabled: true

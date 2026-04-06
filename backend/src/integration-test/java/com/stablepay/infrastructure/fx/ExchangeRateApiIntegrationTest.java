@@ -7,15 +7,12 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -44,17 +41,6 @@ class ExchangeRateApiIntegrationTest {
 
     @Autowired
     private FxRateProvider fxRateProvider;
-
-    @Autowired
-    private CacheManager cacheManager;
-
-    @BeforeEach
-    void clearCaches() {
-        cacheManager.getCacheNames().stream()
-                .map(cacheManager::getCache)
-                .filter(Objects::nonNull)
-                .forEach(org.springframework.cache.Cache::clear);
-    }
 
     @Test
     void shouldReturnLiveRateFromApi() {
