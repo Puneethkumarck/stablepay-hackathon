@@ -152,7 +152,7 @@ dependencies {
     implementation("com.github.f4b6a3:uuid-creator:6.1.1")
 
     // Solana SDK
-    implementation("org.sol4k:sol4k:0.5.5")
+    implementation("org.sol4k:sol4k:0.7.0")
 
     // Test
     testCompileOnly("org.projectlombok:lombok:1.18.44")
