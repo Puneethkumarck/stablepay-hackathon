@@ -154,6 +154,9 @@ dependencies {
     // Solana SDK
     implementation("org.sol4k:sol4k:0.7.0")
 
+    // Twilio SMS
+    implementation("com.twilio.sdk:twilio:10.7.0")
+
     // Test
     testCompileOnly("org.projectlombok:lombok:1.18.44")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.44")
