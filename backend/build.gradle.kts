@@ -45,11 +45,14 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+val gitDir = file("${rootProject.projectDir}/../.git")
+
 val installGitHooks by tasks.registering(Copy::class) {
     description = "Installs git hooks from backend/.githooks into .git/hooks"
     group = "setup"
+    enabled = gitDir.isDirectory
     from("${projectDir}/.githooks")
-    into("${rootProject.projectDir}/../.git/hooks")
+    into("${gitDir}/hooks")
     filePermissions {
         unix("rwxr-xr-x")
     }
