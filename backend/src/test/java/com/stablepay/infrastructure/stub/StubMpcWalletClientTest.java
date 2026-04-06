@@ -9,15 +9,17 @@ class StubMpcWalletClientTest {
     private final StubMpcWalletClient stubClient = new StubMpcWalletClient();
 
     @Test
-    void shouldGenerateNonBlankSolanaAddress() {
+    void shouldGenerateKeyWithSolanaAddressAndKeyData() {
         // given — no special setup needed for stub
 
         // when
         var result = stubClient.generateKey();
 
         // then
-        assertThat(result).isNotBlank();
-        assertThat(result).hasSizeGreaterThanOrEqualTo(32);
+        assertThat(result.solanaAddress()).isNotBlank();
+        assertThat(result.solanaAddress()).hasSizeGreaterThanOrEqualTo(32);
+        assertThat(result.publicKey()).hasSize(32);
+        assertThat(result.keyShareData()).hasSize(64);
     }
 
     @Test
@@ -29,7 +31,7 @@ class StubMpcWalletClientTest {
         var second = stubClient.generateKey();
 
         // then
-        assertThat(first).isNotEqualTo(second);
+        assertThat(first.solanaAddress()).isNotEqualTo(second.solanaAddress());
     }
 
     @Test

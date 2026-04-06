@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import com.stablepay.domain.wallet.model.GeneratedKey;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +23,18 @@ public class StubMpcWalletClient implements MpcWalletClient {
     private final AtomicInteger counter = new AtomicInteger(0);
 
     @Override
-    public String generateKey() {
+    public GeneratedKey generateKey() {
         var index = counter.incrementAndGet();
         var address = generateDeterministicAddress(index);
+        var publicKey = generateStubBytes("pub-" + index, 32);
+        var keyShareData = generateStubBytes("share-" + index, 64);
 
         log.info("STUB: Generated MPC wallet #{} with address={}", index, address);
-        return address;
+        return GeneratedKey.builder()
+                .solanaAddress(address)
+                .publicKey(publicKey)
+                .keyShareData(keyShareData)
+                .build();
     }
 
     @Override
