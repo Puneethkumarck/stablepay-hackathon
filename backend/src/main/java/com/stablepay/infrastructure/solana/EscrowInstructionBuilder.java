@@ -1,0 +1,258 @@
+package com.stablepay.infrastructure.solana;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import org.sol4k.AccountMeta;
+import org.sol4k.PublicKey;
+import org.sol4k.instruction.BaseInstruction;
+import org.sol4k.instruction.Instruction;
+import org.springframework.stereotype.Component;
+
+import com.stablepay.domain.remittance.exception.SolanaTransactionException;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class EscrowInstructionBuilder {
+
+    private static final PublicKey TOKEN_PROGRAM_ID =
+            new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    private static final PublicKey ASSOCIATED_TOKEN_PROGRAM_ID =
+            new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    private static final PublicKey SYSTEM_PROGRAM_ID =
+            new PublicKey("11111111111111111111111111111111");
+    private static final PublicKey RENT_SYSVAR =
+            new PublicKey("SysvarRent111111111111111111111111111111111");
+    private static final byte[] PDA_MARKER = "ProgramDerivedAddress".getBytes();
+
+    private static final int USDC_DECIMALS = 6;
+    private static final byte[] ESCROW_SEED_PREFIX = "escrow".getBytes();
+
+    private final SolanaProperties solanaProperties;
+
+    public Instruction buildDepositInstruction(
+            UUID remittanceId,
+            PublicKey senderWallet,
+            PublicKey claimAuthority,
+            BigDecimal amountUsdc,
+            long expiryTimestamp) {
+
+        var remittanceIdBytes = uuidToBytes(remittanceId);
+        var escrowPda = deriveEscrowPda(remittanceIdBytes);
+        var senderAta = deriveAssociatedTokenAddress(senderWallet, solanaProperties.usdcMint());
+        var vaultAta = deriveAssociatedTokenAddress(escrowPda, solanaProperties.usdcMint());
+        var lamports = usdcToLamports(amountUsdc);
+
+        var data = buildDepositData(remittanceIdBytes, lamports, expiryTimestamp);
+
+        var keys = List.of(
+                AccountMeta.signerAndWritable(senderWallet),
+                AccountMeta.writable(escrowPda),
+                AccountMeta.writable(vaultAta),
+                AccountMeta.writable(senderAta),
+                new AccountMeta(claimAuthority, false, false),
+                new AccountMeta(solanaProperties.usdcMint(), false, false),
+                new AccountMeta(TOKEN_PROGRAM_ID, false, false),
+                new AccountMeta(ASSOCIATED_TOKEN_PROGRAM_ID, false, false),
+                new AccountMeta(SYSTEM_PROGRAM_ID, false, false),
+                new AccountMeta(RENT_SYSVAR, false, false));
+
+        log.debug("Built deposit instruction for remittance {} with escrow PDA {}",
+                remittanceId, escrowPda.toBase58());
+
+        return new BaseInstruction(data, keys, solanaProperties.escrowProgramId());
+    }
+
+    public Instruction buildClaimInstruction(
+            UUID remittanceId,
+            PublicKey claimAuthority,
+            PublicKey destinationTokenAccount) {
+
+        var remittanceIdBytes = uuidToBytes(remittanceId);
+        var escrowPda = deriveEscrowPda(remittanceIdBytes);
+        var vaultAta = deriveAssociatedTokenAddress(escrowPda, solanaProperties.usdcMint());
+
+        var data = buildClaimData();
+
+        var keys = List.of(
+                AccountMeta.signerAndWritable(claimAuthority),
+                AccountMeta.writable(escrowPda),
+                AccountMeta.writable(vaultAta),
+                AccountMeta.writable(destinationTokenAccount),
+                new AccountMeta(solanaProperties.usdcMint(), false, false),
+                new AccountMeta(TOKEN_PROGRAM_ID, false, false));
+
+        log.debug("Built claim instruction for remittance {} with destination {}",
+                remittanceId, destinationTokenAccount.toBase58());
+
+        return new BaseInstruction(data, keys, solanaProperties.escrowProgramId());
+    }
+
+    public Instruction buildRefundInstruction(
+            UUID remittanceId, PublicKey claimAuthority, PublicKey senderWallet) {
+
+        var remittanceIdBytes = uuidToBytes(remittanceId);
+        var escrowPda = deriveEscrowPda(remittanceIdBytes);
+        var vaultAta = deriveAssociatedTokenAddress(escrowPda, solanaProperties.usdcMint());
+        var senderAta = deriveAssociatedTokenAddress(senderWallet, solanaProperties.usdcMint());
+
+        var data = buildRefundData();
+
+        var keys = List.of(
+                AccountMeta.signerAndWritable(claimAuthority),
+                AccountMeta.writable(senderWallet),
+                AccountMeta.writable(escrowPda),
+                AccountMeta.writable(vaultAta),
+                AccountMeta.writable(senderAta),
+                new AccountMeta(solanaProperties.usdcMint(), false, false),
+                new AccountMeta(TOKEN_PROGRAM_ID, false, false));
+
+        log.debug("Built refund instruction for remittance {} returning to {}",
+                remittanceId, senderWallet.toBase58());
+
+        return new BaseInstruction(data, keys, solanaProperties.escrowProgramId());
+    }
+
+    public PublicKey deriveEscrowPda(byte[] remittanceIdBytes) {
+        try {
+            return findProgramDerivedAddress(
+                    List.of(ESCROW_SEED_PREFIX, remittanceIdBytes),
+                    solanaProperties.escrowProgramId());
+        } catch (SolanaTransactionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw SolanaTransactionException.pdaDerivationFailed(
+                    "escrow:" + Arrays.toString(remittanceIdBytes), e);
+        }
+    }
+
+    public PublicKey deriveAssociatedTokenAddress(PublicKey owner, PublicKey mint) {
+        try {
+            return PublicKey.findProgramDerivedAddress(owner, mint)
+                    .getPublicKey();
+        } catch (Exception e) {
+            throw SolanaTransactionException.pdaDerivationFailed(
+                    "ata:" + owner.toBase58() + ":" + mint.toBase58(), e);
+        }
+    }
+
+    byte[] buildDepositData(byte[] remittanceIdBytes, long lamports, long expiryTimestamp) {
+        var discriminator = anchorDiscriminator("global:deposit");
+        var buffer = ByteBuffer.allocate(8 + 16 + 8 + 8)
+                .order(ByteOrder.LITTLE_ENDIAN)
+                .put(discriminator)
+                .put(remittanceIdBytes)
+                .putLong(lamports)
+                .putLong(expiryTimestamp);
+        return buffer.array();
+    }
+
+    byte[] buildClaimData() {
+        return anchorDiscriminator("global:claim");
+    }
+
+    byte[] buildRefundData() {
+        return anchorDiscriminator("global:refund");
+    }
+
+    byte[] anchorDiscriminator(String instructionName) {
+        try {
+            var digest = MessageDigest.getInstance("SHA-256");
+            var hash = digest.digest(instructionName.getBytes());
+            return Arrays.copyOfRange(hash, 0, 8);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    static PublicKey findProgramDerivedAddress(List<byte[]> seeds, PublicKey programId) {
+        for (var nonce = 255; nonce >= 0; nonce--) {
+            try {
+                var address = createProgramAddress(seeds, (byte) nonce, programId);
+                return address;
+            } catch (IllegalArgumentException e) {
+                // nonce produces on-curve point, try next
+            }
+        }
+        throw new RuntimeException("Unable to find program derived address");
+    }
+
+    private static PublicKey createProgramAddress(
+            List<byte[]> seeds, byte nonce, PublicKey programId) {
+        try {
+            var totalSize = seeds.stream().mapToInt(s -> s.length).sum()
+                    + 1 // nonce byte
+                    + programId.bytes().length
+                    + PDA_MARKER.length;
+
+            var buffer = ByteBuffer.allocate(totalSize);
+            seeds.forEach(buffer::put);
+            buffer.put(nonce);
+            buffer.put(programId.bytes());
+            buffer.put(PDA_MARKER);
+
+            var hash = MessageDigest.getInstance("SHA-256").digest(buffer.array());
+
+            if (isOnCurve(hash)) {
+                throw new IllegalArgumentException("Invalid seeds: address is on curve");
+            }
+            return new PublicKey(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private static final BigInteger ED25519_P =
+            BigInteger.TWO.pow(255).subtract(BigInteger.valueOf(19));
+    private static final BigInteger ED25519_D = BigInteger.valueOf(-121665)
+            .multiply(BigInteger.valueOf(121666).modInverse(ED25519_P))
+            .mod(ED25519_P);
+
+    private static boolean isOnCurve(byte[] point) {
+        var yBytes = point.clone();
+        yBytes[31] &= 0x7f;
+
+        var reversed = new byte[32];
+        for (var i = 0; i < 32; i++) {
+            reversed[i] = yBytes[31 - i];
+        }
+        var y = new BigInteger(1, reversed);
+
+        if (y.compareTo(ED25519_P) >= 0) {
+            return false;
+        }
+
+        var y2 = y.modPow(BigInteger.TWO, ED25519_P);
+        var numerator = y2.subtract(BigInteger.ONE).mod(ED25519_P);
+        var denominator = ED25519_D.multiply(y2).add(BigInteger.ONE).mod(ED25519_P);
+        var x2 = numerator.multiply(denominator.modInverse(ED25519_P)).mod(ED25519_P);
+
+        var exp = ED25519_P.subtract(BigInteger.ONE).shiftRight(1);
+        var legendreSymbol = x2.modPow(exp, ED25519_P);
+
+        return legendreSymbol.equals(BigInteger.ONE) || x2.equals(BigInteger.ZERO);
+    }
+
+    static byte[] uuidToBytes(UUID uuid) {
+        var buffer = ByteBuffer.allocate(16)
+                .order(ByteOrder.BIG_ENDIAN)
+                .putLong(uuid.getMostSignificantBits())
+                .putLong(uuid.getLeastSignificantBits());
+        return buffer.array();
+    }
+
+    static long usdcToLamports(BigDecimal amountUsdc) {
+        return amountUsdc.movePointRight(USDC_DECIMALS).longValueExact();
+    }
+}

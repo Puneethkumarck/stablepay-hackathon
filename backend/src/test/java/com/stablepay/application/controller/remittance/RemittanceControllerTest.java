@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
@@ -39,10 +40,12 @@ import com.stablepay.domain.remittance.handler.GetRemittanceQueryHandler;
 import com.stablepay.domain.remittance.handler.ListRemittancesQueryHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
+import com.stablepay.testutil.TestClockConfig;
 
 import lombok.SneakyThrows;
 
 @WebMvcTest(RemittanceController.class)
+@Import(TestClockConfig.class)
 class RemittanceControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
