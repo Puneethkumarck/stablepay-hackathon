@@ -14,9 +14,9 @@ Before writing or modifying any code, read the relevant doc:
 
 | Task | Read first |
 |---|---|
-| Any backend (Java) code | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) |
-| Any backend test code | [docs/TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md) |
-| Any Solana program (Rust/Anchor) code | [docs/SOLANA_CODING_STANDARDS.md](docs/SOLANA_CODING_STANDARDS.md) |
+| Any `backend/` code (Java/Spring Boot) | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) |
+| Any `backend/` test code (Java) | [docs/TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md) |
+| Any `programs/` code (Rust/Anchor) | [docs/SOLANA_CODING_STANDARDS.md](docs/SOLANA_CODING_STANDARDS.md) |
 | Architecture or design decisions | [docs/ADR.md](docs/ADR.md) |
 | Full requirements | [docs/brainstorms/2026-04-03-stablepay-cross-border-requirements.md](docs/brainstorms/2026-04-03-stablepay-cross-border-requirements.md) |
 | Implementation plan | [docs/plans/2026-04-03-001-feat-cross-border-remittance-plan.md](docs/plans/2026-04-03-001-feat-cross-border-remittance-plan.md) |

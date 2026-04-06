@@ -250,6 +250,8 @@ let value = some_option.unwrap();
 let value = some_option.ok_or(EscrowError::InvalidState)?;
 ```
 
+**Exception:** `unwrap()` and `expect()` are acceptable in `#[cfg(test)]` code for known-safe operations (e.g., hardcoded values that cannot fail). In production code, always propagate errors.
+
 ## 4. State Management
 
 ### Account Struct Design
@@ -444,6 +446,21 @@ tests/
   stablepay-escrow.ts         # Main test file
 ```
 
+### Test Isolation
+
+Each test must be independent. Use unique PDA seeds per test to avoid state leakage:
+
+```typescript
+// Generate unique remittance ID per test to derive unique PDAs
+const remittanceId = anchor.web3.Keypair.generate().publicKey;
+const [escrowPDA] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("escrow"), remittanceId.toBuffer()],
+    program.programId
+);
+```
+
+Never rely on shared mutable state between tests. Each test creates its own accounts.
+
 ### Test Structure: Arrange / Act / Assert
 
 ```typescript
@@ -518,6 +535,7 @@ mod tests {
     fn should_calculate_fee_correctly() {
         let amount: u64 = 1_000_000;
         let fee_bps: u16 = 50;
+        // unwrap() is acceptable in tests for known-safe hardcoded values
         let fee = amount
             .checked_mul(fee_bps as u64)
             .unwrap()
