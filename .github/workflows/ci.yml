@@ -118,14 +118,29 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - name: Cache Solana CLI
+        id: cache-solana
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/solana
+          key: solana-cli-${{ env.SOLANA_VERSION }}
       - name: Install Solana CLI
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
-          echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+        if: steps.cache-solana.outputs.cache-hit != 'true'
+        run: sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+      - run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       - name: Install Anchor CLI
         run: |
           curl -fsSL "https://github.com/coral-xyz/anchor/releases/download/v${{ env.ANCHOR_VERSION }}/anchor-${{ env.ANCHOR_VERSION }}-x86_64-unknown-linux-gnu" -o /usr/local/bin/anchor
           chmod +x /usr/local/bin/anchor
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-anchor-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-anchor-${{ runner.os }}-
       - run: anchor build
 
   anchor-test:
@@ -140,13 +155,28 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - name: Cache Solana CLI
+        id: cache-solana
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/solana
+          key: solana-cli-${{ env.SOLANA_VERSION }}
       - name: Install Solana CLI
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
-          echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+        if: steps.cache-solana.outputs.cache-hit != 'true'
+        run: sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+      - run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       - name: Install Anchor CLI
         run: |
           curl -fsSL "https://github.com/coral-xyz/anchor/releases/download/v${{ env.ANCHOR_VERSION }}/anchor-${{ env.ANCHOR_VERSION }}-x86_64-unknown-linux-gnu" -o /usr/local/bin/anchor
           chmod +x /usr/local/bin/anchor
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-anchor-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-anchor-${{ runner.os }}-
       - run: solana-keygen new --no-bip39-passphrase
       - run: anchor test
