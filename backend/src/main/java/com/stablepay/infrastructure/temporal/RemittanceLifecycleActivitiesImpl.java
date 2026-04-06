@@ -2,6 +2,7 @@ package com.stablepay.infrastructure.temporal;
 
 import static java.util.Objects.requireNonNull;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Component;
 import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
-import com.stablepay.domain.wallet.port.MpcWalletClient;
+import com.stablepay.domain.remittance.port.SolanaTransactionService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,40 +20,47 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleActivities {
 
-    private final MpcWalletClient mpcWalletClient;
+    private final SolanaTransactionService solanaTransactionService;
     private final SmsProvider smsProvider;
     private final UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
 
     @Override
-    public byte[] signEscrowDeposit(byte[] unsignedTxBytes) {
-        requireNonNull(unsignedTxBytes, "unsignedTxBytes must not be null");
-        log.info("Signing escrow deposit transaction ({} bytes)", unsignedTxBytes.length);
-        var keyShareData = resolveKeyShareData();
-        var signature = mpcWalletClient.signTransaction(unsignedTxBytes, keyShareData);
-        log.info("Escrow deposit signed successfully ({} byte signature)", signature.length);
+    public String depositEscrow(
+            String remittanceId,
+            String senderWalletAddress,
+            BigDecimal amountUsdc,
+            long expiryTimestamp) {
+        requireNonNull(remittanceId, "remittanceId must not be null");
+        requireNonNull(senderWalletAddress, "senderWalletAddress must not be null");
+        requireNonNull(amountUsdc, "amountUsdc must not be null");
+        log.info("Depositing escrow for remittance {} amount {} USDC", remittanceId, amountUsdc);
+        var uuid = UUID.fromString(remittanceId);
+        var signature = solanaTransactionService.depositEscrow(
+                uuid, senderWalletAddress, amountUsdc, expiryTimestamp);
+        log.info("Escrow deposit completed for remittance {} with signature {}", remittanceId, signature);
         return signature;
     }
 
     @Override
-    public byte[] signEscrowRelease(byte[] unsignedTxBytes) {
-        requireNonNull(unsignedTxBytes, "unsignedTxBytes must not be null");
-        log.info("Signing escrow release transaction ({} bytes)", unsignedTxBytes.length);
-        var keyShareData = resolveKeyShareData();
-        var signature = mpcWalletClient.signTransaction(unsignedTxBytes, keyShareData);
-        log.info("Escrow release signed successfully ({} byte signature)", signature.length);
+    public String releaseEscrow(String remittanceId, String destinationTokenAccount) {
+        requireNonNull(remittanceId, "remittanceId must not be null");
+        requireNonNull(destinationTokenAccount, "destinationTokenAccount must not be null");
+        log.info("Releasing escrow for remittance {}", remittanceId);
+        var uuid = UUID.fromString(remittanceId);
+        var signature = solanaTransactionService.claimEscrow(uuid, destinationTokenAccount);
+        log.info("Escrow released for remittance {} with signature {}", remittanceId, signature);
         return signature;
     }
 
     @Override
-    public String submitToSolana(byte[] signedTxBytes) {
-        requireNonNull(signedTxBytes, "signedTxBytes must not be null");
-        log.info("Submitting signed transaction to Solana ({} bytes)", signedTxBytes.length);
-        // Simulated for hackathon MVP: log the submission and return a stub signature.
-        // Full Solana RPC raw-bytes submission with confirmation polling will be
-        // integrated when the escrow program is deployed on devnet.
-        var txSignature = "sim_" + UUID.randomUUID().toString().replace("-", "");
-        log.info("Transaction submitted to Solana, signature={}", txSignature);
-        return txSignature;
+    public String refundEscrow(String remittanceId, String senderWalletAddress) {
+        requireNonNull(remittanceId, "remittanceId must not be null");
+        requireNonNull(senderWalletAddress, "senderWalletAddress must not be null");
+        log.info("Refunding escrow for remittance {}", remittanceId);
+        var uuid = UUID.fromString(remittanceId);
+        var signature = solanaTransactionService.refundEscrow(uuid, senderWalletAddress);
+        log.info("Escrow refunded for remittance {} with signature {}", remittanceId, signature);
+        return signature;
     }
 
     @Override
@@ -82,14 +90,6 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
         log.info("Updating remittance {} status to {}", remittanceId, status);
         var uuid = UUID.fromString(remittanceId);
         updateRemittanceStatusHandler.handle(uuid, status);
-    }
-
-    private byte[] resolveKeyShareData() {
-        // Hackathon MVP: single-party MPC setup. Key share resolution will be
-        // enhanced to look up per-wallet key shares when multi-party signing is
-        // integrated. For now, return a minimal placeholder that the MPC sidecar
-        // can accept for its single-party ceremony.
-        return new byte[0];
     }
 
     private String maskPhone(String phone) {

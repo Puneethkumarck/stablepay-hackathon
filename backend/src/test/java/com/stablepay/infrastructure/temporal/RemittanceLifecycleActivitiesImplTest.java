@@ -1,9 +1,14 @@
 package com.stablepay.infrastructure.temporal;
 
-import static com.stablepay.testutil.MpcFixtures.SOME_SIGNATURE;
-import static com.stablepay.testutil.MpcFixtures.SOME_TRANSACTION_BYTES;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_DEPOSIT_TX_SIGNATURE;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_ESCROW_EXPIRY_TIMESTAMP;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_RECIPIENT_PHONE;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_REFUND_TX_SIGNATURE;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_RELEASE_TX_SIGNATURE;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_SENDER_ADDRESS;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,17 +26,16 @@ import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
-import com.stablepay.domain.wallet.port.MpcWalletClient;
+import com.stablepay.domain.remittance.port.SolanaTransactionService;
 
 @ExtendWith(MockitoExtension.class)
 class RemittanceLifecycleActivitiesImplTest {
 
-    private static final byte[] EMPTY_KEY_SHARE = new byte[0];
     private static final String SOME_CLAIM_URL = "https://claim.stablepay.app/claim-token-abc-123";
     private static final String SOME_AMOUNT_INR = "8325.00";
 
     @Mock
-    private MpcWalletClient mpcWalletClient;
+    private SolanaTransactionService solanaTransactionService;
 
     @Mock
     private SmsProvider smsProvider;
@@ -43,41 +47,45 @@ class RemittanceLifecycleActivitiesImplTest {
     private RemittanceLifecycleActivitiesImpl activities;
 
     @Test
-    void shouldSignEscrowDepositViaMpc() {
+    void shouldDepositEscrowViaSolanaService() {
         // given
-        given(mpcWalletClient.signTransaction(SOME_TRANSACTION_BYTES, EMPTY_KEY_SHARE))
-                .willReturn(SOME_SIGNATURE);
+        given(solanaTransactionService.depositEscrow(
+                SOME_REMITTANCE_ID, SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC, SOME_ESCROW_EXPIRY_TIMESTAMP))
+                .willReturn(SOME_DEPOSIT_TX_SIGNATURE);
 
         // when
-        var result = activities.signEscrowDeposit(SOME_TRANSACTION_BYTES);
+        var result = activities.depositEscrow(
+                SOME_REMITTANCE_ID.toString(), SOME_SENDER_ADDRESS,
+                SOME_AMOUNT_USDC, SOME_ESCROW_EXPIRY_TIMESTAMP);
 
         // then
-        assertThat(result).isEqualTo(SOME_SIGNATURE);
+        assertThat(result).isEqualTo(SOME_DEPOSIT_TX_SIGNATURE);
     }
 
     @Test
-    void shouldSignEscrowReleaseViaMpc() {
+    void shouldReleaseEscrowViaSolanaService() {
         // given
-        given(mpcWalletClient.signTransaction(SOME_TRANSACTION_BYTES, EMPTY_KEY_SHARE))
-                .willReturn(SOME_SIGNATURE);
+        given(solanaTransactionService.claimEscrow(SOME_REMITTANCE_ID, SOME_DESTINATION_ADDRESS))
+                .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
         // when
-        var result = activities.signEscrowRelease(SOME_TRANSACTION_BYTES);
+        var result = activities.releaseEscrow(SOME_REMITTANCE_ID.toString(), SOME_DESTINATION_ADDRESS);
 
         // then
-        assertThat(result).isEqualTo(SOME_SIGNATURE);
+        assertThat(result).isEqualTo(SOME_RELEASE_TX_SIGNATURE);
     }
 
     @Test
-    void shouldSubmitToSolanaAndReturnSignature() {
+    void shouldRefundEscrowViaSolanaService() {
         // given
-        var signedTxBytes = new byte[]{1, 2, 3, 4, 5};
+        given(solanaTransactionService.refundEscrow(SOME_REMITTANCE_ID, SOME_SENDER_ADDRESS))
+                .willReturn(SOME_REFUND_TX_SIGNATURE);
 
         // when
-        var result = activities.submitToSolana(signedTxBytes);
+        var result = activities.refundEscrow(SOME_REMITTANCE_ID.toString(), SOME_SENDER_ADDRESS);
 
         // then
-        assertThat(result).startsWith("sim_").isNotBlank();
+        assertThat(result).isEqualTo(SOME_REFUND_TX_SIGNATURE);
     }
 
     @Test
@@ -101,7 +109,7 @@ class RemittanceLifecycleActivitiesImplTest {
 
         // then
         then(smsProvider).shouldHaveNoInteractions();
-        then(mpcWalletClient).shouldHaveNoInteractions();
+        then(solanaTransactionService).shouldHaveNoInteractions();
     }
 
     @Test
