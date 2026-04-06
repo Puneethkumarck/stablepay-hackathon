@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, CloseAccount, Token, TokenAccount, Transfer};
 
 use crate::constants::*;
 use crate::errors::EscrowError;
@@ -33,10 +33,22 @@ pub fn handler(ctx: Context<Refund>) -> Result<()> {
         },
         signer_seeds,
     );
-    token::transfer(transfer_ctx, escrow.amount)?;
+    token::transfer(transfer_ctx, ctx.accounts.vault.amount)?;
 
     // Reload vault after CPI to reflect updated balance
     ctx.accounts.vault.reload()?;
+
+    // Close the vault token account — return rent to sender
+    let close_ctx = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        CloseAccount {
+            account: ctx.accounts.vault.to_account_info(),
+            destination: ctx.accounts.sender.to_account_info(),
+            authority: ctx.accounts.escrow.to_account_info(),
+        },
+        signer_seeds,
+    );
+    token::close_account(close_ctx)?;
 
     Ok(())
 }

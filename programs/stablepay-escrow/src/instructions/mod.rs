@@ -1,3 +1,5 @@
+#![allow(ambiguous_glob_reexports)]
+
 pub mod cancel;
 pub mod claim;
 pub mod deposit;

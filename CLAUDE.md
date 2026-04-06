@@ -84,7 +84,7 @@ docker compose down                # stop infrastructure
 | Migrations | Flyway |
 | Mapping | MapStruct 1.6.3 |
 | Testing | JUnit 5, BDDMockito, AssertJ, MockMvc |
-| Solana Program | Anchor 0.30.x (Rust) |
+| Solana Program | Anchor 0.32.x (Rust) |
 | MPC Sidecar | Go 1.26, bnb-chain/tss-lib (fystack fork) |
 | Mobile | React Native, Expo SDK 52 |
 | Web Claim | Next.js, shadcn/ui |

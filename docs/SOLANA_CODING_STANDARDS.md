@@ -619,8 +619,8 @@ no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
-anchor-lang = "0.30"
-anchor-spl = "0.30"
+anchor-lang = "0.32"
+anchor-spl = "0.32"
 
 [profile.release]
 overflow-checks = true
