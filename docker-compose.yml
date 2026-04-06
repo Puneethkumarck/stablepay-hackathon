@@ -46,6 +46,40 @@ services:
       timeout: 5s
       retries: 5
 
+  mpc-sidecar-0:
+    build:
+      context: ./mpc-sidecar
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+      - "7000:7000"
+    environment:
+      PARTY_ID: 0
+      GRPC_PORT: 50051
+      P2P_PORT: 7000
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 50051 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mpc-sidecar-1:
+    build:
+      context: ./mpc-sidecar
+      dockerfile: Dockerfile
+    ports:
+      - "50052:50051"
+      - "7001:7000"
+    environment:
+      PARTY_ID: 1
+      GRPC_PORT: 50051
+      P2P_PORT: 7000
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 50051 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     image: stablepay-backend:latest
     build:
@@ -63,6 +97,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       TEMPORAL_ADDRESS: temporal:7233
+      MPC_SIDECAR_HOST: mpc-sidecar-0
+      MPC_SIDECAR_PORT: 50051
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,6 +106,8 @@ services:
         condition: service_healthy
       temporal:
         condition: service_started
+      mpc-sidecar-0:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
