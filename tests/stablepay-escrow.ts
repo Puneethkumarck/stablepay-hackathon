@@ -78,6 +78,20 @@ describe("stablepay-escrow", () => {
     return { sender, senderToken };
   }
 
+  // Helper: poll the validator clock until it passes the target timestamp
+  async function waitForClockToPass(targetTimestamp: number): Promise<void> {
+    const maxWaitMs = 30_000;
+    const pollIntervalMs = 1_000;
+    const start = Date.now();
+    while (Date.now() - start < maxWaitMs) {
+      const slot = await connection.getSlot();
+      const blockTime = await connection.getBlockTime(slot);
+      if (blockTime && blockTime > targetTimestamp) return;
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+    throw new Error(`Validator clock did not pass ${targetTimestamp} within ${maxWaitMs}ms`);
+  }
+
   function deriveEscrowPDA(remittanceId: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("escrow"), remittanceId.toBuffer()],
@@ -635,8 +649,8 @@ describe("stablepay-escrow", () => {
         .signers([sender])
         .rpc();
 
-      // Wait for deadline to pass
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Wait for the validator clock to pass the deadline
+      await waitForClockToPass(deadline.toNumber());
 
       // Refund — called by a third party (cranker)
       const cranker = Keypair.generate();
@@ -757,8 +771,8 @@ describe("stablepay-escrow", () => {
         .signers([claimAuthorityKeypair])
         .rpc();
 
-      // Wait for deadline to pass
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Wait for the validator clock to pass the deadline
+      await waitForClockToPass(deadline.toNumber());
 
       // Attempt refund — should fail (escrow closed by claim)
       try {
