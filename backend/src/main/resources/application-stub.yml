@@ -1,0 +1,29 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.data.redis.autoconfigure.RedisAutoConfiguration
+      - org.springframework.boot.data.redis.autoconfigure.RedisRepositoriesAutoConfiguration
+      - io.temporal.spring.boot.autoconfigure.TemporalAutoConfiguration
+  cache:
+    type: none
+  datasource:
+    url: jdbc:h2:mem:stablepay;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+  h2:
+    console:
+      enabled: true
+
+logging:
+  level:
+    com.stablepay: DEBUG
+    com.stablepay.infrastructure.stub: INFO
