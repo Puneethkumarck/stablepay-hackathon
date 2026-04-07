@@ -512,10 +512,10 @@ cd backend
 # All tests + formatting
 ./gradlew build
 
-# Unit tests only (33 test classes)
+# Unit tests only
 ./gradlew test
 
-# Integration tests (6 test classes, requires Docker for TestContainers)
+# Integration tests (requires Docker for TestContainers)
 ./gradlew integrationTest
 
 # Format code (Spotless)
@@ -558,7 +558,7 @@ GitHub Actions runs **7 jobs** on every push to `main` and every PR:
               |               |
         +-----v----+   +-----v--------+
         |Unit Tests|   |Integration   |
-        |  (33)    |   |Tests (6)     |
+        |          |   |Tests         |
         +-----+----+   +-----+--------+
               |               |
               +-------+-------+
