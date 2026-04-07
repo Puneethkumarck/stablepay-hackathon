@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
 
     private final SolanaTransactionService solanaTransactionService;
     private final SmsProvider smsProvider;
+    private final FiatDisbursementProvider fiatDisbursementProvider;
     private final UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
 
     @Override
@@ -74,13 +76,20 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     }
 
     @Override
-    public void simulateInrDisbursement(String upiId, String amountInr) {
+    public void disburseInr(String upiId, String amountInr, String remittanceId) {
         requireNonNull(upiId, "upiId must not be null");
         requireNonNull(amountInr, "amountInr must not be null");
-        log.info("Simulating INR disbursement: {} INR to UPI {}", amountInr, upiId);
-        // Hackathon MVP: simulate disbursement by logging.
-        // Production would integrate with a payment rail (e.g., RazorpayX, Cashfree).
-        log.info("INR disbursement simulated successfully: {} INR to UPI {}", amountInr, upiId);
+        requireNonNull(remittanceId, "remittanceId must not be null");
+        log.info("Disbursing {} INR to UPI {} for remittance {}", amountInr, maskUpi(upiId), remittanceId);
+        fiatDisbursementProvider.disburse(upiId, amountInr, remittanceId);
+        log.info("INR disbursement completed for remittance {}", remittanceId);
+    }
+
+    private static String maskUpi(String upiId) {
+        if (upiId == null || upiId.length() <= 4) {
+            return "****";
+        }
+        return upiId.substring(0, 3) + "****";
     }
 
     @Override

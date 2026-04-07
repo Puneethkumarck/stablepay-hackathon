@@ -113,9 +113,10 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         currentStatus = RemittanceStatus.CLAIMED;
         log.info("Escrow released for remittanceId={} with tx={}", remittanceId, releaseSignature);
 
-        solanaActivities.simulateInrDisbursement(
+        solanaActivities.disburseInr(
                 pendingClaim.upiId(),
-                request.amountUsdc().toPlainString());
+                request.amountUsdc().toPlainString(),
+                remittanceId.toString());
 
         statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.DELIVERED);
         currentStatus = RemittanceStatus.DELIVERED;

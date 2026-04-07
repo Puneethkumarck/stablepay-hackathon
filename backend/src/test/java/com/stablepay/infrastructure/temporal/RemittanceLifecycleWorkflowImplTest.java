@@ -136,8 +136,8 @@ class RemittanceLifecycleWorkflowImplTest {
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.CLAIMED);
 
-        then(activities).should().simulateInrDisbursement(
-                SOME_UPI_ID, SOME_AMOUNT_USDC.toPlainString());
+        then(activities).should().disburseInr(
+                SOME_UPI_ID, SOME_AMOUNT_USDC.toPlainString(), SOME_REMITTANCE_ID.toString());
 
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.DELIVERED);

@@ -51,6 +51,11 @@ stablepay:
     escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:11111111111111111111111111111111}
     usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
+  transak:
+    enabled: ${TRANSAK_ENABLED:false}
+    api-key: ${TRANSAK_API_KEY:}
+    api-secret: ${TRANSAK_API_SECRET:}
+    base-url: ${TRANSAK_BASE_URL:https://staging-api.transak.com}
   twilio:
     enabled: ${TWILIO_ENABLED:false}
     account-sid: ${TWILIO_ACCOUNT_SID:}

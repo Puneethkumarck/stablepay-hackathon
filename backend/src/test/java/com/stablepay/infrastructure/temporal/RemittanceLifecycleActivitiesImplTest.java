@@ -26,6 +26,7 @@ import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +40,9 @@ class RemittanceLifecycleActivitiesImplTest {
 
     @Mock
     private SmsProvider smsProvider;
+
+    @Mock
+    private FiatDisbursementProvider fiatDisbursementProvider;
 
     @Mock
     private UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
@@ -101,15 +105,14 @@ class RemittanceLifecycleActivitiesImplTest {
     }
 
     @Test
-    void shouldSimulateInrDisbursementWithoutError() {
-        // given — no dependencies to stub
+    void shouldDelegateInrDisbursementToProvider() {
+        // given — provider is void, no stubbing needed
 
         // when
-        activities.simulateInrDisbursement(SOME_UPI_ID, SOME_AMOUNT_INR);
+        activities.disburseInr(SOME_UPI_ID, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString());
 
         // then
-        then(smsProvider).shouldHaveNoInteractions();
-        then(solanaTransactionService).shouldHaveNoInteractions();
+        then(fiatDisbursementProvider).should().disburse(SOME_UPI_ID, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString());
     }
 
     @Test
