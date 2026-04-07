@@ -21,7 +21,7 @@ public interface RemittanceLifecycleActivities {
 
     void sendClaimSms(String recipientPhone, String claimUrl);
 
-    void disburseInr(String upiId, String amountInr, String remittanceId);
+    void disburseInr(String upiId, String amountUsdc, String remittanceId);
 
     void updateRemittanceStatus(String remittanceId, RemittanceStatus status);
 }

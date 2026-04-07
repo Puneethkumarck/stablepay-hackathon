@@ -13,9 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 public class LoggingDisbursementAdapter implements FiatDisbursementProvider {
 
     @Override
-    public void disburse(String upiId, String amountInr, String remittanceId) {
-        log.info("Simulating INR disbursement: {} INR to UPI {} for remittance {}",
-                amountInr, maskUpi(upiId), remittanceId);
+    public void disburse(String upiId, String amountUsdc, String remittanceId) {
+        log.info("Simulating INR disbursement: {} USDC to UPI {} for remittance {}",
+                amountUsdc, maskUpi(upiId), remittanceId);
         log.info("INR disbursement simulated successfully for remittance {}", remittanceId);
     }
 

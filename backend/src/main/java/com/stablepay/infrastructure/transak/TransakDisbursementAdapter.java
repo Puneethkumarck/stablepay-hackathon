@@ -16,14 +16,20 @@ public class TransakDisbursementAdapter implements FiatDisbursementProvider {
     private final TransakProperties properties;
 
     @Override
-    public void disburse(String upiId, String amountInr, String remittanceId) {
-        log.info("Initiating Transak off-ramp: {} INR to UPI {} for remittance {}",
-                amountInr, maskUpi(upiId), remittanceId);
+    public void disburse(String upiId, String amountUsdc, String remittanceId) {
+        log.info("Initiating Transak off-ramp: {} USDC to UPI {} for remittance {}",
+                amountUsdc, maskUpi(upiId), remittanceId);
         try {
-            var quoteResponse = createQuote(amountInr);
+            var quoteResponse = createQuote(amountUsdc);
+            if (quoteResponse == null) {
+                throw DisbursementException.forRecipient(upiId, "Empty quote response from Transak");
+            }
             log.info("Transak quote received for remittance {}: quoteId={}", remittanceId, quoteResponse.quoteId());
 
             var orderResponse = createOrder(quoteResponse.quoteId(), upiId, remittanceId);
+            if (orderResponse == null) {
+                throw DisbursementException.forRecipient(upiId, "Empty order response from Transak");
+            }
             log.info("Transak order created for remittance {}: orderId={}", remittanceId, orderResponse.orderId());
         } catch (DisbursementException ex) {
             throw ex;
@@ -33,10 +39,10 @@ public class TransakDisbursementAdapter implements FiatDisbursementProvider {
         }
     }
 
-    private TransakQuoteResponse createQuote(String amountInr) {
+    private TransakQuoteResponse createQuote(String amountUsdc) {
         return transakRestClient.post()
                 .uri("/api/v1/partners/quotes")
-                .body(new TransakQuoteRequest("USDC", "INR", amountInr, "SELL"))
+                .body(new TransakQuoteRequest("USDC", "INR", amountUsdc, "SELL"))
                 .retrieve()
                 .body(TransakQuoteResponse.class);
     }
@@ -55,17 +61,4 @@ public class TransakDisbursementAdapter implements FiatDisbursementProvider {
         }
         return upiId.substring(0, 3) + "****";
     }
-
-    record TransakQuoteRequest(
-        String cryptoCurrency,
-        String fiatCurrency,
-        String fiatAmount,
-        String type
-    ) {}
-
-    record TransakQuoteResponse(String quoteId, String fiatAmount, String cryptoAmount) {}
-
-    record TransakOrderRequest(String quoteId, String paymentDetails, String partnerOrderId) {}
-
-    record TransakOrderResponse(String orderId, String status, String depositAddress) {}
 }

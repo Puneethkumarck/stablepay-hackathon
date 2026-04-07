@@ -76,12 +76,12 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     }
 
     @Override
-    public void disburseInr(String upiId, String amountInr, String remittanceId) {
+    public void disburseInr(String upiId, String amountUsdc, String remittanceId) {
         requireNonNull(upiId, "upiId must not be null");
-        requireNonNull(amountInr, "amountInr must not be null");
+        requireNonNull(amountUsdc, "amountUsdc must not be null");
         requireNonNull(remittanceId, "remittanceId must not be null");
-        log.info("Disbursing {} INR to UPI {} for remittance {}", amountInr, maskUpi(upiId), remittanceId);
-        fiatDisbursementProvider.disburse(upiId, amountInr, remittanceId);
+        log.info("Disbursing {} USDC as INR to UPI {} for remittance {}", amountUsdc, maskUpi(upiId), remittanceId);
+        fiatDisbursementProvider.disburse(upiId, amountUsdc, remittanceId);
         log.info("INR disbursement completed for remittance {}", remittanceId);
     }
 

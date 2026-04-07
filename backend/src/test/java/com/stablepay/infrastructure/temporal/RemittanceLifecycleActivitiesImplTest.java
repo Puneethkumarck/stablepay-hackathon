@@ -33,7 +33,7 @@ import com.stablepay.domain.remittance.port.SolanaTransactionService;
 class RemittanceLifecycleActivitiesImplTest {
 
     private static final String SOME_CLAIM_URL = "https://claim.stablepay.app/claim-token-abc-123";
-    private static final String SOME_AMOUNT_INR = "8325.00";
+    private static final String SOME_DISBURSEMENT_AMOUNT = "100.00";
 
     @Mock
     private SolanaTransactionService solanaTransactionService;
@@ -109,10 +109,10 @@ class RemittanceLifecycleActivitiesImplTest {
         // given — provider is void, no stubbing needed
 
         // when
-        activities.disburseInr(SOME_UPI_ID, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString());
+        activities.disburseInr(SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_REMITTANCE_ID.toString());
 
         // then
-        then(fiatDisbursementProvider).should().disburse(SOME_UPI_ID, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString());
+        then(fiatDisbursementProvider).should().disburse(SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_REMITTANCE_ID.toString());
     }
 
     @Test

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 class LoggingDisbursementAdapterTest {
 
-    private static final String SOME_AMOUNT_INR = "8450.00";
+    private static final String SOME_AMOUNT_USDC = "100.00";
 
     private final LoggingDisbursementAdapter adapter = new LoggingDisbursementAdapter();
 
@@ -17,7 +17,7 @@ class LoggingDisbursementAdapterTest {
         // given — logging adapter is a no-op
 
         // when / then
-        assertThatCode(() -> adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+        assertThatCode(() -> adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_REMITTANCE_ID.toString()))
                 .doesNotThrowAnyException();
     }
 }
