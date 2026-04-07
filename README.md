@@ -1,5 +1,22 @@
 # StablePay
 
+[![CI](https://github.com/Puneethkumarck/stablepay-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/Puneethkumarck/stablepay-hackathon/actions/workflows/ci.yml)
+[![Java](https://img.shields.io/badge/Java-25-orange)](https://jdk.java.net/25/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-8-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![Temporal](https://img.shields.io/badge/Temporal-1.29.5-000000?logo=temporal&logoColor=white)](https://temporal.io/)
+[![Solana](https://img.shields.io/badge/Solana-devnet-9945FF?logo=solana&logoColor=white)](https://solana.com/)
+[![Anchor](https://img.shields.io/badge/Anchor-0.32.1-blue)](https://www.anchor-lang.com/)
+[![Rust](https://img.shields.io/badge/Rust-stable-DEA584?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![React Native](https://img.shields.io/badge/React%20Native-Expo%20SDK%2052-61DAFB?logo=react&logoColor=white)](https://reactnative.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-latest-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Gradle](https://img.shields.io/badge/Gradle-9.4.1-02303A?logo=gradle&logoColor=white)](https://gradle.org/)
+[![Twilio](https://img.shields.io/badge/Twilio-SMS-F22F46?logo=twilio&logoColor=white)](https://www.twilio.com/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Instant cross-border remittances on Solana. No seed phrases. No app for recipients. Guaranteed delivery.**
 
 StablePay is a consumer-facing remittance application for the **USD to INR** corridor, built on USDC/Solana. It combines MPC wallet abstraction, a custom Anchor escrow program, and Temporal durable workflows to deliver a seamless sender-to-recipient experience where the recipient claims funds via an SMS link — no crypto knowledge required.
@@ -135,7 +152,7 @@ application --> domain
 infrastructure --> domain
 ```
 
-The domain layer has **zero Spring imports** (only `@Service` and `@Transactional`). All external system access goes through domain-defined ports, implemented by infrastructure adapters.
+The domain layer has minimal Spring imports — only `@Service`, `@Transactional`, and Spring Data pagination types (`Page`, `Pageable`). All external system access goes through domain-defined ports, implemented by infrastructure adapters.
 
 ---
 
@@ -144,7 +161,7 @@ The domain layer has **zero Spring imports** (only `@Service` and `@Transactiona
 | Component | Technology | Version |
 |---|---|---|
 | **Backend** | Java + Spring Boot (MVC + JPA) | 25 / 4.0.5 |
-| **Database** | PostgreSQL + Flyway | 16 / 12.3 |
+| **Database** | PostgreSQL + Flyway | 18 / 12.3 |
 | **Cache** | Redis | 8 |
 | **Workflows** | Temporal | 1.29.5 |
 | **On-chain Program** | Rust + Anchor | 0.32.1 |
@@ -495,10 +512,10 @@ cd backend
 # All tests + formatting
 ./gradlew build
 
-# Unit tests only (32 test classes)
+# Unit tests only (33 test classes)
 ./gradlew test
 
-# Integration tests (9 test classes, requires Docker for TestContainers)
+# Integration tests (6 test classes, requires Docker for TestContainers)
 ./gradlew integrationTest
 
 # Format code (Spotless)
@@ -541,7 +558,7 @@ GitHub Actions runs **7 jobs** on every push to `main` and every PR:
               |               |
         +-----v----+   +-----v--------+
         |Unit Tests|   |Integration   |
-        |  (32)    |   |Tests (9)     |
+        |  (33)    |   |Tests (6)     |
         +-----+----+   +-----+--------+
               |               |
               +-------+-------+
