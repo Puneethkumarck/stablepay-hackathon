@@ -47,17 +47,17 @@ class MpcWalletGrpcClientTest {
 
     private static final GenerateKeyRequest EXPECTED_KEYGEN_REQUEST = GenerateKeyRequest.newBuilder()
             .setCeremonyId(SOME_CEREMONY_ID)
-            .setPartyId(1)
-            .setThreshold(1)
-            .setTotalParties(1)
+            .setPartyId(0)
+            .setThreshold(2)
+            .setTotalParties(2)
             .putAllPeerAddresses(Map.of())
             .build();
 
     private static final SignRequest EXPECTED_SIGN_REQUEST = SignRequest.newBuilder()
             .setCeremonyId(SOME_CEREMONY_ID)
-            .setPartyId(1)
-            .setThreshold(1)
-            .addSigningPartyIds(1)
+            .setPartyId(0)
+            .setThreshold(2)
+            .addSigningPartyIds(0)
             .setKeyShareData(ByteString.copyFrom(SOME_KEY_SHARE_DATA))
             .setMessage(ByteString.copyFrom(SOME_TRANSACTION_BYTES))
             .putAllPeerAddresses(Map.of())
