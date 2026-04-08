@@ -1,5 +1,7 @@
 package com.stablepay.infrastructure.mpc;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.DisposableBean;
@@ -40,8 +42,31 @@ public class MpcGrpcConfig implements DisposableBean {
     @Bean
     public MpcWalletGrpcClient mpcWalletGrpcClient(
             TssSidecarGrpc.TssSidecarBlockingStub tssSidecarBlockingStub,
-            @Value("${stablepay.mpc.sidecar.deadline-ms:30000}") long deadlineMs) {
-        return new MpcWalletGrpcClient(tssSidecarBlockingStub, deadlineMs);
+            @Value("${stablepay.mpc.sidecar.deadline-ms:30000}") long deadlineMs,
+            @Value("${stablepay.mpc.party-id:0}") int partyId,
+            @Value("${stablepay.mpc.threshold:1}") int threshold,
+            @Value("${stablepay.mpc.total-parties:2}") int totalParties,
+            @Value("${stablepay.mpc.peer-addresses:}") String peerAddressesStr) {
+
+        var peerAddresses = parsePeerAddresses(peerAddressesStr);
+        log.info("MPC config: partyId={}, threshold={}, totalParties={}, peers={}",
+                partyId, threshold, totalParties, peerAddresses);
+        return new MpcWalletGrpcClient(tssSidecarBlockingStub, deadlineMs,
+                partyId, threshold, totalParties, peerAddresses);
+    }
+
+    private Map<Integer, String> parsePeerAddresses(String raw) {
+        var result = new HashMap<Integer, String>();
+        if (raw == null || raw.isBlank()) {
+            return result;
+        }
+        for (var entry : raw.split(",")) {
+            var parts = entry.trim().split("=", 2);
+            if (parts.length == 2) {
+                result.put(Integer.parseInt(parts[0].trim()), parts[1].trim());
+            }
+        }
+        return result;
     }
 
     @Override
