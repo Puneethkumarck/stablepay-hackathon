@@ -98,7 +98,7 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                             remittanceId.toString(), RemittanceStatus.CLAIMED);
             then(activities)
                     .should()
-                    .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC.toPlainString(), remittanceId.toString());
+                    .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC, remittanceId.toString());
             then(activities)
                     .should()
                     .updateRemittanceStatus(

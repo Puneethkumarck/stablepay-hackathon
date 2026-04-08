@@ -137,7 +137,7 @@ class RemittanceLifecycleWorkflowImplTest {
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.CLAIMED);
 
         then(activities).should().disburseInr(
-                SOME_UPI_ID, SOME_AMOUNT_USDC.toPlainString(), SOME_REMITTANCE_ID.toString());
+                SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_REMITTANCE_ID.toString());
 
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.DELIVERED);
@@ -375,6 +375,82 @@ class RemittanceLifecycleWorkflowImplTest {
         assertThat(status)
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
+    }
+
+    @Test
+    void shouldTransitionToDisbursementFailedWhenDisbursementThrows() {
+        // given
+        var request = workflowRequestBuilder()
+                .claimExpiryTimeout(Duration.ofHours(48))
+                .build();
+
+        given(activities.depositEscrow(
+                SOME_REMITTANCE_ID.toString(),
+                SOME_SENDER_ADDRESS,
+                SOME_AMOUNT_USDC,
+                SOME_ESCROW_EXPIRY_TIMESTAMP))
+                .willReturn(SOME_DEPOSIT_TX_SIGNATURE);
+
+        given(activities.releaseEscrow(
+                SOME_REMITTANCE_ID.toString(),
+                SOME_DESTINATION_ADDRESS))
+                .willReturn(SOME_RELEASE_TX_SIGNATURE);
+
+        willThrow(new RuntimeException("Transak API unavailable"))
+                .given(activities).disburseInr(
+                        SOME_UPI_ID,
+                        SOME_AMOUNT_USDC,
+                        SOME_REMITTANCE_ID.toString());
+
+        testEnv.start();
+
+        var workflowId = "disbursement-fail-" + SOME_REMITTANCE_ID;
+        var workflow = client.newWorkflowStub(
+                RemittanceLifecycleWorkflow.class,
+                WorkflowOptions.newBuilder()
+                        .setTaskQueue(TASK_QUEUE)
+                        .setWorkflowId(workflowId)
+                        .build());
+
+        var claimSignal = ClaimSignal.builder()
+                .claimToken(SOME_CLAIM_TOKEN)
+                .upiId(SOME_UPI_ID)
+                .destinationAddress(SOME_DESTINATION_ADDRESS)
+                .build();
+
+        testEnv.registerDelayedCallback(Duration.ofMinutes(1), () -> {
+            var signalStub = client.newWorkflowStub(
+                    RemittanceLifecycleWorkflow.class, workflowId);
+            signalStub.claimSubmitted(claimSignal);
+        });
+
+        // when
+        var result = workflow.execute(request);
+
+        // then
+        var expected = RemittanceWorkflowResult.builder()
+                .remittanceId(SOME_REMITTANCE_ID)
+                .finalStatus(RemittanceStatus.DISBURSEMENT_FAILED.name())
+                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .txSignature(SOME_RELEASE_TX_SIGNATURE)
+                .build();
+
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+
+        then(activities).should().releaseEscrow(
+                SOME_REMITTANCE_ID.toString(),
+                SOME_DESTINATION_ADDRESS);
+
+        then(activities).should().updateRemittanceStatus(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.CLAIMED);
+
+        then(activities).should().updateRemittanceStatus(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.DISBURSEMENT_FAILED);
+
+        then(activities).should(never()).updateRemittanceStatus(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.DELIVERED);
     }
 
     @Test

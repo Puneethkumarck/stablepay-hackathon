@@ -4,11 +4,13 @@ import static com.stablepay.testutil.WorkflowFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
 class LoggingDisbursementAdapterTest {
 
-    private static final String SOME_AMOUNT_USDC = "100.00";
+    private static final BigDecimal SOME_AMOUNT_USDC = new BigDecimal("100.00");
 
     private final LoggingDisbursementAdapter adapter = new LoggingDisbursementAdapter();
 

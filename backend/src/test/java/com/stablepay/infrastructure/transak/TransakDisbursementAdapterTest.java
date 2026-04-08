@@ -4,6 +4,8 @@ import static com.stablepay.testutil.WorkflowFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -16,7 +18,7 @@ import com.stablepay.domain.remittance.exception.DisbursementException;
 
 class TransakDisbursementAdapterTest {
 
-    private static final String SOME_AMOUNT_USDC = "100.00";
+    private static final BigDecimal SOME_AMOUNT_USDC = new BigDecimal("100.00");
     private static final String SOME_QUOTE_ID = "quote-abc-123";
     private static final String SOME_ORDER_ID = "order-xyz-789";
 

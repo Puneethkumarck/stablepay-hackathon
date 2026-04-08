@@ -16,6 +16,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,7 +35,7 @@ import com.stablepay.domain.remittance.port.SolanaTransactionService;
 class RemittanceLifecycleActivitiesImplTest {
 
     private static final String SOME_CLAIM_URL = "https://claim.stablepay.app/claim-token-abc-123";
-    private static final String SOME_DISBURSEMENT_AMOUNT = "100.00";
+    private static final BigDecimal SOME_DISBURSEMENT_AMOUNT = new BigDecimal("100.00");
 
     @Mock
     private SolanaTransactionService solanaTransactionService;

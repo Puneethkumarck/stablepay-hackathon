@@ -1,7 +1,11 @@
 package com.stablepay.infrastructure.transak;
 
+import java.math.BigDecimal;
+
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
 
+import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 
@@ -16,33 +20,43 @@ public class TransakDisbursementAdapter implements FiatDisbursementProvider {
     private final TransakProperties properties;
 
     @Override
-    public void disburse(String upiId, String amountUsdc, String remittanceId) {
+    public void disburse(String upiId, BigDecimal amountUsdc, String remittanceId) {
         log.info("Initiating Transak off-ramp: {} USDC to UPI {} for remittance {}",
-                amountUsdc, maskUpi(upiId), remittanceId);
+                amountUsdc, PiiMasking.maskUpi(upiId), remittanceId);
         try {
             var quoteResponse = createQuote(amountUsdc);
-            if (quoteResponse == null) {
-                throw DisbursementException.forRecipient(upiId, "Empty quote response from Transak");
+            if (quoteResponse == null || quoteResponse.quoteId() == null || quoteResponse.quoteId().isBlank()) {
+                throw DisbursementException.forRecipient(upiId, "Empty or invalid quote response from Transak");
             }
             log.info("Transak quote received for remittance {}: quoteId={}", remittanceId, quoteResponse.quoteId());
 
             var orderResponse = createOrder(quoteResponse.quoteId(), upiId, remittanceId);
-            if (orderResponse == null) {
-                throw DisbursementException.forRecipient(upiId, "Empty order response from Transak");
+            if (orderResponse == null || orderResponse.orderId() == null || orderResponse.orderId().isBlank()) {
+                throw DisbursementException.forRecipient(upiId, "Empty or invalid order response from Transak");
             }
             log.info("Transak order created for remittance {}: orderId={}", remittanceId, orderResponse.orderId());
         } catch (DisbursementException ex) {
             throw ex;
+        } catch (HttpStatusCodeException ex) {
+            log.error("Transak off-ramp failed for remittance {} with HTTP {}",
+                    remittanceId, ex.getStatusCode());
+            throw DisbursementException.forRecipient(upiId,
+                    "Transak API returned HTTP " + ex.getStatusCode());
         } catch (Exception ex) {
-            log.error("Transak off-ramp failed for remittance {}: {}", remittanceId, ex.getMessage());
-            throw DisbursementException.forRecipient(upiId, ex);
+            log.error("Transak off-ramp failed for remittance {}", remittanceId);
+            throw DisbursementException.forRecipient(upiId, "Transak service unavailable");
         }
     }
 
-    private TransakQuoteResponse createQuote(String amountUsdc) {
+    private TransakQuoteResponse createQuote(BigDecimal amountUsdc) {
         return transakRestClient.post()
                 .uri("/api/v1/partners/quotes")
-                .body(new TransakQuoteRequest("USDC", "INR", amountUsdc, "SELL"))
+                .body(TransakQuoteRequest.builder()
+                        .cryptoCurrency("USDC")
+                        .fiatCurrency("INR")
+                        .fiatAmount(amountUsdc.toPlainString())
+                        .type("SELL")
+                        .build())
                 .retrieve()
                 .body(TransakQuoteResponse.class);
     }
@@ -50,15 +64,12 @@ public class TransakDisbursementAdapter implements FiatDisbursementProvider {
     private TransakOrderResponse createOrder(String quoteId, String upiId, String remittanceId) {
         return transakRestClient.post()
                 .uri("/api/v1/partners/orders")
-                .body(new TransakOrderRequest(quoteId, upiId, remittanceId))
+                .body(TransakOrderRequest.builder()
+                        .quoteId(quoteId)
+                        .paymentDetails(upiId)
+                        .partnerOrderId(remittanceId)
+                        .build())
                 .retrieve()
                 .body(TransakOrderResponse.class);
-    }
-
-    private static String maskUpi(String upiId) {
-        if (upiId == null || upiId.length() <= 4) {
-            return "****";
-        }
-        return upiId.substring(0, 3) + "****";
     }
 }
