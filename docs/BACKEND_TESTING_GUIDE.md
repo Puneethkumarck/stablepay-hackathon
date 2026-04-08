@@ -1,438 +1,557 @@
-# Backend Testing Guide
+# Backend E2E Testing Guide
 
-> How to run, write, and reason about tests for the StablePay Java/Spring Boot backend.
+> How to test the StablePay backend end-to-end with full infrastructure.
 
-## Quick Start
-
-```bash
-cd backend/
-
-# Unit tests only (no Docker required)
-./gradlew test
-
-# Integration tests (requires Docker for TestContainers)
-./gradlew integrationTest
-
-# Full build: compile + Spotless + unit tests + ArchUnit
-./gradlew build
-
-# Everything: build + integration tests
-./gradlew build integrationTest
-
-# Format before committing
-./gradlew spotlessApply
-```
+---
 
 ## Prerequisites
 
-| Requirement | Version | Why |
+| Requirement | Version | Check |
 |---|---|---|
-| Java | 25 (Temurin) | Compile and run |
-| Gradle | 9.4+ (wrapper included) | Build tool |
-| Docker | 20+ (Docker Desktop, OrbStack, or Colima) | TestContainers PostgreSQL |
-
-**TestContainers + OrbStack users:** If integration tests fail with `DockerClientProviderStrategy` errors, add to `~/.testcontainers.properties`:
-
-```properties
-docker.host=unix:///Users/<you>/.orbstack/run/docker.sock
-```
+| Java | 25 (Temurin) | `java -version` |
+| Docker | 20+ | `docker ps` |
+| curl or Postman | any | `curl --version` |
 
 ---
 
-## Test Architecture
+## 1. Start the Full Stack
 
-```
-src/
-├── test/                    # Unit tests (44 files) — no Spring context, no Docker
-├── integration-test/        # Integration tests (8 test classes) — real PostgreSQL, Temporal
-└── testFixtures/            # Shared fixtures across both source sets (7 files)
-```
+### Option A: Full Docker Stack (everything in containers)
 
-### Three-Tier Strategy
-
-| Tier | Source Set | Context | Database | External Services | Speed |
-|---|---|---|---|---|---|
-| **Unit** | `src/test/` | None (`@ExtendWith(MockitoExtension)`) or `@WebMvcTest` | Mocked | Mocked | ~50s total |
-| **Integration** | `src/integration-test/` | `@SpringBootTest` via `@PgTest` | Real PostgreSQL (TestContainers) | Mocked (`IntegrationTestConfig`) or WireMock | ~35s total |
-| **E2E** | `src/integration-test/` | `@PgTest + @AutoConfigureMockMvc` | Real PostgreSQL | Mocked (MPC, SMS, Disbursement) | Runs with integration |
-
-### What Gets Mocked at Each Tier
-
-| Dependency | Unit Tests | Integration Tests |
-|---|---|---|
-| PostgreSQL | Mocked via `@Mock` repository | Real (TestContainers `postgres:16-alpine`) |
-| Temporal | `TestWorkflowEnvironment` | `TestWorkflowEnvironment` (in-process) |
-| MPC Sidecar (gRPC) | `@Mock MpcWalletClient` | `Mockito.mock()` via `IntegrationTestConfig` |
-| Twilio SMS | `@Mock SmsProvider` | `Mockito.mock()` via `IntegrationTestConfig` |
-| Fiat Disbursement | `@Mock FiatDisbursementProvider` | `Mockito.mock()` via `IntegrationTestConfig` |
-| ExchangeRate API | `@Mock RestClient` | WireMock (`WireMockExtension`) |
-| Redis | Excluded via `application-test.yml` | Excluded via `application-test.yml` |
-
----
-
-## Test Infrastructure
-
-### Custom Annotations
-
-**`@PgTest`** — PostgreSQL integration tests:
-```java
-@SpringBootTest
-@ActiveProfiles("test")
-@ExtendWith(PostgresContainerExtension.class)
-@Import(IntegrationTestConfig.class)
-```
-
-**`@TemporalTest`** — Temporal workflow integration tests:
-```java
-@SpringBootTest
-@ActiveProfiles("test")
-@ExtendWith(PostgresContainerExtension.class)
-@Import({IntegrationTestConfig.class, TemporalTestConfig.class})
-```
-
-### PostgresContainerExtension
-
-Starts a single `postgres:16-alpine` container, reused across all test classes:
-
-```
-Container startup → Flyway V1, V2, V3 → Hibernate validate → Tests run
-```
-
-The extension injects `spring.datasource.url/username/password` as system properties dynamically from the container's random port.
-
-### IntegrationTestConfig
-
-Provides mock beans for external services that cannot run in CI:
-
-```java
-@TestConfiguration
-public class IntegrationTestConfig {
-    @Bean MpcWalletClient mpcWalletClient()           → Mockito.mock()
-    @Bean SmsProvider smsProvider()                     → Mockito.mock()
-    @Bean FiatDisbursementProvider disbursementProvider() → Mockito.mock()
-}
-```
-
-### TemporalTestConfig
-
-Provides an in-process Temporal test server with mocked activities:
-
-```java
-@TestConfiguration
-public class TemporalTestConfig {
-    @Bean TestWorkflowEnvironment testWorkflowEnvironment()
-    @Bean WorkflowClient workflowClient(testEnv)
-    @Bean @Primary RemittanceLifecycleActivities activities() → Mockito.mock()
-    @Bean Worker worker(testEnv, activities)    → registers workflow + activities, starts env
-}
-```
-
----
-
-## Test Coverage Map
-
-### Domain Layer (Handlers)
-
-| Handler | Test File | Tests |
-|---|---|---|
-| `CreateWalletHandler` | `CreateWalletHandlerTest` | happy path, wallet already exists |
-| `FundWalletHandler` | `FundWalletHandlerTest` | happy path, wallet not found, treasury depleted, balance update |
-| `CreateRemittanceHandler` | `CreateRemittanceHandlerTest` | happy path, insufficient balance, wallet not found, FX locking, workflow start |
-| `GetRemittanceQueryHandler` | `GetRemittanceQueryHandlerTest` | found, not found, field mapping |
-| `ListRemittancesQueryHandler` | `ListRemittancesQueryHandlerTest` | pagination, empty results |
-| `UpdateRemittanceStatusHandler` | `UpdateRemittanceStatusHandlerTest` | valid transitions, invalid transitions, not found |
-| `SubmitClaimHandler` | `SubmitClaimHandlerTest` | happy path, already claimed, expired, token not found, workflow signal |
-| `GetClaimQueryHandler` | `GetClaimQueryHandlerTest` | found, not found |
-| `GetFxRateQueryHandler` | `GetFxRateQueryHandlerTest` | supported corridor, unsupported corridor |
-
-### Domain Models
-
-| Model | Test File | Tests |
-|---|---|---|
-| `Wallet` | `WalletTest` | reserveBalance, releaseBalance, insufficient balance |
-| `Remittance` | `RemittanceTest` | state transitions, null safety |
-| `RemittanceStatus` | `RemittanceStatusTest` | valid/invalid transitions |
-| `ClaimToken` | `ClaimTokenTest` | construction, null checks |
-| `Corridor` | `CorridorTest` | USD-INR lookup, case insensitivity |
-| `PiiMasking` | `PiiMaskingTest` | null, empty, short, boundary, normal |
-
-### Controllers (MockMvc Unit Tests)
-
-| Controller | Test File | Endpoints Tested |
-|---|---|---|
-| `WalletController` | `WalletControllerTest` | POST /api/wallets (201, 400, 409), POST /api/wallets/{id}/fund (200, 404, 503) |
-| `RemittanceController` | `RemittanceControllerTest` | POST /api/remittances (201, 400), GET /api/remittances/{id} (200, 404), GET /api/remittances (200) |
-| `ClaimController` | `ClaimControllerTest` | GET /api/claims/{token} (200, 404, 410), POST /api/claims/{token} (200, 404, 409, 410) |
-| `FxRateController` | `FxRateControllerTest` | GET /api/fx/{corridor} (200, 400) |
-
-### Mappers (Bidirectional Mapping)
-
-| Mapper | Test File | Pattern |
-|---|---|---|
-| `WalletEntityMapper` | `WalletEntityMapperTest` | domain → entity → domain roundtrip |
-| `RemittanceEntityMapper` | `RemittanceEntityMapperTest` | domain → entity → domain roundtrip |
-| `ClaimTokenEntityMapper` | `ClaimTokenEntityMapperTest` | domain → entity → domain roundtrip |
-| `WalletApiMapper` | `WalletApiMapperTest` | domain → DTO |
-| `RemittanceApiMapper` | `RemittanceApiMapperTest` | domain → DTO |
-| `ClaimApiMapper` | `ClaimApiMapperTest` | composite (ClaimDetails → DTO with @Mapping) |
-| `FxRateApiMapper` | `FxRateApiMapperTest` | domain → DTO |
-
-### Infrastructure Adapters
-
-| Adapter | Test File | What's Tested |
-|---|---|---|
-| `SolanaTransactionServiceAdapter` | `SolanaTransactionServiceAdapterTest` | deposit, claim, refund escrow, wallet lookup, MPC signing errors |
-| `EscrowInstructionBuilder` | `EscrowInstructionBuilderTest` | 16 tests: deposit/claim/refund instructions, PDA derivation, USDC conversion |
-| `ExchangeRateApiAdapter` | `ExchangeRateApiAdapterTest` | API call, response parsing |
-| `MpcWalletGrpcClient` | `MpcWalletGrpcClientTest` | key generation, signing, gRPC errors |
-| `TwilioSmsAdapter` | `TwilioSmsAdapterTest` | SMS sending, error handling |
-| `TransakDisbursementAdapter` | `TransakDisbursementAdapterTest` | quote + order creation |
-| `LoggingDisbursementAdapter` | `LoggingDisbursementAdapterTest` | no-op execution |
-| `LoggingSmsAdapter` | `LoggingSmsAdapterTest` | no-op execution |
-| `TreasuryServiceAdapter` | `TreasuryServiceAdapterTest` | stub balance, transfer no-op |
-
-### Temporal Workflow
-
-| Test File | What's Tested |
-|---|---|
-| `RemittanceLifecycleWorkflowImplTest` (unit) | Happy path, timeout/refund, SMS failure, SMS failure + claim, status query, disbursement failure, claim before timeout |
-| `RemittanceLifecycleWorkflowIntegrationTest` (integration) | Happy path, timeout/refund, SMS failure, status query, disbursement failure |
-| `RemittanceLifecycleActivitiesImplTest` | Activity delegation: deposit, release, refund, SMS, disbursement, status update |
-| `TemporalRemittanceWorkflowStarterTest` | Workflow request construction, property injection |
-| `TemporalRemittanceClaimSignalerTest` | Signal construction, workflow ID, destination address |
-
-### Integration Tests (Real PostgreSQL)
-
-| Test File | What's Tested |
-|---|---|
-| `WalletRepositoryIntegrationTest` | save, findById, findByUserId, findBySolanaAddress, not found |
-| `RemittanceRepositoryIntegrationTest` | save, findByRemittanceId, findBySenderId (pagination, isolation), status updates |
-| `ClaimTokenRepositoryIntegrationTest` | save, findByToken, UPI persistence, FK constraint |
-| `WalletApiIntegrationTest` | Full HTTP: create wallet (201, 400, 409), fund wallet (200, 404) |
-| `ExchangeRateApiIntegrationTest` | WireMock: live rate, 500 fallback, timeout fallback |
-| `OpenApiIntegrationTest` | /v3/api-docs: spec, tags, error schema |
-
-### E2E Integration Test (Full Remittance Lifecycle)
-
-| Test File | What's Tested |
-|---|---|
-| `RemittanceLifecycleE2EIntegrationTest` | 10-step flow via HTTP: create wallet → fund → check FX → create remittance → verify INITIATED → advance to ESCROWED → get claim → submit claim → verify status → list remittances |
-
-This test exercises the **complete API surface** in a single test, hitting Controller → Handler → Repository → DB for every endpoint.
-
----
-
-## How to Write Tests
-
-### Unit Test Template (Handler)
-
-```java
-@ExtendWith(MockitoExtension.class)
-class MyHandlerTest {
-
-    @Mock private MyRepository repository;
-    @InjectMocks private MyHandler handler;
-
-    @Test
-    void shouldDoSomething() {
-        // given
-        var input = someFixtureBuilder().build();
-        given(repository.findById(SOME_ID)).willReturn(Optional.of(input));
-
-        // when
-        var result = handler.handle(SOME_ID);
-
-        // then
-        var expected = input.toBuilder().status(DONE).build();
-        assertThat(result)
-                .usingRecursiveComparison()
-                .ignoringFields("updatedAt")
-                .isEqualTo(expected);
-    }
-}
-```
-
-### Controller Test Template (MockMvc)
-
-```java
-@WebMvcTest(MyController.class)
-@Import(TestClockConfig.class)
-class MyControllerTest {
-
-    @Autowired private MockMvc mockMvc;
-    @MockitoBean private MyHandler handler;
-    @MockitoBean private MyApiMapper mapper;
-
-    @Test
-    @SneakyThrows
-    void shouldReturnCreated() {
-        // given
-        given(handler.handle("input")).willReturn(domainObj);
-        given(mapper.toResponse(domainObj)).willReturn(responseObj);
-
-        // when / then
-        mockMvc.perform(post("/api/things")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    { "field": "input" }
-                    """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.field").value("input"));
-    }
-}
-```
-
-### Repository Integration Test Template
-
-```java
-@PgTest
-@Transactional
-class MyRepositoryIntegrationTest {
-
-    @Autowired private MyRepository repository;
-
-    @Test
-    void shouldSaveAndFind() {
-        // given
-        var entity = buildEntity();
-
-        // when
-        var saved = repository.save(entity);
-        var found = repository.findById(saved.id());
-
-        // then
-        assertThat(found).isPresent();
-        assertThat(found.get())
-                .usingRecursiveComparison()
-                .ignoringFields("createdAt", "updatedAt")
-                .isEqualTo(saved);
-    }
-}
-```
-
-**Key rules:**
-- Use `@Transactional` on repository integration tests for automatic rollback.
-- Do NOT use `@Transactional` on API integration tests — let the controller transaction commit, verify via API response.
-- Use unique IDs (`System.nanoTime()` suffix) to avoid cross-test collisions.
-
-### API Integration Test Template
-
-```java
-@PgTest
-@AutoConfigureMockMvc
-class MyApiIntegrationTest {
-
-    @Autowired private MockMvc mockMvc;
-    @Autowired private MpcWalletClient mpcWalletClient;  // mocked via IntegrationTestConfig
-
-    @Test
-    @SneakyThrows
-    void shouldCreateAndReturnResponse() {
-        // given
-        given(mpcWalletClient.generateKey()).willReturn(generatedKey);
-
-        // when
-        var result = mockMvc.perform(post("/api/things")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body));
-
-        // then — verify via API response only, no direct DB access
-        result.andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.name").value("expected"));
-    }
-}
-```
-
-### Temporal Workflow Integration Test Template
-
-```java
-@TemporalTest
-class MyWorkflowIntegrationTest {
-
-    @Autowired private WorkflowClient workflowClient;
-    @Autowired private TestWorkflowEnvironment testEnv;
-    @Autowired private RemittanceLifecycleActivities activities;  // mocked
-
-    @Test
-    void shouldComplete() {
-        // given
-        var workflow = startWorkflow();
-
-        // when
-        workflow.claimSubmitted(claimSignalBuilder().build());
-        var result = WorkflowStub.fromTyped(workflow)
-                .getResult(RemittanceWorkflowResult.class);
-
-        // then
-        assertThat(result)
-                .usingRecursiveComparison()
-                .ignoringFields("escrowPda", "txSignature")
-                .isEqualTo(expected);
-
-        then(activities).should()
-                .updateRemittanceStatus(id, RemittanceStatus.DELIVERED);
-    }
-}
-```
-
----
-
-## Test Fixtures
-
-All shared test data lives in `src/testFixtures/java/com/stablepay/testutil/`:
-
-| Fixture | Constants | Builder |
-|---|---|---|
-| `WalletFixtures` | `SOME_WALLET_ID`, `SOME_USER_ID`, `SOME_SOLANA_ADDRESS`, `SOME_BALANCE` | `walletBuilder()` |
-| `RemittanceFixtures` | `SOME_REMITTANCE_ID`, `SOME_SENDER_ID`, `SOME_AMOUNT_USDC`, `SOME_FX_RATE` | `remittanceBuilder()` |
-| `ClaimTokenFixtures` | `SOME_TOKEN`, `SOME_UPI_ID`, `SOME_EXPIRES_AT` | `claimTokenBuilder()` |
-| `FxQuoteFixtures` | `SOME_RATE`, `SOME_SOURCE`, `SOME_TIMESTAMP` | `fxQuoteBuilder()` |
-| `WorkflowFixtures` | `SOME_SENDER_ADDRESS`, `SOME_CLAIM_TOKEN`, `SOME_DEPOSIT_TX_SIGNATURE` | `workflowRequestBuilder()`, `claimSignalBuilder()` |
-| `SolanaFixtures` | `SOME_PROGRAM_ID`, `SOME_USDC_MINT`, `SOME_SENDER_WALLET` | — |
-| `MpcFixtures` | `SOME_CEREMONY_ID`, `SOME_SOLANA_ADDRESS`, `SOME_SIGNATURE` | — |
-
-**Rules:**
-- Constants prefixed with `SOME_`.
-- Builders return `Builder`, not built objects — callers customize and `.build()`.
-- Available to both `src/test/` and `src/integration-test/` via `testFixtures` dependency.
-
----
-
-## Mandatory Rules (from TESTING_STANDARDS.md)
-
-1. **Golden rule** — single `assertThat(actual).usingRecursiveComparison().isEqualTo(expected)`.
-2. **BDD Mockito only** — `given()`/`then()`, never `when()`/`verify()`.
-3. **No generic matchers** — never `any()`, `anyString()` — use actual values.
-4. **AssertJ only** — no JUnit `assertEquals`/`assertTrue`.
-5. **Test naming** — `should*` camelCase (e.g., `shouldCreateRemittanceWithLockedFxRate`).
-6. **Given/When/Then comments** — in every test method.
-7. **`@Spy` for real mappers** — `@Spy private Mapper mapper = new MapperImpl()`.
-
----
-
-## Troubleshooting
-
-### Integration tests fail with "DockerClientProviderStrategy"
-
-Docker isn't reachable. Check:
 ```bash
-docker ps   # must succeed
+# From repo root
+make up
 ```
 
-For OrbStack, add to `~/.testcontainers.properties`:
-```properties
-docker.host=unix:///Users/<you>/.orbstack/run/docker.sock
+This builds the backend JAR, starts all 7 services, and waits for health checks:
+
+```
+postgres:18-alpine     → localhost:5432
+redis:8-alpine         → localhost:6379
+temporal:1.29.5        → localhost:7233
+temporal-ui:2.48.1     → localhost:8088
+mpc-sidecar-0          → localhost:50051 (gRPC)
+mpc-sidecar-1          → localhost:50052 (gRPC)
+backend (Spring Boot)  → localhost:8080
 ```
 
-### "No active transaction" in API integration tests
+### Option B: Infrastructure in Docker + Backend Local (for development)
 
-Do NOT call repository methods directly in `@PgTest + @AutoConfigureMockMvc` tests. The controller runs in its own committed transaction. Verify state via the API response, not direct DB access.
+```bash
+# Start infrastructure only
+make infra
 
-### Temporal tests hang
+# Run backend locally with live reload
+cd backend && ./gradlew bootRun
+```
 
-Ensure `testEnv.start()` is called (happens automatically via `TemporalTestConfig`). For unit tests (`RemittanceLifecycleWorkflowImplTest`), call it explicitly in `@BeforeEach`.
+### Verify Everything Is Running
 
-### Flyway migration errors
+```bash
+# Check all containers
+make ps
 
-Check that `src/main/resources/db/migration/V{N}__*.sql` files are valid. The test profile uses `ddl-auto: validate` — Hibernate validates the schema against entities after Flyway runs.
+# Health check
+curl -s http://localhost:8080/actuator/health | jq .
+
+# Expected: {"status":"UP","components":{"db":{"status":"UP"},"redis":{"status":"UP"},...}}
+```
+
+### Service URLs
+
+| Service | URL |
+|---|---|
+| Backend API | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| Health | http://localhost:8080/actuator/health |
+| Temporal UI | http://localhost:8088 |
+| OpenAPI Spec | http://localhost:8080/v3/api-docs |
+
+---
+
+## 2. E2E Test Flow — Complete Remittance Lifecycle
+
+The flow below tests every API endpoint in order, simulating a real USD→INR remittance from wallet creation to recipient delivery.
+
+### Step 1: Create Wallet
+
+```bash
+curl -s -X POST http://localhost:8080/api/wallets \
+  -H 'Content-Type: application/json' \
+  -d '{"userId": "demo-user"}' | jq .
+```
+
+**Expected response (201 Created):**
+```json
+{
+  "id": 1,
+  "userId": "demo-user",
+  "solanaAddress": "7Xf9...base58...",
+  "availableBalance": 0,
+  "totalBalance": 0,
+  "createdAt": "2026-04-08T10:00:00Z"
+}
+```
+
+**What to verify:**
+- `solanaAddress` is a valid base58 Solana address (MPC DKG worked)
+- Balance starts at zero
+- Save the `id` for the next step
+
+```bash
+WALLET_ID=1  # from response
+```
+
+### Step 2: Fund Wallet
+
+```bash
+curl -s -X POST http://localhost:8080/api/wallets/${WALLET_ID}/fund \
+  -H 'Content-Type: application/json' \
+  -d '{"amount": 100.00}' | jq .
+```
+
+**Expected response (200 OK):**
+```json
+{
+  "id": 1,
+  "userId": "demo-user",
+  "availableBalance": 100.000000,
+  "totalBalance": 100.000000
+}
+```
+
+**What to verify:**
+- Both `availableBalance` and `totalBalance` show 100 USDC
+
+### Step 3: Check FX Rate
+
+```bash
+curl -s http://localhost:8080/api/fx/USD-INR | jq .
+```
+
+**Expected response (200 OK):**
+```json
+{
+  "rate": 83.25,
+  "source": "open.er-api.com",
+  "timestamp": "2026-04-08T10:00:00Z",
+  "expiresAt": "2026-04-08T10:01:00Z"
+}
+```
+
+**What to verify:**
+- `rate` is a reasonable USD-INR rate (~83-85)
+- `source` is either `"open.er-api.com"` (live) or `"fallback"` (if API unreachable, rate = 84.50)
+
+### Step 4: Create Remittance
+
+```bash
+curl -s -X POST http://localhost:8080/api/remittances \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "senderId": "demo-user",
+    "recipientPhone": "+919876543210",
+    "amountUsdc": 25.00
+  }' | jq .
+```
+
+**Expected response (201 Created):**
+```json
+{
+  "id": 1,
+  "remittanceId": "550e8400-...",
+  "senderId": "demo-user",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 25.000000,
+  "amountInr": 2081.25,
+  "fxRate": 83.250000,
+  "status": "INITIATED",
+  "claimTokenId": "abc-123-...",
+  "smsNotificationFailed": false,
+  "createdAt": "2026-04-08T10:00:00Z"
+}
+```
+
+**What to verify:**
+- `status` is `INITIATED`
+- `amountInr` = `amountUsdc` × `fxRate`
+- `claimTokenId` is present (generated UUID)
+- Save `remittanceId` and `claimTokenId`:
+
+```bash
+REMITTANCE_ID="550e8400-..."  # from response
+CLAIM_TOKEN="abc-123-..."     # from response
+```
+
+**What to check in Temporal UI (http://localhost:8088):**
+- A workflow named `remittance-<remittanceId>` should appear
+- It should be in `Running` state
+- Activities: `depositEscrow` should execute (deposits USDC to Solana escrow PDA)
+
+### Step 5: Poll Remittance Status
+
+```bash
+curl -s http://localhost:8080/api/remittances/${REMITTANCE_ID} | jq .status
+```
+
+**Expected:** Status progresses from `"INITIATED"` → `"ESCROWED"` as the Temporal workflow deposits the escrow.
+
+Poll every few seconds until you see `"ESCROWED"`:
+```bash
+# Poll loop
+while true; do
+  STATUS=$(curl -s http://localhost:8080/api/remittances/${REMITTANCE_ID} | jq -r .status)
+  echo "Status: $STATUS"
+  [ "$STATUS" = "ESCROWED" ] && break
+  sleep 3
+done
+```
+
+**What to verify:**
+- Status transitions to `ESCROWED` (means on-chain deposit succeeded)
+- Check Temporal UI — `depositEscrow` activity should show as completed
+
+### Step 6: Get Claim Details
+
+```bash
+curl -s http://localhost:8080/api/claims/${CLAIM_TOKEN} | jq .
+```
+
+**Expected response (200 OK):**
+```json
+{
+  "remittanceId": "550e8400-...",
+  "senderId": "demo-user",
+  "amountUsdc": 25.000000,
+  "amountInr": 2081.25,
+  "fxRate": 83.250000,
+  "status": "ESCROWED",
+  "claimed": false,
+  "expiresAt": "2026-04-10T10:00:00Z"
+}
+```
+
+**What to verify:**
+- `claimed` is `false`
+- `expiresAt` is 48 hours from creation
+- This is what the recipient sees on the claim web page
+
+### Step 7: Submit Claim (Recipient Action)
+
+```bash
+curl -s -X POST http://localhost:8080/api/claims/${CLAIM_TOKEN} \
+  -H 'Content-Type: application/json' \
+  -d '{"upiId": "recipient@upi"}' | jq .
+```
+
+**Expected response (200 OK):**
+```json
+{
+  "remittanceId": "550e8400-...",
+  "claimed": true,
+  "status": "ESCROWED"
+}
+```
+
+**What to verify:**
+- `claimed` is `true`
+- Check Temporal UI — a `claimSubmitted` signal should appear on the workflow
+- Workflow should proceed: `releaseEscrow` → `disburseInr` → status updates
+
+### Step 8: Poll for Delivery
+
+```bash
+while true; do
+  STATUS=$(curl -s http://localhost:8080/api/remittances/${REMITTANCE_ID} | jq -r .status)
+  echo "Status: $STATUS"
+  [ "$STATUS" = "DELIVERED" ] || [ "$STATUS" = "DISBURSEMENT_FAILED" ] && break
+  sleep 3
+done
+```
+
+**Expected:** Status progresses `ESCROWED` → `CLAIMED` → `DELIVERED`
+
+**What to verify in Temporal UI:**
+- `releaseEscrow` activity completed (USDC released from escrow PDA)
+- `disburseInr` activity completed (simulated INR payout)
+- `updateRemittanceStatus` called for each transition
+- Workflow reaches `Completed` state
+
+### Step 9: Verify Final State
+
+```bash
+curl -s http://localhost:8080/api/remittances/${REMITTANCE_ID} | jq .
+```
+
+**Expected:** `"status": "DELIVERED"` — terminal state.
+
+### Step 10: List Sender's Remittances
+
+```bash
+curl -s "http://localhost:8080/api/remittances?senderId=demo-user&page=0&size=20" | jq .
+```
+
+**Expected:** Paginated list with the remittance visible.
+
+---
+
+## 3. Error Scenario Testing
+
+### Insufficient Balance
+
+```bash
+# Try to send more than the wallet has
+curl -s -X POST http://localhost:8080/api/remittances \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "senderId": "demo-user",
+    "recipientPhone": "+919876543210",
+    "amountUsdc": 999999.00
+  }' | jq .
+```
+
+**Expected:** `400 Bad Request` with `"errorCode": "SP-0002"` (insufficient balance)
+
+### Duplicate Wallet
+
+```bash
+curl -s -X POST http://localhost:8080/api/wallets \
+  -H 'Content-Type: application/json' \
+  -d '{"userId": "demo-user"}' | jq .
+```
+
+**Expected:** `409 Conflict` with `"errorCode": "SP-0008"` (wallet already exists)
+
+### Invalid Claim Token
+
+```bash
+curl -s http://localhost:8080/api/claims/nonexistent-token | jq .
+```
+
+**Expected:** `404 Not Found` with `"errorCode": "SP-0011"`
+
+### Double Claim
+
+```bash
+# Submit claim again with same token
+curl -s -X POST http://localhost:8080/api/claims/${CLAIM_TOKEN} \
+  -H 'Content-Type: application/json' \
+  -d '{"upiId": "someone@upi"}' | jq .
+```
+
+**Expected:** `409 Conflict` with `"errorCode": "SP-0012"` (already claimed)
+
+### Unsupported Corridor
+
+```bash
+curl -s http://localhost:8080/api/fx/EUR-GBP | jq .
+```
+
+**Expected:** `400 Bad Request` with `"errorCode": "SP-0009"`
+
+### Fund Nonexistent Wallet
+
+```bash
+curl -s -X POST http://localhost:8080/api/wallets/999999/fund \
+  -H 'Content-Type: application/json' \
+  -d '{"amount": 100.00}' | jq .
+```
+
+**Expected:** `404 Not Found` with `"errorCode": "SP-0006"`
+
+---
+
+## 4. Temporal Workflow Verification
+
+Open **http://localhost:8088** (Temporal UI) to inspect workflows.
+
+### What to Look For
+
+| Check | Where | Expected |
+|---|---|---|
+| Workflow created | Workflow list | `remittance-<uuid>` in Running state |
+| Deposit escrow | Activity history | `depositEscrow` completed with tx signature |
+| SMS sent | Activity history | `sendClaimSms` completed (or failed if Twilio not configured) |
+| Status updates | Activity history | `updateRemittanceStatus` calls for ESCROWED, CLAIMED, DELIVERED |
+| Claim signal | Event history | `claimSubmitted` signal received |
+| Release escrow | Activity history | `releaseEscrow` completed with tx signature |
+| INR disbursement | Activity history | `disburseInr` completed (simulated) |
+| Workflow complete | Workflow status | `Completed` with result containing `finalStatus: DELIVERED` |
+
+### Timeout/Refund Test
+
+To test the auto-refund path (requires waiting 48h or modifying config):
+
+1. Create a remittance (Steps 1-4 above)
+2. Do NOT submit a claim
+3. Wait for the claim expiry timeout (default: 48h)
+4. The workflow should automatically refund: `ESCROWED` → `REFUNDED`
+
+For faster testing, set a shorter timeout in `application.yml`:
+```yaml
+stablepay:
+  temporal:
+    claim-expiry-timeout: PT1M  # 1 minute for testing
+```
+
+---
+
+## 5. Database Verification
+
+Connect to PostgreSQL directly:
+
+```bash
+docker exec -it $(docker ps -qf name=postgres) psql -U stablepay -d stablepay
+```
+
+### Verify Tables
+
+```sql
+-- Check wallet was created
+SELECT id, user_id, solana_address, available_balance, total_balance FROM wallets;
+
+-- Check remittance and its status
+SELECT remittance_id, sender_id, amount_usdc, amount_inr, fx_rate, status FROM remittances;
+
+-- Check claim token
+SELECT token, remittance_id, claimed, upi_id, expires_at FROM claim_tokens;
+
+-- Check Flyway migrations applied
+SELECT version, description, success FROM flyway_schema_history ORDER BY installed_rank;
+```
+
+**Expected Flyway output:**
+```
+ version |        description        | success
+---------+---------------------------+---------
+ 1       | initial schema            | t
+ 2       | add upi id to claim tokens| t
+ 3       | add key share to wallets  | t
+```
+
+---
+
+## 6. Redis Verification
+
+```bash
+docker exec -it $(docker ps -qf name=redis) redis-cli
+```
+
+```redis
+KEYS *
+# Expected: FX rate cache keys (if rate was recently fetched)
+
+GET fx:USD:INR
+# Expected: cached FX rate JSON (TTL ~60s)
+```
+
+---
+
+## 7. Using the Postman Collection
+
+Import `docs/StablePay.postman_collection.json` into Postman.
+
+### Setup
+
+1. Set variable `baseUrl` = `http://localhost:8080`
+2. Set variable `userId` = `demo-user`
+
+### Run the E2E Flow
+
+Open the **"E2E Flow"** folder and run requests in order (1-9). The collection uses Postman test scripts to auto-capture:
+- `walletId` from Create Wallet response
+- `remittanceId` from Create Remittance response
+- `claimToken` from Create Remittance response
+
+Each subsequent request uses these variables automatically.
+
+---
+
+## 8. Cleanup
+
+```bash
+# Stop everything
+make down
+
+# Stop and wipe all data (PostgreSQL volumes, etc.)
+make clean
+```
+
+---
+
+## Error Code Reference
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| SP-0002 | 400 | Insufficient wallet balance |
+| SP-0003 | 400 | Request validation error |
+| SP-0006 | 404 | Wallet not found |
+| SP-0007 | 503 | Treasury depleted |
+| SP-0008 | 409 | Wallet already exists for user |
+| SP-0009 | 400 | Unsupported currency corridor |
+| SP-0010 | 404 | Remittance not found |
+| SP-0011 | 404 | Claim token not found |
+| SP-0012 | 409 | Claim already submitted |
+| SP-0013 | 410 | Claim token expired |
+| SP-0014 | 409 | Invalid remittance state |
+
+---
+
+## Quick Reference: Full E2E Script
+
+Copy-paste this to run the entire flow in one go:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+BASE=http://localhost:8080/api
+USER="e2e-$(date +%s)"
+
+echo "=== Step 1: Create Wallet ==="
+WALLET=$(curl -sf -X POST $BASE/wallets -H 'Content-Type: application/json' -d "{\"userId\":\"$USER\"}")
+WALLET_ID=$(echo $WALLET | jq -r .id)
+echo "Wallet ID: $WALLET_ID"
+
+echo "=== Step 2: Fund Wallet ==="
+curl -sf -X POST $BASE/wallets/$WALLET_ID/fund -H 'Content-Type: application/json' -d '{"amount":100.00}' | jq .availableBalance
+
+echo "=== Step 3: Check FX Rate ==="
+curl -sf $BASE/fx/USD-INR | jq .rate
+
+echo "=== Step 4: Create Remittance ==="
+REM=$(curl -sf -X POST $BASE/remittances -H 'Content-Type: application/json' \
+  -d "{\"senderId\":\"$USER\",\"recipientPhone\":\"+919876543210\",\"amountUsdc\":25.00}")
+REM_ID=$(echo $REM | jq -r .remittanceId)
+TOKEN=$(echo $REM | jq -r .claimTokenId)
+echo "Remittance: $REM_ID | Token: $TOKEN"
+
+echo "=== Step 5: Poll for ESCROWED ==="
+for i in $(seq 1 20); do
+  STATUS=$(curl -sf $BASE/remittances/$REM_ID | jq -r .status)
+  echo "  Status: $STATUS"
+  [ "$STATUS" = "ESCROWED" ] && break
+  sleep 3
+done
+
+echo "=== Step 6: Get Claim ==="
+curl -sf $BASE/claims/$TOKEN | jq '{claimed, amountInr, expiresAt}'
+
+echo "=== Step 7: Submit Claim ==="
+curl -sf -X POST $BASE/claims/$TOKEN -H 'Content-Type: application/json' -d '{"upiId":"recipient@upi"}' | jq .claimed
+
+echo "=== Step 8: Poll for DELIVERED ==="
+for i in $(seq 1 20); do
+  STATUS=$(curl -sf $BASE/remittances/$REM_ID | jq -r .status)
+  echo "  Status: $STATUS"
+  [ "$STATUS" = "DELIVERED" ] || [ "$STATUS" = "DISBURSEMENT_FAILED" ] && break
+  sleep 3
+done
+
+echo "=== Step 9: Final State ==="
+curl -sf $BASE/remittances/$REM_ID | jq '{status, amountUsdc, amountInr}'
+
+echo "=== Step 10: List Remittances ==="
+curl -sf "$BASE/remittances?senderId=$USER&page=0&size=20" | jq '.totalElements'
+
+echo "=== DONE ==="
+```
