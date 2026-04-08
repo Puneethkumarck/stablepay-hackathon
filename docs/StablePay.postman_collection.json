@@ -1,0 +1,418 @@
+{
+	"info": {
+		"_postman_id": "stablepay-api-collection",
+		"name": "StablePay API",
+		"description": "StablePay — Cross-border stablecoin remittance on Solana.\n\nUSD → INR corridor via USDC on Solana devnet.\n\nBase URL: http://localhost:8080/api",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "walletId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "remittanceId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "claimToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "user-001",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Wallets",
+			"description": "MPC-backed Solana wallet management",
+			"item": [
+				{
+					"name": "Create Wallet",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('walletId', json.id);",
+									"    pm.collectionVariables.set('userId', json.userId);",
+									"    pm.test('Wallet created successfully', function () {",
+									"        pm.expect(json.id).to.be.a('number');",
+									"        pm.expect(json.solanaAddress).to.be.a('string');",
+									"        pm.expect(json.availableBalance).to.exist;",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{userId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/wallets",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wallets"]
+						},
+						"description": "Creates an MPC-backed Solana wallet for the given user.\n\n**Response:** 201 Created\n\n**Errors:**\n- 400 (SP-0003): Validation error\n- 409 (SP-0008): Wallet already exists for this user"
+					}
+				},
+				{
+					"name": "Fund Wallet",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.test('Wallet funded successfully', function () {",
+									"        pm.expect(json.availableBalance).to.be.a('number');",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 100.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/wallets/{{walletId}}/fund",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wallets", "{{walletId}}", "fund"]
+						},
+						"description": "Adds demo USDC from the treasury to the wallet.\n\n**Errors:**\n- 404 (SP-0006): Wallet not found\n- 503 (SP-0007): Treasury depleted"
+					}
+				}
+			]
+		},
+		{
+			"name": "FX Rates",
+			"description": "Foreign exchange rate lookup",
+			"item": [
+				{
+					"name": "Get FX Rate (USD-INR)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/fx/USD-INR",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "fx", "USD-INR"]
+						},
+						"description": "Returns the current exchange rate for USD → INR.\n\n**Errors:**\n- 400 (SP-0009): Unsupported currency corridor"
+					}
+				}
+			]
+		},
+		{
+			"name": "Remittances",
+			"description": "Cross-border remittance operations",
+			"item": [
+				{
+					"name": "Create Remittance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('remittanceId', json.remittanceId);",
+									"    pm.test('Remittance created successfully', function () {",
+									"        pm.expect(json.remittanceId).to.be.a('string');",
+									"        pm.expect(json.status).to.equal('PENDING');",
+									"        pm.expect(json.fxRate).to.be.a('number');",
+									"        pm.expect(json.amountInr).to.be.a('number');",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"senderId\": \"{{userId}}\",\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/remittances",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "remittances"]
+						},
+						"description": "Initiates a new USD → INR remittance with a locked FX rate.\n\n**Response:** 201 Created\n\n**Errors:**\n- 400 (SP-0003): Validation error\n- 400 (SP-0002): Insufficient balance"
+					}
+				},
+				{
+					"name": "Get Remittance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/remittances/{{remittanceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "remittances", "{{remittanceId}}"]
+						},
+						"description": "Retrieves a remittance by its unique identifier.\n\n**Errors:**\n- 404 (SP-0010): Remittance not found"
+					}
+				},
+				{
+					"name": "List Remittances",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/remittances?senderId={{userId}}&page=0&size=20&sort=createdAt,desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "remittances"],
+							"query": [
+								{
+									"key": "senderId",
+									"value": "{{userId}}"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "sort",
+									"value": "createdAt,desc"
+								}
+							]
+						},
+						"description": "Returns a paginated list of remittances for a sender.\n\nQuery params `page`, `size`, and `sort` are optional."
+					}
+				}
+			]
+		},
+		{
+			"name": "Claims",
+			"description": "Recipient claim flow (SMS link → web page → UPI payout)",
+			"item": [
+				{
+					"name": "Get Claim Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "claims", "{{claimToken}}"]
+						},
+						"description": "Retrieves remittance claim details by the claim token sent via SMS.\n\n**Errors:**\n- 404 (SP-0011): Claim token not found\n- 410 (SP-0013): Claim token expired"
+					}
+				},
+				{
+					"name": "Submit Claim",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"upiId\": \"recipient@upi\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "claims", "{{claimToken}}"]
+						},
+						"description": "Submits a claim with the recipient's UPI ID to receive INR payout.\n\n**Errors:**\n- 404 (SP-0011): Claim token not found\n- 409 (SP-0012): Claim already submitted\n- 410 (SP-0013): Claim token expired"
+					}
+				}
+			]
+		},
+		{
+			"name": "E2E Flow",
+			"description": "Run these requests in order to test the full remittance flow:\n1. Create Wallet\n2. Fund Wallet\n3. Get FX Rate\n4. Create Remittance\n5. Get Claim Details (use token from SMS/logs)\n6. Submit Claim",
+			"item": [
+				{
+					"name": "1. Create Wallet",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('walletId', json.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"demo-user\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/wallets",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wallets"]
+						}
+					}
+				},
+				{
+					"name": "2. Fund Wallet (100 USDC)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 100.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/wallets/{{walletId}}/fund",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wallets", "{{walletId}}", "fund"]
+						}
+					}
+				},
+				{
+					"name": "3. Check FX Rate",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/fx/USD-INR",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "fx", "USD-INR"]
+						}
+					}
+				},
+				{
+					"name": "4. Create Remittance (25 USDC)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('remittanceId', json.remittanceId);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"senderId\": \"demo-user\",\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/remittances",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "remittances"]
+						}
+					}
+				},
+				{
+					"name": "5. Get Claim Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "claims", "{{claimToken}}"]
+						},
+						"description": "Set the `claimToken` variable from the SMS or application logs before running this."
+					}
+				},
+				{
+					"name": "6. Submit Claim (UPI)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"upiId\": \"recipient@upi\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "claims", "{{claimToken}}"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

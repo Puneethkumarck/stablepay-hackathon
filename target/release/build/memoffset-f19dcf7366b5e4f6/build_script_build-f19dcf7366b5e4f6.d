@@ -1,0 +1,5 @@
+/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/release/build/memoffset-f19dcf7366b5e4f6/build_script_build-f19dcf7366b5e4f6: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/memoffset-0.9.1/build.rs
+
+/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/release/build/memoffset-f19dcf7366b5e4f6/build_script_build-f19dcf7366b5e4f6.d: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/memoffset-0.9.1/build.rs
+
+/Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/memoffset-0.9.1/build.rs:
