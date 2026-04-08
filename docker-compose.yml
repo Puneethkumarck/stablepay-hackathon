@@ -99,8 +99,10 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       MPC_SIDECAR_HOST: mpc-sidecar-0
       MPC_SIDECAR_PORT: 50051
-      MPC_SIDECAR_0_URL: mpc-sidecar-0:50051
-      MPC_SIDECAR_1_URL: mpc-sidecar-1:50051
+      STABLEPAY_MPC_PARTY_ID: 0
+      STABLEPAY_MPC_THRESHOLD: 1
+      STABLEPAY_MPC_TOTAL_PARTIES: 2
+      STABLEPAY_MPC_PEER_ADDRESSES: 1=mpc-sidecar-1:7000
     depends_on:
       postgres:
         condition: service_healthy

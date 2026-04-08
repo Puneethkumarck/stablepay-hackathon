@@ -25,27 +25,47 @@ import sidecar.v1.TssSidecarGrpc;
 @Slf4j
 public class MpcWalletGrpcClient implements MpcWalletClient {
 
-    private static final int DEFAULT_PARTY_ID = 1;
-    private static final int DEFAULT_THRESHOLD = 1;
-    private static final int DEFAULT_TOTAL_PARTIES = 1;
-
     private final TssSidecarGrpc.TssSidecarBlockingStub blockingStub;
     private final long deadlineMs;
     private final Supplier<String> ceremonyIdGenerator;
+    private final int partyId;
+    private final int threshold;
+    private final int totalParties;
+    private final Map<Integer, String> peerAddresses;
 
     public MpcWalletGrpcClient(
             TssSidecarGrpc.TssSidecarBlockingStub blockingStub,
-            @Value("${stablepay.mpc.sidecar.deadline-ms:30000}") long deadlineMs) {
-        this(blockingStub, deadlineMs, () -> UUID.randomUUID().toString());
+            @Value("${stablepay.mpc.sidecar.deadline-ms:30000}") long deadlineMs,
+            @Value("${stablepay.mpc.party-id:0}") int partyId,
+            @Value("${stablepay.mpc.threshold:1}") int threshold,
+            @Value("${stablepay.mpc.total-parties:2}") int totalParties,
+            Map<Integer, String> peerAddresses) {
+        this(blockingStub, deadlineMs, () -> UUID.randomUUID().toString(),
+                partyId, threshold, totalParties, peerAddresses);
     }
 
     MpcWalletGrpcClient(
             TssSidecarGrpc.TssSidecarBlockingStub blockingStub,
             long deadlineMs,
             Supplier<String> ceremonyIdGenerator) {
+        this(blockingStub, deadlineMs, ceremonyIdGenerator, 0, 1, 2, Map.of());
+    }
+
+    MpcWalletGrpcClient(
+            TssSidecarGrpc.TssSidecarBlockingStub blockingStub,
+            long deadlineMs,
+            Supplier<String> ceremonyIdGenerator,
+            int partyId,
+            int threshold,
+            int totalParties,
+            Map<Integer, String> peerAddresses) {
         this.blockingStub = blockingStub;
         this.deadlineMs = deadlineMs;
         this.ceremonyIdGenerator = ceremonyIdGenerator;
+        this.partyId = partyId;
+        this.threshold = threshold;
+        this.totalParties = totalParties;
+        this.peerAddresses = peerAddresses;
     }
 
     @Override
@@ -55,10 +75,10 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
 
         var request = GenerateKeyRequest.newBuilder()
                 .setCeremonyId(ceremonyId)
-                .setPartyId(DEFAULT_PARTY_ID)
-                .setThreshold(DEFAULT_THRESHOLD)
-                .setTotalParties(DEFAULT_TOTAL_PARTIES)
-                .putAllPeerAddresses(Map.of())
+                .setPartyId(partyId)
+                .setThreshold(threshold)
+                .setTotalParties(totalParties)
+                .putAllPeerAddresses(peerAddresses)
                 .build();
 
         try {
@@ -86,12 +106,12 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
 
         var request = SignRequest.newBuilder()
                 .setCeremonyId(ceremonyId)
-                .setPartyId(DEFAULT_PARTY_ID)
-                .setThreshold(DEFAULT_THRESHOLD)
-                .addSigningPartyIds(DEFAULT_PARTY_ID)
+                .setPartyId(partyId)
+                .setThreshold(threshold)
+                .addSigningPartyIds(partyId)
                 .setKeyShareData(ByteString.copyFrom(keyShareData))
                 .setMessage(ByteString.copyFrom(transactionBytes))
-                .putAllPeerAddresses(Map.of())
+                .putAllPeerAddresses(peerAddresses)
                 .build();
 
         try {
