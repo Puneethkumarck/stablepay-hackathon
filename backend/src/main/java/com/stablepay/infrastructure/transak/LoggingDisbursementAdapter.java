@@ -2,17 +2,12 @@ package com.stablepay.infrastructure.transak;
 
 import java.math.BigDecimal;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Component;
-
 import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
-@ConditionalOnMissingBean(FiatDisbursementProvider.class)
 public class LoggingDisbursementAdapter implements FiatDisbursementProvider {
 
     @Override
