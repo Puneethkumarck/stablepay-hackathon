@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class GetClaimQueryHandler {
 
     private final ClaimTokenRepository claimTokenRepository;

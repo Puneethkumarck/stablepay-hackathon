@@ -19,6 +19,7 @@ public record RemittanceResponse(
     BigDecimal fxRate,
     RemittanceStatus status,
     String escrowPda,
+    String claimTokenId,
     boolean smsNotificationFailed,
     Instant createdAt,
     Instant updatedAt,

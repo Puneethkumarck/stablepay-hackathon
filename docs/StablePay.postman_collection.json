@@ -91,6 +91,7 @@
 									"    var json = pm.response.json();",
 									"    pm.test('Wallet funded successfully', function () {",
 									"        pm.expect(json.availableBalance).to.be.a('number');",
+									"        pm.expect(json.totalBalance).to.be.a('number');",
 									"    });",
 									"}"
 								]
@@ -125,6 +126,24 @@
 			"item": [
 				{
 					"name": "Get FX Rate (USD-INR)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('FX rate returned', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.rate).to.be.a('number');",
+									"    pm.expect(json.source).to.be.a('string');",
+									"    pm.expect(json.timestamp).to.be.a('string');",
+									"    pm.expect(json.expiresAt).to.be.a('string');",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -153,11 +172,15 @@
 									"if (pm.response.code === 201) {",
 									"    var json = pm.response.json();",
 									"    pm.collectionVariables.set('remittanceId', json.remittanceId);",
+									"    if (json.claimTokenId) {",
+									"        pm.collectionVariables.set('claimToken', json.claimTokenId);",
+									"    }",
 									"    pm.test('Remittance created successfully', function () {",
 									"        pm.expect(json.remittanceId).to.be.a('string');",
-									"        pm.expect(json.status).to.equal('PENDING');",
+									"        pm.expect(json.status).to.equal('INITIATED');",
 									"        pm.expect(json.fxRate).to.be.a('number');",
 									"        pm.expect(json.amountInr).to.be.a('number');",
+									"        pm.expect(json.claimTokenId).to.be.a('string');",
 									"    });",
 									"}"
 								]
@@ -186,6 +209,22 @@
 				},
 				{
 					"name": "Get Remittance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Remittance retrieved', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.remittanceId).to.equal(pm.collectionVariables.get('remittanceId'));",
+									"    pm.expect(json.status).to.be.a('string');",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -199,6 +238,22 @@
 				},
 				{
 					"name": "List Remittances",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Remittances listed', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.content).to.be.an('array');",
+									"    pm.expect(json.totalElements).to.be.a('number');",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -236,6 +291,25 @@
 			"item": [
 				{
 					"name": "Get Claim Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Claim details retrieved', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.remittanceId).to.be.a('string');",
+									"    pm.expect(json.amountUsdc).to.be.a('number');",
+									"    pm.expect(json.amountInr).to.be.a('number');",
+									"    pm.expect(json.claimed).to.be.false;",
+									"    pm.expect(json.expiresAt).to.be.a('string');",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -249,6 +323,21 @@
 				},
 				{
 					"name": "Submit Claim",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Claim submitted', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.claimed).to.be.true;",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -273,7 +362,7 @@
 		},
 		{
 			"name": "E2E Flow",
-			"description": "Run these requests in order to test the full remittance flow:\n1. Create Wallet\n2. Fund Wallet\n3. Get FX Rate\n4. Create Remittance\n5. Get Claim Details (use token from SMS/logs)\n6. Submit Claim",
+			"description": "Run these requests in order to test the full remittance flow.\nEach step auto-captures variables for the next step.\n\n1. Create Wallet → captures walletId\n2. Fund Wallet (100 USDC)\n3. Check FX Rate (USD-INR)\n4. Create Remittance (25 USDC) → captures remittanceId, claimToken\n5. Poll Remittance Status → verify status progression\n6. Get Claim Details\n7. Submit Claim (UPI)\n8. Verify Final Status\n9. List Remittances",
 			"item": [
 				{
 					"name": "1. Create Wallet",
@@ -283,10 +372,13 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"pm.test('Wallet created', function () {",
+									"    pm.response.to.have.status(201);",
 									"    var json = pm.response.json();",
 									"    pm.collectionVariables.set('walletId', json.id);",
-									"}"
+									"    pm.expect(json.solanaAddress).to.be.a('string');",
+									"    pm.expect(json.availableBalance).to.equal(0);",
+									"});"
 								]
 							}
 						}
@@ -312,6 +404,22 @@
 				},
 				{
 					"name": "2. Fund Wallet (100 USDC)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Wallet funded with 100 USDC', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.availableBalance).to.equal(100);",
+									"    pm.expect(json.totalBalance).to.equal(100);",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -333,6 +441,22 @@
 				},
 				{
 					"name": "3. Check FX Rate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('FX rate available', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.rate).to.be.a('number');",
+									"    pm.expect(json.rate).to.be.above(0);",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -351,10 +475,19 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"pm.test('Remittance created with INITIATED status', function () {",
+									"    pm.response.to.have.status(201);",
 									"    var json = pm.response.json();",
 									"    pm.collectionVariables.set('remittanceId', json.remittanceId);",
-									"}"
+									"    if (json.claimTokenId) {",
+									"        pm.collectionVariables.set('claimToken', json.claimTokenId);",
+									"    }",
+									"    pm.expect(json.status).to.equal('INITIATED');",
+									"    pm.expect(json.amountUsdc).to.equal(25);",
+									"    pm.expect(json.amountInr).to.be.a('number');",
+									"    pm.expect(json.fxRate).to.be.a('number');",
+									"    pm.expect(json.claimTokenId).to.be.a('string');",
+									"});"
 								]
 							}
 						}
@@ -379,7 +512,55 @@
 					}
 				},
 				{
-					"name": "5. Get Claim Details",
+					"name": "5. Poll Remittance Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Remittance status retrieved', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.remittanceId).to.equal(pm.collectionVariables.get('remittanceId'));",
+									"    var validStatuses = ['INITIATED', 'ESCROWED', 'CLAIMED', 'DELIVERED'];",
+									"    pm.expect(validStatuses).to.include(json.status);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/remittances/{{remittanceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "remittances", "{{remittanceId}}"]
+						},
+						"description": "Poll this endpoint to watch status progression:\nINITIATED → ESCROWED → CLAIMED → DELIVERED\n\nWith Temporal running, status should advance to ESCROWED within seconds."
+					}
+				},
+				{
+					"name": "6. Get Claim Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Claim details show unclaimed remittance', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.remittanceId).to.equal(pm.collectionVariables.get('remittanceId'));",
+									"    pm.expect(json.claimed).to.be.false;",
+									"    pm.expect(json.amountUsdc).to.equal(25);",
+									"    pm.expect(json.expiresAt).to.be.a('string');",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -388,11 +569,26 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "claims", "{{claimToken}}"]
 						},
-						"description": "Set the `claimToken` variable from the SMS or application logs before running this."
+						"description": "The claimToken is automatically captured from the Create Remittance response."
 					}
 				},
 				{
-					"name": "6. Submit Claim (UPI)",
+					"name": "7. Submit Claim (UPI)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Claim submitted successfully', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.claimed).to.be.true;",
+									"});"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -409,6 +605,79 @@
 							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "claims", "{{claimToken}}"]
+						},
+						"description": "Submits the claim with a UPI ID. After this, the Temporal workflow will release escrow and disburse INR."
+					}
+				},
+				{
+					"name": "8. Verify Final Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Remittance reached terminal status', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    var terminalStatuses = ['DELIVERED', 'ESCROWED', 'CLAIMED'];",
+									"    pm.expect(terminalStatuses).to.include(json.status);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/remittances/{{remittanceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "remittances", "{{remittanceId}}"]
+						},
+						"description": "After claim submission, poll for DELIVERED status.\nWith Temporal running: ESCROWED → CLAIMED → DELIVERED.\nWithout Temporal: status stays as-is (workflow not running)."
+					}
+				},
+				{
+					"name": "9. List Remittances",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Sender remittances listed', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.content).to.be.an('array');",
+									"    pm.expect(json.content.length).to.be.above(0);",
+									"    pm.expect(json.content[0].senderId).to.equal('demo-user');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/remittances?senderId=demo-user&page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "remittances"],
+							"query": [
+								{
+									"key": "senderId",
+									"value": "demo-user"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
 						}
 					}
 				}
