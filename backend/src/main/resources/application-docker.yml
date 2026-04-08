@@ -1,6 +1,7 @@
 spring:
   autoconfigure:
-    exclude: []
+    exclude:
+      - io.temporal.spring.boot.autoconfigure.TemporalAutoConfiguration
   datasource:
     url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:stablepay}
     username: ${DB_USER:stablepay}
@@ -9,16 +10,6 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
-
-spring.temporal:
-  connection:
-    target: ${TEMPORAL_ADDRESS:temporal:7233}
-  workers:
-    - name: remittance-worker
-      task-queue: remittance-task-queue
-  workers-auto-discovery:
-    packages:
-      - com.stablepay.infrastructure.temporal
 
 stablepay:
   fx:
