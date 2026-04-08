@@ -53,7 +53,7 @@ public class TemporalConfig {
     @Bean
     @Profile("!test")
     WorkflowClient workflowClient(WorkflowServiceStubs serviceStubs, DataConverter dataConverter) {
-        var namespace = System.getenv().getOrDefault("TEMPORAL_NAMESPACE", "stablepay");
+        var namespace = System.getenv().getOrDefault("TEMPORAL_NAMESPACE", "default");
         var options = WorkflowClientOptions.newBuilder()
                 .setNamespace(namespace)
                 .setDataConverter(dataConverter)
