@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
@@ -76,20 +77,13 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     }
 
     @Override
-    public void disburseInr(String upiId, String amountUsdc, String remittanceId) {
+    public void disburseInr(String upiId, BigDecimal amountUsdc, String remittanceId) {
         requireNonNull(upiId, "upiId must not be null");
         requireNonNull(amountUsdc, "amountUsdc must not be null");
         requireNonNull(remittanceId, "remittanceId must not be null");
-        log.info("Disbursing {} USDC as INR to UPI {} for remittance {}", amountUsdc, maskUpi(upiId), remittanceId);
+        log.info("Disbursing {} USDC as INR to UPI {} for remittance {}", amountUsdc, PiiMasking.maskUpi(upiId), remittanceId);
         fiatDisbursementProvider.disburse(upiId, amountUsdc, remittanceId);
         log.info("INR disbursement completed for remittance {}", remittanceId);
-    }
-
-    private static String maskUpi(String upiId) {
-        if (upiId == null || upiId.length() <= 4) {
-            return "****";
-        }
-        return upiId.substring(0, 3) + "****";
     }
 
     @Override

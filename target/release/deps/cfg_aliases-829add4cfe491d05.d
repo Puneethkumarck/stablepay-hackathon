@@ -1,0 +1,7 @@
+/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/release/deps/libcfg_aliases-829add4cfe491d05.rmeta: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cfg_aliases-0.2.1/src/lib.rs
+
+/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/release/deps/libcfg_aliases-829add4cfe491d05.rlib: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cfg_aliases-0.2.1/src/lib.rs
+
+/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/release/deps/cfg_aliases-829add4cfe491d05.d: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cfg_aliases-0.2.1/src/lib.rs
+
+/Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cfg_aliases-0.2.1/src/lib.rs:

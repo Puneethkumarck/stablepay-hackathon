@@ -8,13 +8,14 @@ public enum RemittanceStatus {
     ESCROWED,
     CLAIMED,
     DELIVERED,
+    DISBURSEMENT_FAILED,
     REFUNDED,
     CANCELLED;
 
     private static final Map<RemittanceStatus, Set<RemittanceStatus>> VALID_TRANSITIONS = Map.of(
             INITIATED, Set.of(ESCROWED, CANCELLED),
             ESCROWED, Set.of(CLAIMED, REFUNDED, CANCELLED),
-            CLAIMED, Set.of(DELIVERED)
+            CLAIMED, Set.of(DELIVERED, DISBURSEMENT_FAILED)
     );
 
     public boolean canTransitionTo(RemittanceStatus target) {

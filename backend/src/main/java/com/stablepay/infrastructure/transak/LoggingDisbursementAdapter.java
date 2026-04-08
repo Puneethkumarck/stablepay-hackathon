@@ -1,8 +1,11 @@
 package com.stablepay.infrastructure.transak;
 
+import java.math.BigDecimal;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
+import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 
 import lombok.extern.slf4j.Slf4j;
@@ -13,16 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 public class LoggingDisbursementAdapter implements FiatDisbursementProvider {
 
     @Override
-    public void disburse(String upiId, String amountUsdc, String remittanceId) {
+    public void disburse(String upiId, BigDecimal amountUsdc, String remittanceId) {
         log.info("Simulating INR disbursement: {} USDC to UPI {} for remittance {}",
-                amountUsdc, maskUpi(upiId), remittanceId);
+                amountUsdc, PiiMasking.maskUpi(upiId), remittanceId);
         log.info("INR disbursement simulated successfully for remittance {}", remittanceId);
-    }
-
-    private static String maskUpi(String upiId) {
-        if (upiId == null || upiId.length() <= 4) {
-            return "****";
-        }
-        return upiId.substring(0, 3) + "****";
     }
 }

@@ -19,6 +19,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     private static final Logger log = Workflow.getLogger(RemittanceLifecycleWorkflowImpl.class);
 
     private static final Duration SOLANA_ACTIVITY_TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration DISBURSEMENT_ACTIVITY_TIMEOUT = Duration.ofSeconds(45);
     private static final Duration SMS_ACTIVITY_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration STATUS_UPDATE_TIMEOUT = Duration.ofSeconds(10);
     private static final int SOLANA_MAX_ATTEMPTS = 3;
@@ -26,6 +27,9 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
     private final RemittanceLifecycleActivities solanaActivities =
             Workflow.newActivityStub(RemittanceLifecycleActivities.class, solanaActivityOptions());
+
+    private final RemittanceLifecycleActivities disbursementActivities =
+            Workflow.newActivityStub(RemittanceLifecycleActivities.class, disbursementActivityOptions());
 
     private final RemittanceLifecycleActivities smsActivities =
             Workflow.newActivityStub(RemittanceLifecycleActivities.class, smsActivityOptions());
@@ -113,10 +117,23 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         currentStatus = RemittanceStatus.CLAIMED;
         log.info("Escrow released for remittanceId={} with tx={}", remittanceId, releaseSignature);
 
-        solanaActivities.disburseInr(
-                pendingClaim.upiId(),
-                request.amountUsdc().toPlainString(),
-                remittanceId.toString());
+        try {
+            disbursementActivities.disburseInr(
+                    pendingClaim.upiId(),
+                    request.amountUsdc(),
+                    remittanceId.toString());
+        } catch (Exception e) {
+            log.error("INR disbursement failed for remittanceId={}, escrow already released", remittanceId, e);
+            statusActivities.updateRemittanceStatus(
+                    remittanceId.toString(), RemittanceStatus.DISBURSEMENT_FAILED);
+            currentStatus = RemittanceStatus.DISBURSEMENT_FAILED;
+            return RemittanceWorkflowResult.builder()
+                    .remittanceId(remittanceId)
+                    .finalStatus(RemittanceStatus.DISBURSEMENT_FAILED.name())
+                    .escrowPda(escrowTxSignature)
+                    .txSignature(releaseSignature)
+                    .build();
+        }
 
         statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.DELIVERED);
         currentStatus = RemittanceStatus.DELIVERED;
@@ -164,6 +181,17 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
                         .setMaximumAttempts(SOLANA_MAX_ATTEMPTS)
                         .setInitialInterval(Duration.ofSeconds(2))
                         .setBackoffCoefficient(2.0)
+                        .build())
+                .build();
+    }
+
+    private static ActivityOptions disbursementActivityOptions() {
+        return ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(DISBURSEMENT_ACTIVITY_TIMEOUT)
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(1)
+                        .setDoNotRetry(
+                                "com.stablepay.domain.remittance.exception.DisbursementException")
                         .build())
                 .build();
     }
