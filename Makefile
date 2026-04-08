@@ -69,6 +69,15 @@ urls-infra: ## Print infrastructure URLs (no backend)
 	@echo "============================================"
 	@echo ""
 
+e2e: ## Run E2E API tests via Newman (requires running stack)
+	@cd e2e-tests && npm install --silent && npm test
+
+e2e-ci: ## Run E2E tests with JUnit output for CI
+	@cd e2e-tests && npm install --silent && npm run test:ci
+
+e2e-full: up ## Start stack + wait + run E2E tests
+	@cd e2e-tests && npm install --silent && npm run wait-and-test
+
 clean: ## Stop all services and remove volumes
 	@$(COMPOSE) down -v
 	@echo "StablePay stack stopped and volumes removed."

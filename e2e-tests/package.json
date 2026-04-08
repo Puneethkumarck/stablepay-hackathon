@@ -1,0 +1,15 @@
+{
+  "name": "stablepay-e2e-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "E2E API tests for StablePay backend using Newman",
+  "scripts": {
+    "test": "newman run ../docs/StablePay.postman_collection.json --folder 'E2E Flow' --env-var 'baseUrl=http://localhost:8080' --delay-request 500 --reporters cli,json --reporter-json-export results/e2e-report.json",
+    "test:all": "newman run ../docs/StablePay.postman_collection.json --env-var 'baseUrl=http://localhost:8080' --delay-request 500 --reporters cli,json --reporter-json-export results/all-report.json",
+    "test:ci": "newman run ../docs/StablePay.postman_collection.json --folder 'E2E Flow' --env-var 'baseUrl=http://localhost:8080' --delay-request 1000 --reporters cli,junit --reporter-junit-export results/e2e-junit.xml",
+    "wait-and-test": "node scripts/wait-for-backend.js && npm test"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  }
+}
