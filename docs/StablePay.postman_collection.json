@@ -368,6 +368,16 @@
 					"name": "1. Create Wallet",
 					"event": [
 						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var uniqueUser = 'e2e-' + Date.now();",
+									"pm.collectionVariables.set('userId', uniqueUser);"
+								]
+							}
+						},
+						{
 							"listen": "test",
 							"script": {
 								"type": "text/javascript",
@@ -393,7 +403,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"userId\": \"demo-user\"\n}"
+							"raw": "{\n    \"userId\": \"{{userId}}\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/wallets",
@@ -502,7 +512,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"senderId\": \"demo-user\",\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
+							"raw": "{\n    \"senderId\": \"{{userId}}\",\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances",
@@ -651,7 +661,7 @@
 									"    var json = pm.response.json();",
 									"    pm.expect(json.content).to.be.an('array');",
 									"    pm.expect(json.content.length).to.be.above(0);",
-									"    pm.expect(json.content[0].senderId).to.equal('demo-user');",
+									"    pm.expect(json.content[0].senderId).to.equal(pm.collectionVariables.get('userId'));",
 									"});"
 								]
 							}
@@ -667,7 +677,7 @@
 							"query": [
 								{
 									"key": "senderId",
-									"value": "demo-user"
+									"value": "{{userId}}"
 								},
 								{
 									"key": "page",
