@@ -41,7 +41,8 @@ public class TemporalConfig {
     @Bean
     @Profile("!test")
     WorkflowServiceStubs workflowServiceStubs() {
-        var target = System.getenv().getOrDefault("TEMPORAL_FRONTEND_URL", "127.0.0.1:7233");
+        var target = System.getenv().getOrDefault("TEMPORAL_ADDRESS",
+                System.getenv().getOrDefault("TEMPORAL_FRONTEND_URL", "127.0.0.1:7233"));
         var options = WorkflowServiceStubsOptions.newBuilder()
                 .setTarget(target)
                 .build();
