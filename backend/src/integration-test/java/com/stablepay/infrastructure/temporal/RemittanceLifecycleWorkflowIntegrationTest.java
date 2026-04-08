@@ -2,6 +2,7 @@ package com.stablepay.infrastructure.temporal;
 
 import static com.stablepay.infrastructure.temporal.TaskQueue.Constants.TASK_QUEUE_REMITTANCE_LIFECYCLE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;
 import static com.stablepay.testutil.WorkflowFixtures.claimSignalBuilder;
 import static com.stablepay.testutil.WorkflowFixtures.workflowRequestBuilder;
@@ -176,6 +177,55 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                     .usingRecursiveComparison()
                     .ignoringFields("escrowPda", "txSignature")
                     .isEqualTo(expected);
+        }
+    }
+
+    @Nested
+    class DisbursementFailure {
+
+        @Test
+        void shouldTransitionToDisbursementFailedWhenDisbursementThrows() {
+            // given
+            willThrow(new RuntimeException("Transak API unavailable"))
+                    .given(activities)
+                    .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC, remittanceId.toString());
+
+            var workflow = startWorkflow();
+
+            // when
+            workflow.claimSubmitted(claimSignalBuilder().build());
+
+            var result = WorkflowStub.fromTyped(workflow)
+                    .getResult(RemittanceWorkflowResult.class);
+
+            // then
+            var expected = RemittanceWorkflowResult.builder()
+                    .remittanceId(remittanceId)
+                    .finalStatus(RemittanceStatus.DISBURSEMENT_FAILED.name())
+                    .build();
+
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("escrowPda", "txSignature")
+                    .isEqualTo(expected);
+
+            then(activities)
+                    .should()
+                    .releaseEscrow(
+                            remittanceId.toString(),
+                            SOME_DESTINATION_ADDRESS);
+            then(activities)
+                    .should()
+                    .updateRemittanceStatus(
+                            remittanceId.toString(), RemittanceStatus.CLAIMED);
+            then(activities)
+                    .should()
+                    .updateRemittanceStatus(
+                            remittanceId.toString(), RemittanceStatus.DISBURSEMENT_FAILED);
+            then(activities)
+                    .should(never())
+                    .updateRemittanceStatus(
+                            remittanceId.toString(), RemittanceStatus.DELIVERED);
         }
     }
 

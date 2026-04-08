@@ -71,4 +71,33 @@ class WalletRepositoryIntegrationTest {
         // then
         assertThat(found).isEmpty();
     }
+
+    @Test
+    void shouldFindWalletBySolanaAddress() {
+        // given
+        var solanaAddress = "addr-solana-" + System.nanoTime();
+        var wallet = Wallet.builder()
+                .userId("user-solana-" + System.nanoTime())
+                .solanaAddress(solanaAddress)
+                .availableBalance(SOME_BALANCE)
+                .totalBalance(SOME_BALANCE)
+                .build();
+        walletRepository.save(wallet);
+
+        // when
+        var found = walletRepository.findBySolanaAddress(solanaAddress);
+
+        // then
+        assertThat(found).isPresent();
+        assertThat(found.get().solanaAddress()).isEqualTo(solanaAddress);
+    }
+
+    @Test
+    void shouldReturnEmptyWhenSolanaAddressNotFound() {
+        // when
+        var found = walletRepository.findBySolanaAddress("nonexistent-solana-address");
+
+        // then
+        assertThat(found).isEmpty();
+    }
 }
