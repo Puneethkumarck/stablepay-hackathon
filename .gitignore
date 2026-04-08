@@ -11,3 +11,9 @@ node_modules/
 # Environment
 .env
 .env.local
+
+# Anchor / Solana
+.anchor/
+target/
+test-ledger/
+*.dylib

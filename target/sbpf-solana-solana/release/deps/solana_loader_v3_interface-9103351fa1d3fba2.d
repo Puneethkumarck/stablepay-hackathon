@@ -1,9 +1,0 @@
-/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/sbpf-solana-solana/release/deps/libsolana_loader_v3_interface-9103351fa1d3fba2.rmeta: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/lib.rs /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/instruction.rs /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/state.rs
-
-/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/sbpf-solana-solana/release/deps/libsolana_loader_v3_interface-9103351fa1d3fba2.rlib: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/lib.rs /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/instruction.rs /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/state.rs
-
-/Users/puneethkumarck/Documents/AI/github/stablepay-hackathon/target/sbpf-solana-solana/release/deps/solana_loader_v3_interface-9103351fa1d3fba2.d: /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/lib.rs /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/instruction.rs /Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/state.rs
-
-/Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/lib.rs:
-/Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/instruction.rs:
-/Users/puneethkumarck/.cargo/registry/src/index.crates.io-6f17d22bba15001f/solana-loader-v3-interface-5.0.0/src/state.rs:
