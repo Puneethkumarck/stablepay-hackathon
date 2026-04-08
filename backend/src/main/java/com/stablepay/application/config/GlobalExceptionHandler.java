@@ -16,6 +16,7 @@ import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
+import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
@@ -103,6 +104,14 @@ public class GlobalExceptionHandler {
             InvalidRemittanceStateException ex, HttpServletRequest request) {
         log.warn("Invalid remittance state: {}", ex.getMessage());
         return buildResponse("SP-0014", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(DisbursementException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ErrorResponse handleDisbursementFailure(
+            DisbursementException ex, HttpServletRequest request) {
+        log.error("Disbursement failed: {}", ex.getMessage());
+        return buildResponse("SP-0018", ex.getMessage(), request);
     }
 
     @ExceptionHandler(RemittanceNotFoundException.class)
