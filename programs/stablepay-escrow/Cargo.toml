@@ -23,7 +23,7 @@ anchor-spl = "0.32"
 # which is incompatible with the Solana Platform Tools toolchain (Rust 1.79).
 blake3 = "=1.8.2"
 proc-macro-crate = "=3.3.0"
-indexmap = "=2.11.4"
+indexmap = "=2.14.0"
 unicode-segmentation = "=1.12.0"
 
 [profile.release]
