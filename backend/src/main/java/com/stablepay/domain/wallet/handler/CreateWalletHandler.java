@@ -35,6 +35,7 @@ public class CreateWalletHandler {
                 .solanaAddress(generatedKey.solanaAddress())
                 .publicKey(generatedKey.publicKey())
                 .keyShareData(generatedKey.keyShareData())
+                .peerKeyShareData(generatedKey.peerKeyShareData())
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .build();

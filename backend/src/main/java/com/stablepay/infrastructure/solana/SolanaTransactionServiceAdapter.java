@@ -57,7 +57,8 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
             var transaction = new VersionedTransaction(message);
 
             var messageBytes = message.serialize();
-            var mpcSignature = mpcWalletClient.signTransaction(messageBytes, wallet.keyShareData());
+            var mpcSignature = mpcWalletClient.signTransaction(
+                    messageBytes, wallet.keyShareData(), wallet.peerKeyShareData());
             if (mpcSignature == null || mpcSignature.length != 64) {
                 throw SolanaTransactionException.submissionFailed(
                         "deposit:" + remittanceId,

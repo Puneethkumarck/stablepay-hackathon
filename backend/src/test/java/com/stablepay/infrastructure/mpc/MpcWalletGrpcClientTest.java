@@ -3,6 +3,7 @@ package com.stablepay.infrastructure.mpc;
 import static com.stablepay.testutil.MpcFixtures.SOME_CEREMONY_ID;
 import static com.stablepay.testutil.MpcFixtures.SOME_DEADLINE_MS;
 import static com.stablepay.testutil.MpcFixtures.SOME_KEY_SHARE_DATA;
+import static com.stablepay.testutil.MpcFixtures.SOME_PEER_KEY_SHARE_DATA;
 import static com.stablepay.testutil.MpcFixtures.SOME_PUBLIC_KEY;
 import static com.stablepay.testutil.MpcFixtures.SOME_SIGNATURE;
 import static com.stablepay.testutil.MpcFixtures.SOME_SOLANA_ADDRESS;
@@ -58,6 +59,7 @@ class MpcWalletGrpcClientTest {
             .setPartyId(0)
             .setThreshold(2)
             .addSigningPartyIds(0)
+            .addSigningPartyIds(1)
             .setKeyShareData(ByteString.copyFrom(SOME_KEY_SHARE_DATA))
             .setMessage(ByteString.copyFrom(SOME_TRANSACTION_BYTES))
             .putAllPeerAddresses(Map.of())
@@ -200,7 +202,7 @@ class MpcWalletGrpcClientTest {
             given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
             // when
-            var result = client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA);
+            var result = client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA, SOME_PEER_KEY_SHARE_DATA);
 
             // then
             assertThat(result).isEqualTo(SOME_SIGNATURE);
@@ -219,7 +221,7 @@ class MpcWalletGrpcClientTest {
             given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
             // when / then
-            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA, SOME_PEER_KEY_SHARE_DATA))
                     .isInstanceOf(MpcSigningException.class)
                     .hasMessageContaining("signing protocol error");
         }
@@ -236,7 +238,7 @@ class MpcWalletGrpcClientTest {
             given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
             // when / then
-            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA, SOME_PEER_KEY_SHARE_DATA))
                     .isInstanceOf(MpcSigningException.class)
                     .hasMessageContaining("ceremony timed out");
         }
@@ -253,7 +255,7 @@ class MpcWalletGrpcClientTest {
             given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
             // when / then
-            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA, SOME_PEER_KEY_SHARE_DATA))
                     .isInstanceOf(MpcSigningException.class)
                     .hasMessageContaining("unexpected status");
         }
@@ -271,7 +273,7 @@ class MpcWalletGrpcClientTest {
             given(deadlineStub.sign(EXPECTED_SIGN_REQUEST)).willReturn(response);
 
             // when / then
-            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA, SOME_PEER_KEY_SHARE_DATA))
                     .isInstanceOf(MpcSigningException.class)
                     .hasMessageContaining("empty signature");
         }
@@ -285,7 +287,7 @@ class MpcWalletGrpcClientTest {
                     .willThrow(new StatusRuntimeException(Status.UNAVAILABLE));
 
             // when / then
-            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA))
+            assertThatThrownBy(() -> client.signTransaction(SOME_TRANSACTION_BYTES, SOME_KEY_SHARE_DATA, SOME_PEER_KEY_SHARE_DATA))
                     .isInstanceOf(MpcSigningException.class)
                     .hasCauseInstanceOf(StatusRuntimeException.class);
         }

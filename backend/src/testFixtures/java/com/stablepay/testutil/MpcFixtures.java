@@ -8,6 +8,7 @@ public final class MpcFixtures {
     public static final String SOME_SOLANA_ADDRESS = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
     public static final byte[] SOME_PUBLIC_KEY = new byte[]{1, 2, 3, 4, 5, 6, 7, 8};
     public static final byte[] SOME_KEY_SHARE_DATA = new byte[]{10, 20, 30, 40, 50};
+    public static final byte[] SOME_PEER_KEY_SHARE_DATA = new byte[]{60, 70, 80, 90, 100};
     public static final byte[] SOME_TRANSACTION_BYTES = new byte[]{100, 101, 102, 103, 104};
     public static final byte[] SOME_SIGNATURE = new byte[]{
         (byte) 0xAB, (byte) 0xCD, (byte) 0xEF, 0x01, 0x02, 0x03, 0x04, 0x05,

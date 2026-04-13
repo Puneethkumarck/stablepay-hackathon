@@ -202,7 +202,8 @@ class SolanaTransactionServiceAdapterTest {
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
             given(mpcWalletClient.signTransaction(
                     ArgumentMatchers.<byte[]>notNull(),
-                    ArgumentMatchers.<byte[]>notNull()))
+                    ArgumentMatchers.<byte[]>notNull(),
+                    ArgumentMatchers.nullable(byte[].class)))
                     .willReturn(new byte[64]);
             given(solanaConnection.sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull()))
                     .willReturn(SOME_TRANSACTION_SIGNATURE);
@@ -216,7 +217,8 @@ class SolanaTransactionServiceAdapterTest {
             assertThat(result).isEqualTo(SOME_TRANSACTION_SIGNATURE);
             then(mpcWalletClient).should().signTransaction(
                     ArgumentMatchers.<byte[]>notNull(),
-                    ArgumentMatchers.<byte[]>notNull());
+                    ArgumentMatchers.<byte[]>notNull(),
+                    ArgumentMatchers.nullable(byte[].class));
             then(solanaConnection).should().sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull());
         }
 
@@ -272,7 +274,8 @@ class SolanaTransactionServiceAdapterTest {
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
             given(mpcWalletClient.signTransaction(
                     ArgumentMatchers.<byte[]>notNull(),
-                    ArgumentMatchers.<byte[]>notNull()))
+                    ArgumentMatchers.<byte[]>notNull(),
+                    ArgumentMatchers.nullable(byte[].class)))
                     .willThrow(new RuntimeException("MPC signing failed"));
 
             // when / then

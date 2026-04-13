@@ -95,12 +95,22 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
             var response = stubWithDeadline(primaryStub).generateKey(primaryRequest);
             validateGenerateKeyResponse(ceremonyId, response);
 
-            // Wait for peers to complete (best-effort — primary result is what matters)
-            peerFutures.forEach(f -> f.exceptionally(ex -> {
-                log.warn("Peer sidecar keygen completed with error for ceremony {}: {}",
-                        ceremonyId, ex.getMessage());
-                return null;
-            }));
+            // Collect peer key share data (best-effort — primary result is what matters)
+            byte[] peerKeyShareData = null;
+            for (var future : peerFutures) {
+                try {
+                    var peerResponse = future.get(deadlineMs, TimeUnit.MILLISECONDS);
+                    if (peerResponse != null
+                            && peerResponse.getStatus() == Status.STATUS_COMPLETED
+                            && !peerResponse.getKeyShareData().isEmpty()) {
+                        peerKeyShareData = peerResponse.getKeyShareData().toByteArray();
+                        log.info("Captured peer key share for ceremony {}", ceremonyId);
+                    }
+                } catch (Exception ex) {
+                    log.warn("Peer sidecar keygen completed with error for ceremony {}: {}",
+                            ceremonyId, ex.getMessage());
+                }
+            }
 
             log.info("MPC key generation completed for ceremony {}: address={}",
                     ceremonyId, response.getSolanaAddress());
@@ -108,6 +118,7 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
                     .solanaAddress(response.getSolanaAddress())
                     .publicKey(response.getPublicKey().toByteArray())
                     .keyShareData(response.getKeyShareData().toByteArray())
+                    .peerKeyShareData(peerKeyShareData)
                     .build();
 
         } catch (StatusRuntimeException ex) {
@@ -117,20 +128,23 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
     }
 
     @Override
-    public byte[] signTransaction(byte[] transactionBytes, byte[] keyShareData) {
+    public byte[] signTransaction(byte[] transactionBytes, byte[] keyShareData, byte[] peerKeyShareData) {
         var ceremonyId = ceremonyIdGenerator.get();
-        log.info("Starting MPC signing ceremony: {}", ceremonyId);
+        log.info("Starting MPC signing ceremony: {} (parties: {})", ceremonyId, totalParties);
 
-        // Trigger peer sidecars for signing (they need their own key share data — not available here)
-        // For signing, the peer sidecar must be triggered separately with its own key share.
-        // In a 2-of-2 setup, both parties must participate. For the hackathon, we only sign
-        // from the primary sidecar using the stored key share (1-of-1 signing with threshold=2).
+        var allSigningPartyIds = allPartyIds();
+
+        // Trigger peer sidecars concurrently (same pattern as DKG)
+        if (peerKeyShareData != null) {
+            peerSidecars.forEach(peer ->
+                    triggerPeerSigning(ceremonyId, peer, peerKeyShareData, transactionBytes, allSigningPartyIds));
+        }
 
         var request = SignRequest.newBuilder()
                 .setCeremonyId(ceremonyId)
                 .setPartyId(partyId)
                 .setThreshold(threshold)
-                .addSigningPartyIds(partyId)
+                .addAllSigningPartyIds(allSigningPartyIds)
                 .setKeyShareData(ByteString.copyFrom(keyShareData))
                 .setMessage(ByteString.copyFrom(transactionBytes))
                 .putAllPeerAddresses(peerAddresses)
@@ -147,6 +161,39 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
             log.error("gRPC call failed for signing ceremony {}: {}", ceremonyId, ex.getStatus());
             throw MpcSigningException.fromCause(ceremonyId, ex);
         }
+    }
+
+    private CompletableFuture<SignResponse> triggerPeerSigning(
+            String ceremonyId, PeerSidecar peer, byte[] peerKeyShareData,
+            byte[] message, List<Integer> allSigningPartyIds) {
+        return CompletableFuture.supplyAsync(() -> {
+            log.info("Triggering peer sidecar (party {}) for signing ceremony {}", peer.partyId(), ceremonyId);
+            var peerRequest = SignRequest.newBuilder()
+                    .setCeremonyId(ceremonyId)
+                    .setPartyId(peer.partyId())
+                    .setThreshold(threshold)
+                    .addAllSigningPartyIds(allSigningPartyIds)
+                    .setKeyShareData(ByteString.copyFrom(peerKeyShareData))
+                    .setMessage(ByteString.copyFrom(message))
+                    .putAllPeerAddresses(peer.peerAddresses())
+                    .build();
+            return stubWithDeadline(peer.stub()).sign(peerRequest);
+        });
+    }
+
+    private List<Integer> allPartyIds() {
+        var ids = new java.util.ArrayList<Integer>();
+        ids.add(partyId);
+        peerSidecars.forEach(peer -> ids.add(peer.partyId()));
+        if (ids.size() < totalParties) {
+            for (int i = 0; i < totalParties; i++) {
+                if (!ids.contains(i)) {
+                    ids.add(i);
+                }
+            }
+        }
+        ids.sort(Integer::compareTo);
+        return ids;
     }
 
     private CompletableFuture<GenerateKeyResponse> triggerPeerKeygen(String ceremonyId, PeerSidecar peer) {

@@ -16,6 +16,7 @@ public record Wallet(
     String solanaAddress,
     byte[] publicKey,
     byte[] keyShareData,
+    byte[] peerKeyShareData,
     BigDecimal availableBalance,
     BigDecimal totalBalance,
     Instant createdAt,

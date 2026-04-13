@@ -78,6 +78,8 @@ public class TemporalConfig {
         var worker = workerFactory.newWorker(taskQueue);
         worker.registerWorkflowImplementationTypes(RemittanceLifecycleWorkflowImpl.class);
         activitiesProvider.ifAvailable(worker::registerActivitiesImplementations);
+        workerFactory.start();
+        log.info("Temporal WorkerFactory started, polling task queue {}", taskQueue);
         return worker;
     }
 }
