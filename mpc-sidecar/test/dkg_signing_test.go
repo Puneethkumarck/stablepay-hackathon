@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	stded25519 "crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -81,12 +82,38 @@ func TestEdDSAKeygenAndSigning(t *testing.T) {
 
 	ok := edwards.Verify(&pk, message, r, s)
 	if !ok {
-		t.Fatal("FAIL: Ed25519 signature verification failed")
+		t.Fatal("FAIL: Ed25519 signature verification failed (dcrd/edwards)")
+	}
+	t.Logf("PASS: dcrd/edwards signature verified")
+
+	// Cross-verify with Go's standard crypto/ed25519 (same as Solana uses)
+	pubKeyBytes := pk.Serialize() // 32-byte Ed25519 public key
+	t.Logf("Public key (hex): %x", pubKeyBytes)
+	t.Logf("Signature (hex):  %x", sigData.Signature)
+	t.Logf("Message (hex):    %x", message)
+
+	stdOk := stded25519.Verify(stded25519.PublicKey(pubKeyBytes), message, sigData.Signature)
+	if !stdOk {
+		t.Logf("FAIL: crypto/ed25519 verification FAILED — signature not Solana-compatible")
+		t.Logf("Trying with R||S constructed from big-endian fields...")
+
+		// Try constructing signature from R/S fields
+		rBytes := padTo32(sigData.R)
+		sBytes := padTo32(sigData.S)
+		altSig := append(rBytes, sBytes...)
+		t.Logf("Alt signature (hex): %x", altSig)
+
+		altOk := stded25519.Verify(stded25519.PublicKey(pubKeyBytes), message, altSig)
+		if altOk {
+			t.Log("PASS: crypto/ed25519 verified with manually constructed R||S")
+		} else {
+			t.Fatal("FAIL: Neither sigData.Signature nor R||S passes crypto/ed25519 verify")
+		}
+	} else {
+		t.Log("PASS: crypto/ed25519 (standard Ed25519) signature verified — Solana compatible!")
 	}
 
-	t.Logf("PASS: Ed25519 signature verified successfully")
-	t.Logf("Signature (R||S): %x", sigData.Signature)
-	t.Logf("Solana address: %s", base58.Encode(pk.Serialize()))
+	t.Logf("Solana address: %s", base58.Encode(pubKeyBytes))
 	t.Log("SPIKE RESULT: EdDSA keygen + signing with fystack/tss-lib PASSED")
 }
 
@@ -284,4 +311,13 @@ func routeMessage(t *testing.T, msg tss.Message, fromIdx, totalParties int, sort
 			}
 		}
 	}
+}
+
+func padTo32(b []byte) []byte {
+	if len(b) >= 32 {
+		return b[len(b)-32:]
+	}
+	padded := make([]byte, 32)
+	copy(padded[32-len(b):], b)
+	return padded
 }
