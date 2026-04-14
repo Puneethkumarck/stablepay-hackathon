@@ -30,7 +30,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sol4k.AccountMeta;
 import org.sol4k.Connection;
 import org.sol4k.PublicKey;
-import org.sol4k.VersionedTransaction;
 import org.sol4k.instruction.BaseInstruction;
 
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
@@ -75,7 +74,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
 
             // when
             var result = adapter.getTransactionStatus(SOME_TRANSACTION_SIGNATURE);
@@ -93,7 +92,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
             var destination = new PublicKey(SOME_DESTINATION_TOKEN_ACCOUNT);
             var instruction = new BaseInstruction(
@@ -104,7 +103,7 @@ class SolanaTransactionServiceAdapterTest {
                     SOME_REMITTANCE_ID, claimAuthorityPubKey, destination))
                     .willReturn(instruction);
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
-            given(solanaConnection.sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull()))
+            given(solanaConnection.sendTransaction(ArgumentMatchers.<byte[]>notNull()))
                     .willReturn(SOME_TRANSACTION_SIGNATURE);
 
             // when
@@ -112,7 +111,7 @@ class SolanaTransactionServiceAdapterTest {
 
             // then
             assertThat(result).isEqualTo(SOME_TRANSACTION_SIGNATURE);
-            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull());
+            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<byte[]>notNull());
         }
 
         @Test
@@ -120,7 +119,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithoutKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
 
             // when / then
             assertThatThrownBy(() -> adapter.claimEscrow(
@@ -138,7 +137,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
             var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             var instruction = new BaseInstruction(
@@ -149,7 +148,7 @@ class SolanaTransactionServiceAdapterTest {
                     SOME_REMITTANCE_ID, claimAuthorityPubKey, senderWallet))
                     .willReturn(instruction);
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
-            given(solanaConnection.sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull()))
+            given(solanaConnection.sendTransaction(ArgumentMatchers.<byte[]>notNull()))
                     .willReturn(SOME_TRANSACTION_SIGNATURE);
 
             // when
@@ -157,7 +156,7 @@ class SolanaTransactionServiceAdapterTest {
 
             // then
             assertThat(result).isEqualTo(SOME_TRANSACTION_SIGNATURE);
-            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull());
+            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<byte[]>notNull());
         }
 
         @Test
@@ -165,7 +164,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithoutKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
 
             // when / then
             assertThatThrownBy(() -> adapter.refundEscrow(SOME_REMITTANCE_ID, SOME_SENDER_WALLET))
@@ -182,7 +181,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
             var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
             var wallet = walletBuilder()
@@ -205,7 +204,7 @@ class SolanaTransactionServiceAdapterTest {
                     ArgumentMatchers.<byte[]>notNull(),
                     ArgumentMatchers.nullable(byte[].class)))
                     .willReturn(new byte[64]);
-            given(solanaConnection.sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull()))
+            given(solanaConnection.sendTransaction(ArgumentMatchers.<byte[]>notNull()))
                     .willReturn(SOME_TRANSACTION_SIGNATURE);
 
             // when
@@ -219,7 +218,7 @@ class SolanaTransactionServiceAdapterTest {
                     ArgumentMatchers.<byte[]>notNull(),
                     ArgumentMatchers.<byte[]>notNull(),
                     ArgumentMatchers.nullable(byte[].class));
-            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull());
+            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<byte[]>notNull());
         }
 
         @Test
@@ -227,7 +226,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
             var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
             var instruction = new BaseInstruction(
@@ -254,7 +253,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
             var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
             var wallet = walletBuilder()
@@ -291,7 +290,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithoutKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
 
             // when / then
             assertThatThrownBy(() -> adapter.depositEscrow(
@@ -306,7 +305,7 @@ class SolanaTransactionServiceAdapterTest {
             // given
             var adapter = new SolanaTransactionServiceAdapter(
                     solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+                    mpcWalletClient, walletRepository, "http://localhost:8899");
             var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             var claimAuthorityPubKey = new PublicKey(SOME_CLAIM_AUTHORITY_PUBLIC_KEY);
 

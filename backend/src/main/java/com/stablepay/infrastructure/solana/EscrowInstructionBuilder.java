@@ -48,28 +48,28 @@ public class EscrowInstructionBuilder {
             BigDecimal amountUsdc,
             long expiryTimestamp) {
 
-        var remittanceIdBytes = uuidToBytes(remittanceId);
-        var escrowPda = deriveEscrowPda(remittanceIdBytes);
+        var remittanceIdPubkey = uuidToPublicKey(remittanceId);
+        var escrowPda = deriveEscrowPda(remittanceIdPubkey.bytes());
         var senderAta = deriveAssociatedTokenAddress(senderWallet, solanaProperties.usdcMint());
-        var vaultAta = deriveAssociatedTokenAddress(escrowPda, solanaProperties.usdcMint());
+        var vaultPda = deriveVaultPda(escrowPda);
         var lamports = usdcToLamports(amountUsdc);
 
-        var data = buildDepositData(remittanceIdBytes, lamports, expiryTimestamp);
+        var data = buildDepositData(lamports, expiryTimestamp);
 
+        // Account order must match Anchor Deposit struct exactly
         var keys = List.of(
-                AccountMeta.signerAndWritable(senderWallet),
-                AccountMeta.writable(escrowPda),
-                AccountMeta.writable(vaultAta),
-                AccountMeta.writable(senderAta),
-                new AccountMeta(claimAuthority, false, false),
-                new AccountMeta(solanaProperties.usdcMint(), false, false),
-                new AccountMeta(TOKEN_PROGRAM_ID, false, false),
-                new AccountMeta(ASSOCIATED_TOKEN_PROGRAM_ID, false, false),
-                new AccountMeta(SYSTEM_PROGRAM_ID, false, false),
-                new AccountMeta(RENT_SYSVAR, false, false));
+                AccountMeta.signerAndWritable(senderWallet),       // sender
+                AccountMeta.writable(escrowPda),                   // escrow (init)
+                AccountMeta.writable(vaultPda),                    // vault (init)
+                AccountMeta.writable(senderAta),                   // sender_token
+                new AccountMeta(solanaProperties.usdcMint(), false, false),  // usdc_mint
+                new AccountMeta(claimAuthority, false, false),     // claim_authority
+                new AccountMeta(remittanceIdPubkey, false, false), // remittance_id
+                new AccountMeta(SYSTEM_PROGRAM_ID, false, false),  // system_program
+                new AccountMeta(TOKEN_PROGRAM_ID, false, false));  // token_program
 
-        log.debug("Built deposit instruction for remittance {} with escrow PDA {}",
-                remittanceId, escrowPda.toBase58());
+        log.debug("Built deposit instruction for remittance {} with escrow PDA {}, remittanceIdPubkey {}",
+                remittanceId, escrowPda.toBase58(), remittanceIdPubkey.toBase58());
 
         return new BaseInstruction(data, keys, solanaProperties.escrowProgramId());
     }
@@ -124,16 +124,15 @@ public class EscrowInstructionBuilder {
         return new BaseInstruction(data, keys, solanaProperties.escrowProgramId());
     }
 
-    public PublicKey deriveEscrowPda(byte[] remittanceIdBytes) {
+    public PublicKey deriveEscrowPda(byte[] remittanceIdPubkeyBytes) {
         try {
             return findProgramDerivedAddress(
-                    List.of(ESCROW_SEED_PREFIX, remittanceIdBytes),
+                    List.of(ESCROW_SEED_PREFIX, remittanceIdPubkeyBytes),
                     solanaProperties.escrowProgramId());
         } catch (SolanaTransactionException e) {
             throw e;
         } catch (Exception e) {
-            throw SolanaTransactionException.pdaDerivationFailed(
-                    "escrow:" + Arrays.toString(remittanceIdBytes), e);
+            throw SolanaTransactionException.pdaDerivationFailed("escrow", e);
         }
     }
 
@@ -147,15 +146,34 @@ public class EscrowInstructionBuilder {
         }
     }
 
-    byte[] buildDepositData(byte[] remittanceIdBytes, long lamports, long expiryTimestamp) {
+    byte[] buildDepositData(long lamports, long expiryTimestamp) {
         var discriminator = anchorDiscriminator("global:deposit");
-        var buffer = ByteBuffer.allocate(8 + 16 + 8 + 8)
+        var buffer = ByteBuffer.allocate(8 + 8 + 8)
                 .order(ByteOrder.LITTLE_ENDIAN)
                 .put(discriminator)
-                .put(remittanceIdBytes)
                 .putLong(lamports)
                 .putLong(expiryTimestamp);
         return buffer.array();
+    }
+
+    PublicKey uuidToPublicKey(UUID uuid) {
+        var bytes = new byte[32];
+        var uuidBytes = uuidToBytes(uuid);
+        System.arraycopy(uuidBytes, 0, bytes, 0, 16);
+        return new PublicKey(bytes);
+    }
+
+    public PublicKey deriveVaultPda(PublicKey escrowPda) {
+        try {
+            return findProgramDerivedAddress(
+                    List.of("vault".getBytes(), escrowPda.bytes()),
+                    solanaProperties.escrowProgramId());
+        } catch (SolanaTransactionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw SolanaTransactionException.pdaDerivationFailed(
+                    "vault:" + escrowPda.toBase58(), e);
+        }
     }
 
     byte[] buildClaimData() {

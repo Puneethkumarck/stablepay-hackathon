@@ -12,6 +12,11 @@ spring:
       port: ${REDIS_PORT:6379}
 
 stablepay:
+  solana:
+    rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
+    escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:6G9X8RArxw6f6n41wRKZMsgzRtHuUgPSkYipyjQu8NXD}
+    usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
+    claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
   fx:
     api:
       base-url: ${FX_API_BASE_URL:https://open.er-api.com}

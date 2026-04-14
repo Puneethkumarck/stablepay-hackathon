@@ -100,14 +100,24 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
             for (var future : peerFutures) {
                 try {
                     var peerResponse = future.get(deadlineMs, TimeUnit.MILLISECONDS);
-                    if (peerResponse != null
-                            && peerResponse.getStatus() == Status.STATUS_COMPLETED
-                            && !peerResponse.getKeyShareData().isEmpty()) {
-                        peerKeyShareData = peerResponse.getKeyShareData().toByteArray();
-                        log.info("Captured peer key share for ceremony {}", ceremonyId);
+                    if (peerResponse == null) {
+                        log.warn("Peer keygen response was null for ceremony {}", ceremonyId);
+                    } else {
+                        log.info("Peer keygen response for ceremony {}: status={}, keyShareLen={}",
+                                ceremonyId, peerResponse.getStatus(),
+                                peerResponse.getKeyShareData().size());
+                        if (peerResponse.getStatus() == Status.STATUS_COMPLETED
+                                && !peerResponse.getKeyShareData().isEmpty()) {
+                            peerKeyShareData = peerResponse.getKeyShareData().toByteArray();
+                            log.info("Captured peer key share for ceremony {} ({} bytes)",
+                                    ceremonyId, peerKeyShareData.length);
+                        } else if (peerResponse.getStatus() == Status.STATUS_FAILED) {
+                            log.warn("Peer keygen FAILED for ceremony {}: {}",
+                                    ceremonyId, peerResponse.getErrorMessage());
+                        }
                     }
                 } catch (Exception ex) {
-                    log.warn("Peer sidecar keygen completed with error for ceremony {}: {}",
+                    log.warn("Peer sidecar keygen error for ceremony {}: {}",
                             ceremonyId, ex.getMessage());
                 }
             }
