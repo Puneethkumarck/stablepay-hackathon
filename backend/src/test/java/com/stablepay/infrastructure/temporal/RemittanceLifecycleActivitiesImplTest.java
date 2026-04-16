@@ -71,11 +71,11 @@ class RemittanceLifecycleActivitiesImplTest {
     @Test
     void shouldReleaseEscrowViaSolanaService() {
         // given
-        given(solanaTransactionService.claimEscrow(SOME_REMITTANCE_ID, SOME_DESTINATION_ADDRESS))
+        given(solanaTransactionService.claimEscrow(SOME_REMITTANCE_ID, SOME_DESTINATION_ADDRESS, SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
         // when
-        var result = activities.releaseEscrow(SOME_REMITTANCE_ID.toString(), SOME_DESTINATION_ADDRESS);
+        var result = activities.releaseEscrow(SOME_REMITTANCE_ID.toString(), SOME_DESTINATION_ADDRESS, SOME_SENDER_ADDRESS);
 
         // then
         assertThat(result).isEqualTo(SOME_RELEASE_TX_SIGNATURE);

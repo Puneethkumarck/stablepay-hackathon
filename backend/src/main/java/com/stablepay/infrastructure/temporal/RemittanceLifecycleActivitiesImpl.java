@@ -45,12 +45,13 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     }
 
     @Override
-    public String releaseEscrow(String remittanceId, String destinationTokenAccount) {
+    public String releaseEscrow(String remittanceId, String destinationTokenAccount, String senderWalletAddress) {
         requireNonNull(remittanceId, "remittanceId must not be null");
         requireNonNull(destinationTokenAccount, "destinationTokenAccount must not be null");
+        requireNonNull(senderWalletAddress, "senderWalletAddress must not be null");
         log.info("Releasing escrow for remittance {}", remittanceId);
         var uuid = UUID.fromString(remittanceId);
-        var signature = solanaTransactionService.claimEscrow(uuid, destinationTokenAccount);
+        var signature = solanaTransactionService.claimEscrow(uuid, destinationTokenAccount, senderWalletAddress);
         log.info("Escrow released for remittance {} with signature {}", remittanceId, signature);
         return signature;
     }

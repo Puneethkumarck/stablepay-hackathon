@@ -1,9 +1,13 @@
 package com.stablepay.infrastructure.mpc;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -24,6 +28,8 @@ import sidecar.v1.TssSidecarGrpc;
 
 @Slf4j
 public class MpcWalletGrpcClient implements MpcWalletClient {
+
+    private static final ExecutorService VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     private final TssSidecarGrpc.TssSidecarBlockingStub primaryStub;
     private final List<PeerSidecar> peerSidecars;
@@ -145,9 +151,11 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
         var allSigningPartyIds = allPartyIds();
 
         // Trigger peer sidecars concurrently (same pattern as DKG)
+        var peerFutures = Collections.<CompletableFuture<SignResponse>>emptyList();
         if (peerKeyShareData != null) {
-            peerSidecars.forEach(peer ->
-                    triggerPeerSigning(ceremonyId, peer, peerKeyShareData, transactionBytes, allSigningPartyIds));
+            peerFutures = peerSidecars.stream()
+                    .map(peer -> triggerPeerSigning(ceremonyId, peer, peerKeyShareData, transactionBytes, allSigningPartyIds))
+                    .toList();
         }
 
         var request = SignRequest.newBuilder()
@@ -164,6 +172,21 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
             var response = stubWithDeadline(primaryStub).sign(request);
             validateSignResponse(ceremonyId, response);
 
+            // Collect peer signing results (best-effort logging)
+            for (var future : peerFutures) {
+                try {
+                    var peerResponse = future.get(deadlineMs, TimeUnit.MILLISECONDS);
+                    if (peerResponse.getStatus() == Status.STATUS_COMPLETED) {
+                        log.info("Peer signing completed for ceremony {}", ceremonyId);
+                    } else {
+                        log.warn("Peer signing did not complete for ceremony {}: status={}, error={}",
+                                ceremonyId, peerResponse.getStatus(), peerResponse.getErrorMessage());
+                    }
+                } catch (Exception ex) {
+                    log.warn("Peer sidecar signing error for ceremony {}: {}", ceremonyId, ex.getMessage());
+                }
+            }
+
             log.info("MPC signing completed for ceremony {}", ceremonyId);
             return response.getSignature().toByteArray();
 
@@ -177,6 +200,7 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
             String ceremonyId, PeerSidecar peer, byte[] peerKeyShareData,
             byte[] message, List<Integer> allSigningPartyIds) {
         return CompletableFuture.supplyAsync(() -> {
+
             log.info("Triggering peer sidecar (party {}) for signing ceremony {}", peer.partyId(), ceremonyId);
             var peerRequest = SignRequest.newBuilder()
                     .setCeremonyId(ceremonyId)
@@ -188,11 +212,11 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
                     .putAllPeerAddresses(peer.peerAddresses())
                     .build();
             return stubWithDeadline(peer.stub()).sign(peerRequest);
-        });
+        }, VIRTUAL_EXECUTOR);
     }
 
     private List<Integer> allPartyIds() {
-        var ids = new java.util.ArrayList<Integer>();
+        var ids = new ArrayList<Integer>();
         ids.add(partyId);
         peerSidecars.forEach(peer -> ids.add(peer.partyId()));
         if (ids.size() < totalParties) {
@@ -217,7 +241,7 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
                     .putAllPeerAddresses(peer.peerAddresses())
                     .build();
             return stubWithDeadline(peer.stub()).generateKey(peerRequest);
-        });
+        }, VIRTUAL_EXECUTOR);
     }
 
     private TssSidecarGrpc.TssSidecarBlockingStub stubWithDeadline(

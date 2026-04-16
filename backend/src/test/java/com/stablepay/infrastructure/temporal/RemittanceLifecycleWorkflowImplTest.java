@@ -76,7 +76,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         given(activities.releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS))
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
         testEnv.start();
@@ -131,7 +132,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         then(activities).should().releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS);
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS);
 
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.CLAIMED);
@@ -201,7 +203,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         then(activities).should(never()).releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS);
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS);
     }
 
     @Test
@@ -274,7 +277,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         given(activities.releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS))
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
         testEnv.start();
@@ -331,7 +335,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         given(activities.releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS))
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
         testEnv.start();
@@ -393,7 +398,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         given(activities.releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS))
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
         willThrow(new RuntimeException("Transak API unavailable"))
@@ -441,7 +447,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         then(activities).should().releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS);
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS);
 
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.CLAIMED);
@@ -469,7 +476,8 @@ class RemittanceLifecycleWorkflowImplTest {
 
         given(activities.releaseEscrow(
                 SOME_REMITTANCE_ID.toString(),
-                SOME_DESTINATION_ADDRESS))
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
         testEnv.start();

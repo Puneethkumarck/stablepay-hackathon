@@ -111,7 +111,8 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
         var releaseSignature = solanaActivities.releaseEscrow(
                 remittanceId.toString(),
-                pendingClaim.destinationAddress());
+                pendingClaim.destinationAddress(),
+                request.senderAddress());
 
         statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.CLAIMED);
         currentStatus = RemittanceStatus.CLAIMED;

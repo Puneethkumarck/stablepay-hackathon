@@ -28,12 +28,8 @@ public class EscrowInstructionBuilder {
 
     private static final PublicKey TOKEN_PROGRAM_ID =
             new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-    private static final PublicKey ASSOCIATED_TOKEN_PROGRAM_ID =
-            new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
     private static final PublicKey SYSTEM_PROGRAM_ID =
             new PublicKey("11111111111111111111111111111111");
-    private static final PublicKey RENT_SYSVAR =
-            new PublicKey("SysvarRent111111111111111111111111111111111");
     private static final byte[] PDA_MARKER = "ProgramDerivedAddress".getBytes();
 
     private static final int USDC_DECIMALS = 6;
@@ -77,21 +73,23 @@ public class EscrowInstructionBuilder {
     public Instruction buildClaimInstruction(
             UUID remittanceId,
             PublicKey claimAuthority,
-            PublicKey destinationTokenAccount) {
+            PublicKey destinationTokenAccount,
+            PublicKey senderWallet) {
 
-        var remittanceIdBytes = uuidToBytes(remittanceId);
-        var escrowPda = deriveEscrowPda(remittanceIdBytes);
-        var vaultAta = deriveAssociatedTokenAddress(escrowPda, solanaProperties.usdcMint());
+        var remittanceIdPubkey = uuidToPublicKey(remittanceId);
+        var escrowPda = deriveEscrowPda(remittanceIdPubkey.bytes());
+        var vaultPda = deriveVaultPda(escrowPda);
 
         var data = buildClaimData();
 
+        // Account order must match Anchor Claim struct exactly
         var keys = List.of(
-                AccountMeta.signerAndWritable(claimAuthority),
-                AccountMeta.writable(escrowPda),
-                AccountMeta.writable(vaultAta),
-                AccountMeta.writable(destinationTokenAccount),
-                new AccountMeta(solanaProperties.usdcMint(), false, false),
-                new AccountMeta(TOKEN_PROGRAM_ID, false, false));
+                new AccountMeta(claimAuthority, true, false),     // claim_authority (signer)
+                AccountMeta.writable(escrowPda),                  // escrow (mut, close)
+                AccountMeta.writable(vaultPda),                   // vault (mut)
+                AccountMeta.writable(destinationTokenAccount),    // recipient_token (mut)
+                AccountMeta.writable(senderWallet),               // sender (mut, receives rent)
+                new AccountMeta(TOKEN_PROGRAM_ID, false, false)); // token_program
 
         log.debug("Built claim instruction for remittance {} with destination {}",
                 remittanceId, destinationTokenAccount.toBase58());
@@ -102,21 +100,21 @@ public class EscrowInstructionBuilder {
     public Instruction buildRefundInstruction(
             UUID remittanceId, PublicKey claimAuthority, PublicKey senderWallet) {
 
-        var remittanceIdBytes = uuidToBytes(remittanceId);
-        var escrowPda = deriveEscrowPda(remittanceIdBytes);
-        var vaultAta = deriveAssociatedTokenAddress(escrowPda, solanaProperties.usdcMint());
+        var remittanceIdPubkey = uuidToPublicKey(remittanceId);
+        var escrowPda = deriveEscrowPda(remittanceIdPubkey.bytes());
+        var vaultPda = deriveVaultPda(escrowPda);
         var senderAta = deriveAssociatedTokenAddress(senderWallet, solanaProperties.usdcMint());
 
         var data = buildRefundData();
 
+        // Account order must match Anchor Refund struct exactly
         var keys = List.of(
-                AccountMeta.signerAndWritable(claimAuthority),
-                AccountMeta.writable(senderWallet),
-                AccountMeta.writable(escrowPda),
-                AccountMeta.writable(vaultAta),
-                AccountMeta.writable(senderAta),
-                new AccountMeta(solanaProperties.usdcMint(), false, false),
-                new AccountMeta(TOKEN_PROGRAM_ID, false, false));
+                AccountMeta.signerAndWritable(claimAuthority),    // payer (mut, signer)
+                AccountMeta.writable(escrowPda),                  // escrow (mut, close)
+                AccountMeta.writable(vaultPda),                   // vault (mut)
+                AccountMeta.writable(senderWallet),               // sender (mut, receives rent)
+                AccountMeta.writable(senderAta),                  // sender_token (mut)
+                new AccountMeta(TOKEN_PROGRAM_ID, false, false)); // token_program
 
         log.debug("Built refund instruction for remittance {} returning to {}",
                 remittanceId, senderWallet.toBase58());

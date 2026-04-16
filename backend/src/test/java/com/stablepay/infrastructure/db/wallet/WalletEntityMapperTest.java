@@ -3,6 +3,7 @@ package com.stablepay.infrastructure.db.wallet;
 import static com.stablepay.testutil.WalletFixtures.SOME_BALANCE;
 import static com.stablepay.testutil.WalletFixtures.SOME_CREATED_AT;
 import static com.stablepay.testutil.WalletFixtures.SOME_KEY_SHARE_DATA;
+import static com.stablepay.testutil.WalletFixtures.SOME_PEER_KEY_SHARE_DATA;
 import static com.stablepay.testutil.WalletFixtures.SOME_PUBLIC_KEY;
 import static com.stablepay.testutil.WalletFixtures.SOME_SOLANA_ADDRESS;
 import static com.stablepay.testutil.WalletFixtures.SOME_UPDATED_AT;
@@ -27,6 +28,7 @@ class WalletEntityMapperTest {
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .publicKey(SOME_PUBLIC_KEY)
                 .keyShareData(SOME_KEY_SHARE_DATA)
+                .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                 .availableBalance(SOME_BALANCE)
                 .totalBalance(SOME_BALANCE)
                 .createdAt(SOME_CREATED_AT)
@@ -52,6 +54,7 @@ class WalletEntityMapperTest {
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .publicKey(SOME_PUBLIC_KEY)
                 .keyShareData(SOME_KEY_SHARE_DATA)
+                .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                 .availableBalance(SOME_BALANCE)
                 .totalBalance(SOME_BALANCE)
                 .createdAt(SOME_CREATED_AT)
@@ -68,6 +71,7 @@ class WalletEntityMapperTest {
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .publicKey(SOME_PUBLIC_KEY)
                 .keyShareData(SOME_KEY_SHARE_DATA)
+                .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                 .availableBalance(SOME_BALANCE)
                 .totalBalance(SOME_BALANCE)
                 .createdAt(SOME_CREATED_AT)

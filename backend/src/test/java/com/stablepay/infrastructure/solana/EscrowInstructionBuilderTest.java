@@ -32,7 +32,8 @@ class EscrowInstructionBuilderTest {
         var properties = new SolanaProperties(
                 new PublicKey(SOME_PROGRAM_ID),
                 new PublicKey(SOME_USDC_MINT),
-                "");
+                "",
+                "http://localhost:8899");
         builder = new EscrowInstructionBuilder(properties);
     }
 
@@ -126,10 +127,11 @@ class EscrowInstructionBuilderTest {
             // given
             var claimAuthority = new PublicKey(SOME_CLAIM_AUTHORITY);
             var destination = new PublicKey("DestToken111111111111111111111111111111111");
+            var senderWallet = new PublicKey(SOME_SENDER_WALLET);
 
             // when
             var instruction = builder.buildClaimInstruction(
-                    SOME_REMITTANCE_ID, claimAuthority, destination);
+                    SOME_REMITTANCE_ID, claimAuthority, destination, senderWallet);
 
             // then
             assertThat(instruction.getProgramId()).isEqualTo(new PublicKey(SOME_PROGRAM_ID));
@@ -140,10 +142,11 @@ class EscrowInstructionBuilderTest {
             // given
             var claimAuthority = new PublicKey(SOME_CLAIM_AUTHORITY);
             var destination = new PublicKey("DestToken111111111111111111111111111111111");
+            var senderWallet = new PublicKey(SOME_SENDER_WALLET);
 
             // when
             var instruction = builder.buildClaimInstruction(
-                    SOME_REMITTANCE_ID, claimAuthority, destination);
+                    SOME_REMITTANCE_ID, claimAuthority, destination, senderWallet);
 
             // then
             assertThat(instruction.getKeys()).hasSize(6);
@@ -189,7 +192,7 @@ class EscrowInstructionBuilderTest {
                     SOME_REMITTANCE_ID, claimAuthority, senderWallet);
 
             // then
-            assertThat(instruction.getKeys()).hasSize(7);
+            assertThat(instruction.getKeys()).hasSize(6);
         }
 
         @Test
