@@ -4,7 +4,7 @@ status: approved
 created: 2026-04-16
 updated: 2026-04-16
 issue: STA-72
-revision: 2 (edge case fixes from spec review)
+revision: 3 (second review pass — 5 additional fixes)
 ---
 
 # Stripe On-Ramp Integration — Spec
@@ -107,6 +107,11 @@ domain/funding/
 ├── port/
 │   ├── PaymentGateway.java            # Abstracts Stripe (initiatePayment, refund)
 │   ├── FundingOrderRepository.java    # CRUD for FundingOrder
+│   │     Methods:
+│   │       save(FundingOrder) → FundingOrder
+│   │       findByFundingId(UUID) → Optional<FundingOrder>
+│   │       findByStripePaymentIntentId(String) → Optional<FundingOrder>
+│   │       findByWalletIdAndStatusIn(Long, List<FundingStatus>) → List<FundingOrder>
 │   └── FundingWorkflowStarter.java    # Starts WalletFundingWorkflow (abstracts Temporal)
 └── exception/
     ├── FundingOrderNotFoundException.java
@@ -626,10 +631,10 @@ Sender              API              Solana           Stripe
 | `application/controller/wallet/WalletController.java` | Remove `fundWallet` — moved to `FundingController` |
 | `application/dto/FundWalletRequest.java` | Add `@Min(1)`, `@Max(10000)`, `@Digits(integer=5, fraction=6)` |
 | `application/config/GlobalExceptionHandler.java` | Add handlers for 5 new funding exceptions |
-| `infrastructure/solana/TreasuryServiceAdapter.java` | Replace stub with real SPL + SOL transfers |
+| `infrastructure/solana/TreasuryServiceAdapter.java` | Replace stub with real SPL + SOL transfers. Depends on `SolanaProperties` (for USDC mint address), `Connection` (for RPC). Uses `SplTransferInstruction(from, to, owner, mint, amount, decimals=6)` for USDC and `TransferInstruction(from, to, lamports)` for SOL. Treasury keypair loaded from `stablepay.treasury.private-key`. |
 | `domain/wallet/port/TreasuryService.java` | Add `transferSol`, `getSolBalance`, `getUsdcBalance`, `createAtaIfNeeded` |
 | `infrastructure/temporal/TaskQueue.java` | Add `WALLET_FUNDING` task queue |
-| `infrastructure/temporal/TemporalConfig.java` | Register new worker + workflow + activities |
+| `infrastructure/temporal/TemporalConfig.java` | Refactor to register BOTH workers (remittance + funding) before calling `workerFactory.start()` once. Current code calls `start()` in the remittance worker bean — must be moved to a separate `@Bean` that depends on both workers. |
 | `build.gradle.kts` | Add `com.stripe:stripe-java:28.2.0` |
 | `application.yml` | Add `stablepay.stripe.*` and `stablepay.treasury.*` properties |
 
@@ -694,3 +699,8 @@ Sender              API              Solana           Stripe
 | 11 | stripe_client_secret stored in DB | Removed from migration. Returned only on POST, never persisted. |
 | 12 | Amount validation missing | Added @Min(1), @Max(10000), @Digits(integer=5, fraction=6) to FundWalletRequest. |
 | 13 | updateWalletBalance not idempotent on retry | Added idempotency guard: check FundingOrder status before incrementing balance. |
+| 14 | WorkerFactory.start() called twice for two task queues | Refactor TemporalConfig: register both workers before single start() call. |
+| 15 | Remittance refund doesn't release wallet DB balance (pre-existing bug) | Noted as known issue. Refund balance check uses on-chain ATA balance as primary source of truth, DB balance as secondary. On-chain balance is accurate even if DB is stale. |
+| 16 | FundingOrderRepository port methods not specified | Added explicit method signatures: findByFundingId, findByStripePaymentIntentId, findByWalletIdAndStatusIn. |
+| 17 | TreasuryServiceAdapter needs SolanaProperties for mint + decimals | Documented dependency: SplTransferInstruction needs (from, to, owner, mint, amount, decimals=6). |
+| 18 | Webhook looks up by PaymentIntent ID but repo method not listed | Added findByStripePaymentIntentId to FundingOrderRepository port. Webhook extracts PI ID from event, not from metadata. |
