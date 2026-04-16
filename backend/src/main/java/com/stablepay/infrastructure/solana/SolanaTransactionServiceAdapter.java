@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.solana;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.sol4k.Base58;
@@ -54,20 +55,27 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
 
             var blockhash = solanaConnection.getLatestBlockhash();
             var message = TransactionMessage.newMessage(senderWallet, blockhash, instruction);
-            var transaction = new VersionedTransaction(message);
-
             var messageBytes = message.serialize();
-            var mpcSignature = mpcWalletClient.signTransaction(messageBytes, wallet.keyShareData());
+            var mpcSignature = mpcWalletClient.signTransaction(
+                    messageBytes, wallet.keyShareData(), wallet.peerKeyShareData());
             if (mpcSignature == null || mpcSignature.length != 64) {
                 throw SolanaTransactionException.submissionFailed(
                         "deposit:" + remittanceId,
                         new IllegalStateException("Invalid MPC signature: expected 64 bytes, got "
                                 + (mpcSignature == null ? "null" : mpcSignature.length)));
             }
-            transaction.addSignature(Base58.encode(mpcSignature));
-            log.info("Deposit transaction for remittance {} signed via MPC", remittanceId);
+            // Build the signed transaction bytes manually:
+            // wire format = compact_array(signatures) + serialized_message
+            var sigCountByte = new byte[]{1}; // 1 signature (compact-u16)
+            var txBytes = new byte[sigCountByte.length + mpcSignature.length + messageBytes.length];
+            System.arraycopy(sigCountByte, 0, txBytes, 0, 1);
+            System.arraycopy(mpcSignature, 0, txBytes, 1, 64);
+            System.arraycopy(messageBytes, 0, txBytes, 65, messageBytes.length);
 
-            var signature = solanaConnection.sendTransaction(transaction);
+            log.info("Deposit transaction for remittance {} signed via MPC ({} bytes)",
+                    remittanceId, txBytes.length);
+
+            var signature = sendWithSkipPreflight(txBytes);
             log.info("Escrow deposit submitted for remittance {} with signature {}",
                     remittanceId, signature);
 
@@ -81,15 +89,16 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
     }
 
     @Override
-    public String claimEscrow(UUID remittanceId, String destinationTokenAccount) {
+    public String claimEscrow(UUID remittanceId, String destinationTokenAccount, String senderWalletAddress) {
         log.info("Submitting escrow claim for remittance {}", remittanceId);
 
         try {
             var claimAuthorityKeypair = resolveClaimAuthorityKeypair();
             var destination = new PublicKey(destinationTokenAccount);
+            var senderWallet = new PublicKey(senderWalletAddress);
 
             var instruction = escrowInstructionBuilder.buildClaimInstruction(
-                    remittanceId, claimAuthorityKeypair.getPublicKey(), destination);
+                    remittanceId, claimAuthorityKeypair.getPublicKey(), destination, senderWallet);
 
             var blockhash = solanaConnection.getLatestBlockhash();
             var message = TransactionMessage.newMessage(
@@ -97,7 +106,7 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
             var transaction = new VersionedTransaction(message);
             transaction.sign(claimAuthorityKeypair);
 
-            var signature = solanaConnection.sendTransaction(transaction);
+            var signature = sendWithSkipPreflight(transaction.serialize());
             log.info("Escrow claim submitted for remittance {} with signature {}",
                     remittanceId, signature);
 
@@ -127,7 +136,7 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
             var transaction = new VersionedTransaction(message);
             transaction.sign(claimAuthorityKeypair);
 
-            var signature = solanaConnection.sendTransaction(transaction);
+            var signature = sendWithSkipPreflight(transaction.serialize());
             log.info("Escrow refund submitted for remittance {} with signature {}",
                     remittanceId, signature);
 
@@ -149,6 +158,71 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
         // will be implemented via raw JSON-RPC in a follow-up.
         log.info("Transaction status check for {} (stub: returning CONFIRMED)", transactionSignature);
         return "CONFIRMED";
+    }
+
+    private String sendWithSkipPreflight(byte[] txBytes) {
+        try {
+            return solanaConnection.sendTransaction(txBytes);
+        } catch (Exception preflightEx) {
+            log.warn("Preflight failed, retrying with skipPreflight: {}", preflightEx.getMessage());
+            var txBase64 = java.util.Base64.getEncoder().encodeToString(txBytes);
+            var conn = (java.net.HttpURLConnection) null;
+            try {
+                var url = new java.net.URI(solanaProperties.rpcUrl()).toURL();
+                conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(10_000);
+                conn.setReadTimeout(30_000);
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"sendTransaction\",\"params\":[\""
+                        + txBase64 + "\",{\"skipPreflight\":true,\"encoding\":\"base64\"}]}";
+
+                try (var os = conn.getOutputStream()) {
+                    os.write(body.getBytes(StandardCharsets.UTF_8));
+                }
+
+                try (var is = conn.getInputStream()) {
+                    var response = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                    if (response.contains("\"error\"")) {
+                        throw new RuntimeException("RPC error: " + response);
+                    }
+                    var resultStart = response.indexOf("\"result\":\"");
+                    if (resultStart < 0) {
+                        throw new RuntimeException("Unexpected RPC response: " + response);
+                    }
+                    var sigStart = resultStart + "\"result\":\"".length();
+                    var sigEnd = response.indexOf("\"", sigStart);
+                    return response.substring(sigStart, sigEnd);
+                }
+            } catch (SolanaTransactionException e) {
+                throw e;
+            } catch (Exception e) {
+                throw SolanaTransactionException.submissionFailed("sendWithSkipPreflight",
+                        readRpcErrorDetails(conn, e));
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        }
+    }
+
+    private Exception readRpcErrorDetails(java.net.HttpURLConnection conn, Exception original) {
+        if (conn == null) {
+            return original;
+        }
+        try (var errorStream = conn.getErrorStream()) {
+            if (errorStream != null) {
+                var errorBody = new String(errorStream.readAllBytes(), StandardCharsets.UTF_8);
+                log.error("Solana RPC error response: {}", errorBody);
+                return new RuntimeException("RPC error: " + errorBody, original);
+            }
+        } catch (Exception ignored) {
+            log.warn("Failed to read RPC error stream: {}", ignored.getMessage());
+        }
+        return original;
     }
 
     private Keypair resolveClaimAuthorityKeypair() {

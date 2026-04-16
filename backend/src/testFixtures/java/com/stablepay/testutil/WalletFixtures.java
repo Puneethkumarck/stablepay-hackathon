@@ -14,6 +14,7 @@ public final class WalletFixtures {
     public static final String SOME_SOLANA_ADDRESS = "SoLaNa1234567890AbCdEfGhIjKlMnOpQrStUvWx";
     public static final byte[] SOME_PUBLIC_KEY = new byte[]{1, 2, 3, 4, 5, 6, 7, 8};
     public static final byte[] SOME_KEY_SHARE_DATA = new byte[]{10, 20, 30, 40, 50};
+    public static final byte[] SOME_PEER_KEY_SHARE_DATA = new byte[]{60, 70, 80, 90, 100};
     public static final BigDecimal SOME_BALANCE = BigDecimal.valueOf(100);
     public static final Instant SOME_CREATED_AT = Instant.parse("2026-04-03T10:00:00Z");
     public static final Instant SOME_UPDATED_AT = Instant.parse("2026-04-03T10:00:00Z");

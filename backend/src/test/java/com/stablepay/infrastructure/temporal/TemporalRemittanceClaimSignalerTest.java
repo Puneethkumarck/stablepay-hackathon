@@ -40,7 +40,8 @@ class TemporalRemittanceClaimSignalerTest {
         var solanaProperties = new SolanaProperties(
                 new PublicKey("EscrowProgram111111111111111111111111111111"),
                 new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-                SOME_CLAIM_AUTHORITY_PRIVATE_KEY);
+                SOME_CLAIM_AUTHORITY_PRIVATE_KEY,
+                "http://localhost:8899");
         var signaler = new TemporalRemittanceClaimSignaler(workflowClient, solanaProperties);
 
         var expectedWorkflowId = RemittanceLifecycleWorkflow.workflowId(SOME_REMITTANCE_ID);
@@ -70,7 +71,8 @@ class TemporalRemittanceClaimSignalerTest {
         var solanaProperties = new SolanaProperties(
                 new PublicKey("EscrowProgram111111111111111111111111111111"),
                 new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-                "");
+                "",
+                "http://localhost:8899");
         var signaler = new TemporalRemittanceClaimSignaler(workflowClient, solanaProperties);
 
         // when / then

@@ -11,7 +11,7 @@ public interface SolanaTransactionService {
             BigDecimal amountUsdc,
             long expiryTimestamp);
 
-    String claimEscrow(UUID remittanceId, String destinationTokenAccount);
+    String claimEscrow(UUID remittanceId, String destinationTokenAccount, String senderWalletAddress);
 
     String refundEscrow(UUID remittanceId, String senderWalletAddress);
 

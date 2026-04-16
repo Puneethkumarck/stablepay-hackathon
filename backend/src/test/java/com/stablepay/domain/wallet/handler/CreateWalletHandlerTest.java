@@ -2,6 +2,7 @@ package com.stablepay.domain.wallet.handler;
 
 import static com.stablepay.testutil.WalletFixtures.SOME_CREATED_AT;
 import static com.stablepay.testutil.WalletFixtures.SOME_KEY_SHARE_DATA;
+import static com.stablepay.testutil.WalletFixtures.SOME_PEER_KEY_SHARE_DATA;
 import static com.stablepay.testutil.WalletFixtures.SOME_PUBLIC_KEY;
 import static com.stablepay.testutil.WalletFixtures.SOME_SOLANA_ADDRESS;
 import static com.stablepay.testutil.WalletFixtures.SOME_UPDATED_AT;
@@ -49,6 +50,7 @@ class CreateWalletHandlerTest {
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .publicKey(SOME_PUBLIC_KEY)
                 .keyShareData(SOME_KEY_SHARE_DATA)
+                .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                 .build();
         given(mpcWalletClient.generateKey()).willReturn(generatedKey);
 
@@ -57,6 +59,7 @@ class CreateWalletHandlerTest {
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .publicKey(SOME_PUBLIC_KEY)
                 .keyShareData(SOME_KEY_SHARE_DATA)
+                .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .build();
@@ -79,6 +82,7 @@ class CreateWalletHandlerTest {
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .publicKey(SOME_PUBLIC_KEY)
                 .keyShareData(SOME_KEY_SHARE_DATA)
+                .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .createdAt(SOME_CREATED_AT)

@@ -8,7 +8,8 @@ import lombok.Builder;
 public record GeneratedKey(
     String solanaAddress,
     byte[] publicKey,
-    byte[] keyShareData
+    byte[] keyShareData,
+    byte[] peerKeyShareData
 ) {
     public GeneratedKey {
         requireNonNull(solanaAddress, "solanaAddress cannot be null");

@@ -10,10 +10,13 @@ import lombok.Builder;
 public record SolanaProperties(
     PublicKey escrowProgramId,
     PublicKey usdcMint,
-    String claimAuthorityPrivateKey
+    String claimAuthorityPrivateKey,
+    String rpcUrl
 ) {
     public SolanaProperties {
         Objects.requireNonNull(escrowProgramId, "escrowProgramId must not be null");
         Objects.requireNonNull(usdcMint, "usdcMint must not be null");
+        Objects.requireNonNull(claimAuthorityPrivateKey, "claimAuthorityPrivateKey must not be null");
+        Objects.requireNonNull(rpcUrl, "rpcUrl must not be null");
     }
 }

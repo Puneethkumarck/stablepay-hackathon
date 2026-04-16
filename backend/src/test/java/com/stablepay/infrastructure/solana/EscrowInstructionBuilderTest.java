@@ -32,7 +32,8 @@ class EscrowInstructionBuilderTest {
         var properties = new SolanaProperties(
                 new PublicKey(SOME_PROGRAM_ID),
                 new PublicKey(SOME_USDC_MINT),
-                "");
+                "",
+                "http://localhost:8899");
         builder = new EscrowInstructionBuilder(properties);
     }
 
@@ -66,7 +67,7 @@ class EscrowInstructionBuilderTest {
                     SOME_AMOUNT_USDC, SOME_EXPIRY_TIMESTAMP);
 
             // then
-            assertThat(instruction.getKeys()).hasSize(10);
+            assertThat(instruction.getKeys()).hasSize(9);
         }
 
         @Test
@@ -89,12 +90,8 @@ class EscrowInstructionBuilderTest {
 
         @Test
         void shouldBuildDepositDataWithCorrectDiscriminator() throws Exception {
-            // given
-            var remittanceIdBytes = EscrowInstructionBuilder.uuidToBytes(SOME_REMITTANCE_ID);
-
-            // when
-            var data = builder.buildDepositData(
-                    remittanceIdBytes, SOME_AMOUNT_LAMPORTS, SOME_EXPIRY_TIMESTAMP);
+            // given / when
+            var data = builder.buildDepositData(SOME_AMOUNT_LAMPORTS, SOME_EXPIRY_TIMESTAMP);
 
             // then
             var expectedDiscriminator = Arrays.copyOfRange(
@@ -105,21 +102,14 @@ class EscrowInstructionBuilderTest {
 
         @Test
         void shouldBuildDepositDataWithCorrectLayout() {
-            // given
-            var remittanceIdBytes = EscrowInstructionBuilder.uuidToBytes(SOME_REMITTANCE_ID);
-
-            // when
-            var data = builder.buildDepositData(
-                    remittanceIdBytes, SOME_AMOUNT_LAMPORTS, SOME_EXPIRY_TIMESTAMP);
+            // given / when
+            var data = builder.buildDepositData(SOME_AMOUNT_LAMPORTS, SOME_EXPIRY_TIMESTAMP);
 
             // then
-            assertThat(data).hasSize(8 + 16 + 8 + 8);
+            assertThat(data).hasSize(8 + 8 + 8);
 
             var buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
             buffer.position(8);
-            var actualRemittanceId = new byte[16];
-            buffer.get(actualRemittanceId);
-            assertThat(actualRemittanceId).isEqualTo(remittanceIdBytes);
 
             var actualAmount = buffer.getLong();
             assertThat(actualAmount).isEqualTo(SOME_AMOUNT_LAMPORTS);
@@ -137,10 +127,11 @@ class EscrowInstructionBuilderTest {
             // given
             var claimAuthority = new PublicKey(SOME_CLAIM_AUTHORITY);
             var destination = new PublicKey("DestToken111111111111111111111111111111111");
+            var senderWallet = new PublicKey(SOME_SENDER_WALLET);
 
             // when
             var instruction = builder.buildClaimInstruction(
-                    SOME_REMITTANCE_ID, claimAuthority, destination);
+                    SOME_REMITTANCE_ID, claimAuthority, destination, senderWallet);
 
             // then
             assertThat(instruction.getProgramId()).isEqualTo(new PublicKey(SOME_PROGRAM_ID));
@@ -151,10 +142,11 @@ class EscrowInstructionBuilderTest {
             // given
             var claimAuthority = new PublicKey(SOME_CLAIM_AUTHORITY);
             var destination = new PublicKey("DestToken111111111111111111111111111111111");
+            var senderWallet = new PublicKey(SOME_SENDER_WALLET);
 
             // when
             var instruction = builder.buildClaimInstruction(
-                    SOME_REMITTANCE_ID, claimAuthority, destination);
+                    SOME_REMITTANCE_ID, claimAuthority, destination, senderWallet);
 
             // then
             assertThat(instruction.getKeys()).hasSize(6);
@@ -200,7 +192,7 @@ class EscrowInstructionBuilderTest {
                     SOME_REMITTANCE_ID, claimAuthority, senderWallet);
 
             // then
-            assertThat(instruction.getKeys()).hasSize(7);
+            assertThat(instruction.getKeys()).hasSize(6);
         }
 
         @Test

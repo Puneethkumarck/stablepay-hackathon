@@ -41,7 +41,8 @@ public class TemporalConfig {
     @Bean
     @Profile("!test")
     WorkflowServiceStubs workflowServiceStubs() {
-        var target = System.getenv().getOrDefault("TEMPORAL_FRONTEND_URL", "127.0.0.1:7233");
+        var target = System.getenv().getOrDefault("TEMPORAL_ADDRESS",
+                System.getenv().getOrDefault("TEMPORAL_FRONTEND_URL", "127.0.0.1:7233"));
         var options = WorkflowServiceStubsOptions.newBuilder()
                 .setTarget(target)
                 .build();
@@ -52,7 +53,7 @@ public class TemporalConfig {
     @Bean
     @Profile("!test")
     WorkflowClient workflowClient(WorkflowServiceStubs serviceStubs, DataConverter dataConverter) {
-        var namespace = System.getenv().getOrDefault("TEMPORAL_NAMESPACE", "stablepay");
+        var namespace = System.getenv().getOrDefault("TEMPORAL_NAMESPACE", "default");
         var options = WorkflowClientOptions.newBuilder()
                 .setNamespace(namespace)
                 .setDataConverter(dataConverter)
@@ -77,6 +78,8 @@ public class TemporalConfig {
         var worker = workerFactory.newWorker(taskQueue);
         worker.registerWorkflowImplementationTypes(RemittanceLifecycleWorkflowImpl.class);
         activitiesProvider.ifAvailable(worker::registerActivitiesImplementations);
+        workerFactory.start();
+        log.info("Temporal WorkerFactory started, polling task queue {}", taskQueue);
         return worker;
     }
 }

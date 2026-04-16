@@ -3,6 +3,7 @@ package com.stablepay.infrastructure.temporal;
 import static com.stablepay.infrastructure.temporal.TaskQueue.Constants.TASK_QUEUE_REMITTANCE_LIFECYCLE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_SENDER_ADDRESS;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;
 import static com.stablepay.testutil.WorkflowFixtures.claimSignalBuilder;
 import static com.stablepay.testutil.WorkflowFixtures.workflowRequestBuilder;
@@ -213,7 +214,8 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                     .should()
                     .releaseEscrow(
                             remittanceId.toString(),
-                            SOME_DESTINATION_ADDRESS);
+                            SOME_DESTINATION_ADDRESS,
+                            SOME_SENDER_ADDRESS);
             then(activities)
                     .should()
                     .updateRemittanceStatus(

@@ -15,7 +15,7 @@ public interface RemittanceLifecycleActivities {
             BigDecimal amountUsdc,
             long expiryTimestamp);
 
-    String releaseEscrow(String remittanceId, String destinationTokenAccount);
+    String releaseEscrow(String remittanceId, String destinationTokenAccount, String senderWalletAddress);
 
     String refundEscrow(String remittanceId, String senderWalletAddress);
 

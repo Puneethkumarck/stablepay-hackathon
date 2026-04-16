@@ -15,7 +15,6 @@ import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,13 +23,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sol4k.AccountMeta;
 import org.sol4k.Connection;
 import org.sol4k.PublicKey;
-import org.sol4k.VersionedTransaction;
 import org.sol4k.instruction.BaseInstruction;
 
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
@@ -52,6 +51,18 @@ class SolanaTransactionServiceAdapterTest {
     @Mock
     private WalletRepository walletRepository;
 
+    @Captor
+    private ArgumentCaptor<byte[]> txBytesCaptor;
+
+    @Captor
+    private ArgumentCaptor<byte[]> messageBytesCaptor;
+
+    @Captor
+    private ArgumentCaptor<byte[]> keyShareCaptor;
+
+    @Captor
+    private ArgumentCaptor<byte[]> peerKeyShareCaptor;
+
     private SolanaProperties propertiesWithKey;
     private SolanaProperties propertiesWithoutKey;
 
@@ -60,11 +71,13 @@ class SolanaTransactionServiceAdapterTest {
         propertiesWithKey = new SolanaProperties(
                 new PublicKey(SOME_PROGRAM_ID),
                 new PublicKey(SOME_USDC_MINT),
-                SOME_CLAIM_AUTHORITY_PRIVATE_KEY);
+                SOME_CLAIM_AUTHORITY_PRIVATE_KEY,
+                "http://localhost:8899");
         propertiesWithoutKey = new SolanaProperties(
                 new PublicKey(SOME_PROGRAM_ID),
                 new PublicKey(SOME_USDC_MINT),
-                "");
+                "",
+                "http://localhost:8899");
     }
 
     @Nested
@@ -100,19 +113,20 @@ class SolanaTransactionServiceAdapterTest {
                     new byte[8], List.of(AccountMeta.signerAndWritable(claimAuthorityPubKey)),
                     new PublicKey(SOME_PROGRAM_ID));
 
+            var senderWallet = new PublicKey(SOME_SENDER_WALLET);
             given(escrowInstructionBuilder.buildClaimInstruction(
-                    SOME_REMITTANCE_ID, claimAuthorityPubKey, destination))
+                    SOME_REMITTANCE_ID, claimAuthorityPubKey, destination, senderWallet))
                     .willReturn(instruction);
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
-            given(solanaConnection.sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull()))
+            given(solanaConnection.sendTransaction(txBytesCaptor.capture()))
                     .willReturn(SOME_TRANSACTION_SIGNATURE);
 
             // when
-            var result = adapter.claimEscrow(SOME_REMITTANCE_ID, SOME_DESTINATION_TOKEN_ACCOUNT);
+            var result = adapter.claimEscrow(SOME_REMITTANCE_ID, SOME_DESTINATION_TOKEN_ACCOUNT, SOME_SENDER_WALLET);
 
             // then
             assertThat(result).isEqualTo(SOME_TRANSACTION_SIGNATURE);
-            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull());
+            assertThat(txBytesCaptor.getValue()).isNotEmpty();
         }
 
         @Test
@@ -124,7 +138,7 @@ class SolanaTransactionServiceAdapterTest {
 
             // when / then
             assertThatThrownBy(() -> adapter.claimEscrow(
-                    SOME_REMITTANCE_ID, SOME_DESTINATION_TOKEN_ACCOUNT))
+                    SOME_REMITTANCE_ID, SOME_DESTINATION_TOKEN_ACCOUNT, SOME_SENDER_WALLET))
                     .isInstanceOf(SolanaTransactionException.class)
                     .hasMessageContaining("SP-0014");
         }
@@ -149,7 +163,7 @@ class SolanaTransactionServiceAdapterTest {
                     SOME_REMITTANCE_ID, claimAuthorityPubKey, senderWallet))
                     .willReturn(instruction);
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
-            given(solanaConnection.sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull()))
+            given(solanaConnection.sendTransaction(txBytesCaptor.capture()))
                     .willReturn(SOME_TRANSACTION_SIGNATURE);
 
             // when
@@ -157,7 +171,7 @@ class SolanaTransactionServiceAdapterTest {
 
             // then
             assertThat(result).isEqualTo(SOME_TRANSACTION_SIGNATURE);
-            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull());
+            assertThat(txBytesCaptor.getValue()).isNotEmpty();
         }
 
         @Test
@@ -201,10 +215,11 @@ class SolanaTransactionServiceAdapterTest {
                     .willReturn(Optional.of(wallet));
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
             given(mpcWalletClient.signTransaction(
-                    ArgumentMatchers.<byte[]>notNull(),
-                    ArgumentMatchers.<byte[]>notNull()))
+                    messageBytesCaptor.capture(),
+                    keyShareCaptor.capture(),
+                    peerKeyShareCaptor.capture()))
                     .willReturn(new byte[64]);
-            given(solanaConnection.sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull()))
+            given(solanaConnection.sendTransaction(txBytesCaptor.capture()))
                     .willReturn(SOME_TRANSACTION_SIGNATURE);
 
             // when
@@ -214,10 +229,9 @@ class SolanaTransactionServiceAdapterTest {
 
             // then
             assertThat(result).isEqualTo(SOME_TRANSACTION_SIGNATURE);
-            then(mpcWalletClient).should().signTransaction(
-                    ArgumentMatchers.<byte[]>notNull(),
-                    ArgumentMatchers.<byte[]>notNull());
-            then(solanaConnection).should().sendTransaction(ArgumentMatchers.<VersionedTransaction>notNull());
+            assertThat(messageBytesCaptor.getValue()).isNotEmpty();
+            assertThat(keyShareCaptor.getValue()).isEqualTo(new byte[]{1, 2, 3});
+            assertThat(txBytesCaptor.getValue()).isNotEmpty();
         }
 
         @Test
@@ -271,8 +285,9 @@ class SolanaTransactionServiceAdapterTest {
                     .willReturn(Optional.of(wallet));
             given(solanaConnection.getLatestBlockhash()).willReturn(SOME_BLOCKHASH);
             given(mpcWalletClient.signTransaction(
-                    ArgumentMatchers.<byte[]>notNull(),
-                    ArgumentMatchers.<byte[]>notNull()))
+                    messageBytesCaptor.capture(),
+                    keyShareCaptor.capture(),
+                    peerKeyShareCaptor.capture()))
                     .willThrow(new RuntimeException("MPC signing failed"));
 
             // when / then

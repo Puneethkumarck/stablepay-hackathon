@@ -20,7 +20,7 @@ services:
     ports:
       - "7233:7233"
     environment:
-      DB: postgresql
+      DB: postgres12_pgx
       DB_PORT: 5432
       POSTGRES_SEEDS: postgres
       POSTGRES_USER: stablepay
@@ -99,8 +99,15 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       MPC_SIDECAR_HOST: mpc-sidecar-0
       MPC_SIDECAR_PORT: 50051
-      MPC_SIDECAR_0_URL: mpc-sidecar-0:50051
-      MPC_SIDECAR_1_URL: mpc-sidecar-1:50051
+      STABLEPAY_MPC_PARTY_ID: 0
+      STABLEPAY_MPC_THRESHOLD: 2
+      STABLEPAY_MPC_TOTAL_PARTIES: 2
+      STABLEPAY_MPC_PEER_ADDRESSES: 1=mpc-sidecar-1:7000
+      STABLEPAY_MPC_PEER_SIDECARS: 1=mpc-sidecar-1:50051:mpc-sidecar-0:7000
+      STABLEPAY_ESCROW_PROGRAM_ID: 6G9X8RArxw6f6n41wRKZMsgzRtHuUgPSkYipyjQu8NXD
+      CLAIM_AUTHORITY_PRIVATE_KEY: ${CLAIM_AUTHORITY_PRIVATE_KEY}
+      SOLANA_RPC_URL: ${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      USDC_MINT: ${USDC_MINT:-4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     depends_on:
       postgres:
         condition: service_healthy
