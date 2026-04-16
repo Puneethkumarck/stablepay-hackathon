@@ -48,7 +48,7 @@ stablepay:
       deadline-ms: ${MPC_SIDECAR_DEADLINE_MS:30000}
   solana:
     rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
-    escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:6G9X8RArxw6f6n41wRKZMsgzRtHuUgPSkYipyjQu8NXD}
+    escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:7C2zsbhgDnxQuC1Nd2rzXQfsfnKazQWFpoUJNqS8zWij}
     usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
   transak:
