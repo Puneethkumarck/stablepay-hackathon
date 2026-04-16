@@ -4,7 +4,7 @@ status: approved
 created: 2026-04-16
 updated: 2026-04-16
 issue: STA-72
-revision: 3 (second review pass — 5 additional fixes)
+revision: 4 (third review pass — race conditions, money precision, refund ordering)
 ---
 
 # Stripe On-Ramp Integration — Spec
@@ -49,8 +49,10 @@ This closes the gap where funding is currently a DB-only operation with no Strip
 - `POST /api/funding-orders/{fundingId}/refund` initiates a refund
 - Validates sender has sufficient USDC: checks both on-chain ATA balance and DB `available_balance`
 - If insufficient USDC (already spent on remittances): rejects with SP-0025 `InsufficientBalanceForRefundException`
+- **Order matters:** Stripe refund FIRST, then USDC return on-chain
+  - If Stripe refund fails → abort, user still has USDC (no loss)
+  - If Stripe refund succeeds but USDC return fails → REFUND_FAILED (platform risk, manual resolution)
 - USDC transferred from sender ATA back to treasury ATA on-chain
-- Stripe refund API called for the original PaymentIntent
 - FundingOrder transitions: FUNDED → REFUND_INITIATED → REFUNDED
 - If on-chain USDC return or Stripe refund fails: REFUND_INITIATED → REFUND_FAILED
 - Wallet `available_balance` and `total_balance` decremented
@@ -198,7 +200,15 @@ application/dto/
 | REFUND_INITIATED | USDC returned + Stripe refund completed | REFUNDED |
 | REFUND_INITIATED | USDC return or Stripe refund failed | REFUND_FAILED |
 
-**Note:** There is no `PENDING` state. `InitiateFundingHandler` creates the Stripe PaymentIntent and saves the FundingOrder atomically — if Stripe succeeds, status is `PAYMENT_CONFIRMED`; if Stripe fails, status is `FAILED`. This eliminates the gap where a webhook arrives for a `PENDING` order that hasn't been confirmed yet.
+**Ordering in `InitiateFundingHandler`:**
+1. Save FundingOrder with status `PAYMENT_CONFIRMED` to DB **first**
+2. Then call Stripe to create PaymentIntent
+3. Update FundingOrder with `stripePaymentIntentId`
+4. If Stripe call fails: transition to `FAILED`
+
+This ordering is critical because with `confirm: true`, Stripe may fire the webhook **before** the fund endpoint returns. If the FundingOrder isn't saved yet, the webhook can't find it. Saving first guarantees the record exists when the webhook arrives.
+
+**USD to USDC conversion:** 1 USD = 1 USDC (hackathon assumption). Stripe amount in cents = `amountUsdc × 100`. Conversion done in `StripePaymentAdapter`.
 
 ## 4. API Contracts
 
@@ -292,6 +302,8 @@ Content-Type: application/json
 
 **Response:** Always 200. Internal errors logged but never surfaced to Stripe.
 
+**Implementation note:** The controller MUST read the raw request body (`HttpServletRequest.getInputStream()` or `@RequestBody String payload`) — not a typed DTO. Stripe's `constructEvent(payload, sigHeader, secret)` requires the exact bytes for HMAC signature verification. Jackson deserialization would alter the payload and break the signature.
+
 **Handled event types:**
 | Event | Action |
 |---|---|
@@ -362,7 +374,7 @@ CREATE TABLE funding_orders (
     funding_id                 UUID UNIQUE NOT NULL,
     wallet_id                  BIGINT NOT NULL REFERENCES wallets(id),
     amount_usdc                NUMERIC(19, 6) NOT NULL,
-    stripe_payment_intent_id   VARCHAR(255),
+    stripe_payment_intent_id   VARCHAR(255) UNIQUE,
     status                     VARCHAR(50) NOT NULL DEFAULT 'PAYMENT_CONFIRMED',
     created_at                 TIMESTAMP NOT NULL DEFAULT now(),
     updated_at                 TIMESTAMP
@@ -628,7 +640,8 @@ Sender              API              Solana           Stripe
 ### Modified Files (9)
 | File | Change |
 |---|---|
-| `application/controller/wallet/WalletController.java` | Remove `fundWallet` — moved to `FundingController` |
+| `application/controller/wallet/WalletController.java` | Remove `fundWallet` method + `FundWalletHandler` import — funding moved to `FundingController` |
+| `domain/wallet/handler/FundWalletHandler.java` | Delete — replaced by `InitiateFundingHandler` in funding subdomain |
 | `application/dto/FundWalletRequest.java` | Add `@Min(1)`, `@Max(10000)`, `@Digits(integer=5, fraction=6)` |
 | `application/config/GlobalExceptionHandler.java` | Add handlers for 5 new funding exceptions |
 | `infrastructure/solana/TreasuryServiceAdapter.java` | Replace stub with real SPL + SOL transfers. Depends on `SolanaProperties` (for USDC mint address), `Connection` (for RPC). Uses `SplTransferInstruction(from, to, owner, mint, amount, decimals=6)` for USDC and `TransferInstruction(from, to, lamports)` for SOL. Treasury keypair loaded from `stablepay.treasury.private-key`. |
@@ -704,3 +717,9 @@ Sender              API              Solana           Stripe
 | 16 | FundingOrderRepository port methods not specified | Added explicit method signatures: findByFundingId, findByStripePaymentIntentId, findByWalletIdAndStatusIn. |
 | 17 | TreasuryServiceAdapter needs SolanaProperties for mint + decimals | Documented dependency: SplTransferInstruction needs (from, to, owner, mint, amount, decimals=6). |
 | 18 | Webhook looks up by PaymentIntent ID but repo method not listed | Added findByStripePaymentIntentId to FundingOrderRepository port. Webhook extracts PI ID from event, not from metadata. |
+| 19 | Race: webhook arrives before InitiateFundingHandler saves FundingOrder | Save FundingOrder to DB FIRST (status PAYMENT_CONFIRMED), then call Stripe API, then update with PI ID. Record exists when webhook arrives. |
+| 20 | Refund ordering: USDC return vs Stripe refund — who goes first? | Stripe refund first. If Stripe fails → abort (user keeps USDC, no loss). If USDC return fails after Stripe refund → REFUND_FAILED (platform risk, manual resolution). |
+| 21 | USD-to-USDC conversion not specified | 1 USD = 1 USDC (hackathon). Stripe amount = amountUsdc × 100 cents. Conversion in StripePaymentAdapter. |
+| 22 | FundWalletHandler.java not in delete list | Added to modified files: delete FundWalletHandler (replaced by InitiateFundingHandler). |
+| 23 | Webhook controller needs raw body for signature verification | Documented: must use HttpServletRequest.getInputStream() or @RequestBody String, not typed DTO. Jackson would break HMAC. |
+| 24 | stripe_payment_intent_id missing UNIQUE constraint | Added UNIQUE to migration column definition. |
