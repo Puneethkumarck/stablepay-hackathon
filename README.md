@@ -671,7 +671,7 @@ Content-Type: application/json
 
 ## On-Chain Escrow Program
 
-**Program ID:** `6G9X8RArxw6f6n41wRKZMsgzRtHuUgPSkYipyjQu8NXD`
+**Program ID:** `7C2zsbhgDnxQuC1Nd2rzXQfsfnKazQWFpoUJNqS8zWij`
 
 Custom Anchor program managing USDC escrow on Solana devnet.
 
@@ -718,6 +718,322 @@ pub struct Escrow {
 |---|---|
 | Escrow | `["escrow", remittance_id]` |
 | Vault | `["vault", escrow_pubkey]` |
+
+---
+
+## 🏦 Solana Accounting Model: Where Every Dollar Goes
+
+> A visual walkthrough of every wallet, PDA, and token account involved in a $25 remittance — from the moment the sender taps "Send" to the recipient receiving INR in their bank.
+
+### 🗝️ The Players
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        WALLETS & ACCOUNTS                                │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  👤 SENDER MPC WALLET                                                    │
+│  ├─ Address: DQoGcVse...  (Ed25519 — no one holds the full key)         │
+│  ├─ Type: System account (holds SOL for tx fees)                         │
+│  └─ Token Account (ATA): GuDuFKeX...  (holds USDC)                      │
+│                                                                          │
+│  🏛️ DEPLOYER WALLET                                                     │
+│  ├─ Address: 58gFSCTW...                                                 │
+│  ├─ Role: Deployed the escrow program, pays for program storage          │
+│  └─ Not involved in transactions after deployment                        │
+│                                                                          │
+│  🔐 CLAIM AUTHORITY                                                      │
+│  ├─ Address: 3LZh792t...  (backend-controlled keypair)                   │
+│  ├─ Role: Authorizes claim & refund — the only key that can release USDC│
+│  ├─ Token Account (ATA): 2KKehH5e...  (receives USDC on claim)          │
+│  └─ Pays tx fees for claim/refund transactions                           │
+│                                                                          │
+│  📦 ESCROW PDA (per remittance)                                          │
+│  ├─ Address: derived from ["escrow", remittance_id]                      │
+│  ├─ Type: Program-owned account (data: sender, amount, deadline, etc.)   │
+│  └─ Created on deposit, closed on claim/refund (rent → sender)           │
+│                                                                          │
+│  🏦 VAULT PDA (per escrow)                                               │
+│  ├─ Address: derived from ["vault", escrow_pubkey]                       │
+│  ├─ Type: SPL Token Account — holds the locked USDC                      │
+│  ├─ Authority: escrow PDA (only the program can move funds)              │
+│  └─ Created on deposit, closed on claim/refund (rent → sender)           │
+│                                                                          │
+│  🪙 USDC MINT                                                            │
+│  ├─ Address: CAUBK3cr... (test mint) / 4zMMC9sr... (devnet USDC)        │
+│  └─ 6 decimals — $25.00 = 25,000,000 lamports                           │
+│                                                                          │
+│  ⚙️ ESCROW PROGRAM                                                       │
+│  ├─ Address: 7C2zsbhg...                                                 │
+│  └─ Custom Anchor program — deposit, claim, refund, cancel               │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 📖 The Story of a $25 Remittance
+
+#### Act 1: 🔑 Wallet Creation (MPC DKG)
+
+```
+  MPC Sidecar 0          MPC Sidecar 1
+  ┌──────────┐          ┌──────────┐
+  │ Party 0  │◄════════►│ Party 1  │    P2P DKG ceremony
+  │ (gRPC)   │  rounds  │ (gRPC)   │    over ports 7000↔7001
+  └────┬─────┘          └──────────┘
+       │
+       ▼
+  Key Share 0 ──► stored in DB       Key Share 1 ──► stored in DB
+  (primary)       (wallets table)    (peer)          (peer_key_share_data)
+
+  Result: Solana address DQoGcVse... created
+          🔒 Full private key NEVER exists — not even in memory
+```
+
+**What's created on Solana:** Nothing yet! The wallet is just a key — no on-chain account until someone sends SOL to it.
+
+#### Act 2: 💰 Funding the Wallet
+
+```
+  Deployer Wallet              Sender MPC Wallet
+  58gFSCTW...                  DQoGcVse...
+  ┌─────────────┐              ┌─────────────┐
+  │ SOL: 5.0    │──── 1 SOL ──►│ SOL: 1.0    │  For tx fees
+  └─────────────┘              └─────────────┘
+
+  Deployer (mint authority)    Sender Token Account (ATA)
+                               GuDuFKeX...
+  ┌─────────────┐              ┌─────────────┐
+  │ Test USDC   │── 100 USDC ─►│ USDC: 100   │  Sender's USDC
+  │ Mint        │              └─────────────┘
+  └─────────────┘
+```
+
+#### Act 3: 📤 Escrow Deposit ($25 USDC)
+
+> The sender sends $25 to India. The Temporal workflow kicks off and deposits USDC into an on-chain escrow.
+
+```
+  🔐 MPC Signing Ceremony
+  ┌─────────────────────────────────────────────────┐
+  │  Backend builds deposit instruction              │
+  │  ├─ 9 accounts: sender, escrow, vault, ATA...   │
+  │  ├─ Data: amount=25,000,000 + deadline           │
+  │                                                   │
+  │  Sidecar 0 + Sidecar 1 co-sign (2-of-2)         │
+  │  ├─ Each uses their key share from DB             │
+  │  ├─ P2P signing rounds over port 7000↔7001       │
+  │  └─ Result: 64-byte Ed25519 signature             │
+  │                                                   │
+  │  Backend builds raw tx: sig_count(1) + sig + msg  │
+  └─────────────────────────────────────────────────┘
+```
+
+```
+  BEFORE DEPOSIT                          AFTER DEPOSIT
+  ══════════════                          ═════════════
+
+  Sender ATA (GuDuFKeX...)                Sender ATA (GuDuFKeX...)
+  ┌─────────────┐                         ┌─────────────┐
+  │ USDC: 100   │                         │ USDC: 75    │  -$25 ✅
+  └─────────────┘                         └─────────────┘
+
+  Escrow PDA                              Escrow PDA (NEW!)
+  ┌─────────────┐                         ┌─────────────┐
+  │ (does not   │                         │ sender: DQo.│
+  │  exist)     │                         │ amount: 25M │
+  └─────────────┘                         │ deadline:48h│
+                                          │ status: ✅   │
+                                          │ Active      │
+                                          └─────────────┘
+
+  Vault PDA                               Vault PDA (NEW!)
+  ┌─────────────┐                         ┌─────────────┐
+  │ (does not   │                         │ USDC: 25    │  Locked! 🔒
+  │  exist)     │                         │ auth: escrow│
+  └─────────────┘                         └─────────────┘
+
+  Sender SOL                              Sender SOL
+  ┌─────────────┐                         ┌─────────────┐
+  │ SOL: 1.000  │                         │ SOL: 0.992  │  -0.008 (rent+fee)
+  └─────────────┘                         └─────────────┘
+```
+
+**On-chain transaction:** [Finalized ✅](https://explorer.solana.com/?cluster=devnet)
+- 🔒 25 USDC locked in vault PDA (only the escrow program can move it)
+- 📋 Escrow PDA stores: sender, claim_authority, mint, amount, deadline
+- 💸 Sender paid ~0.008 SOL for account rent + tx fee
+
+#### Act 4: 📱 SMS Notification
+
+```
+  Temporal Workflow                     Recipient's Phone
+  ┌──────────────┐                     ┌──────────────────┐
+  │ sendClaimSms │────── SMS ─────────►│ 📱 "You have a   │
+  │ activity     │   (via Twilio)      │ StablePay         │
+  └──────────────┘                     │ remittance!       │
+                                       │ Claim: https://..."│
+                                       └──────────────────┘
+  
+  Workflow now waits ⏳ (up to 48 hours for claim signal)
+```
+
+#### Act 5: ✋ Recipient Claims
+
+> The recipient opens the SMS link, sees ₹2,336 (at 93.44 rate), enters UPI ID, and submits.
+
+```
+  POST /api/claims/{token}  { "upiId": "raj@upi" }
+  
+  ┌───────────────────────────────────────────────────────┐
+  │  SubmitClaimHandler                                    │
+  │  ├─ ✅ Token exists                                    │
+  │  ├─ ✅ Not already claimed                             │
+  │  ├─ ✅ Not expired (within 48h)                        │
+  │  ├─ ✅ Remittance status == ESCROWED                   │
+  │  └─ Signal Temporal workflow: claimSubmitted!           │
+  └───────────────────────────────────────────────────────┘
+
+  TemporalRemittanceClaimSignaler:
+  ├─ Derives claim authority ATA: PublicKey.findProgramDerivedAddress(
+  │      claimAuthority, usdcMint) → 2KKehH5e...
+  └─ Sends ClaimSignal to workflow (wakes it up!)
+```
+
+#### Act 6: 💸 Escrow Release (Claim Transaction)
+
+> The Temporal workflow wakes up and submits the claim transaction on-chain.
+
+```
+  🔐 Claim Authority signs (NOT MPC — this is the backend's own keypair)
+
+  Claim Transaction (single instruction, 6 accounts):
+  ┌──────────────────────────────────────────────────────────────┐
+  │  Account 0: 🔐 Claim Authority (signer)     3LZh792t...    │
+  │  Account 1: 📦 Escrow PDA (mut, close)      4f5fxvV4...    │
+  │  Account 2: 🏦 Vault PDA (mut)              FaRgcuRb...    │
+  │  Account 3: 💰 Recipient Token ATA (mut)    2KKehH5e...    │
+  │  Account 4: 👤 Sender wallet (mut)          DQoGcVse...    │
+  │  Account 5: ⚙️  Token Program               TokenkegQ...   │
+  └──────────────────────────────────────────────────────────────┘
+```
+
+```
+  BEFORE CLAIM                            AFTER CLAIM
+  ════════════                            ═══════════
+
+  Vault PDA (FaRgcuRb...)                 Vault PDA
+  ┌─────────────┐                         ┌─────────────┐
+  │ USDC: 25    │────── 25 USDC ─────────►│ CLOSED ❌    │  Rent → sender
+  └─────────────┘                         └─────────────┘
+                          │
+                          ▼
+  Claim Auth ATA (2KKehH5e...)            Claim Auth ATA (2KKehH5e...)
+  ┌─────────────┐                         ┌─────────────┐
+  │ USDC: 0     │                         │ USDC: 25    │  +$25 ✅
+  └─────────────┘                         └─────────────┘
+
+  Escrow PDA (4f5fxvV4...)                Escrow PDA
+  ┌─────────────┐                         ┌─────────────┐
+  │ status:     │                         │ CLOSED ❌    │  Rent → sender
+  │ Active      │                         └─────────────┘
+  └─────────────┘
+
+  Sender SOL (DQoGcVse...)                Sender SOL (DQoGcVse...)
+  ┌─────────────┐                         ┌─────────────┐
+  │ SOL: 0.992  │                         │ SOL: 0.996  │  +0.004 (rent back!)
+  └─────────────┘                         └─────────────┘
+
+  Claim Auth SOL (3LZh792t...)            Claim Auth SOL (3LZh792t...)
+  ┌─────────────┐                         ┌─────────────┐
+  │ SOL: 5.000  │                         │ SOL: 4.999  │  -0.001 (tx fee)
+  └─────────────┘                         └─────────────┘
+```
+
+**What happens on-chain (2 CPI calls inside the escrow program):**
+1. 🔄 **Transfer**: Vault PDA → Claim Authority ATA (25 USDC)
+2. 🗑️ **Close vault**: Account deleted, rent SOL → sender
+3. 🗑️ **Close escrow**: Account deleted, rent SOL → sender
+
+**On-chain transaction:** [Finalized ✅](https://explorer.solana.com/?cluster=devnet)
+
+#### Act 7: 🏦 INR Disbursement
+
+```
+  Temporal Workflow                     Transak API
+  ┌──────────────┐                     ┌──────────────────┐
+  │ disburseInr  │────── API call ────►│ Convert USDC→INR │
+  │ activity     │                     │ Send ₹2,336 to   │
+  └──────────────┘                     │ raj@upi           │
+                                       └──────────────────┘
+  Status: CLAIMED → DELIVERED ✅
+```
+
+### 📊 Final Ledger
+
+```
+  ┌──────────────────────────────────────────────────────────────┐
+  │                   FINAL STATE ($25 remittance)                │
+  ├──────────────────────────────────────────────────────────────┤
+  │                                                                │
+  │  👤 Sender MPC Wallet (DQoGcVse...)                            │
+  │  ├─ SOL:  0.996  (started 1.000, paid rent, got rent back)    │
+  │  ├─ USDC: 75     (started 100, sent 25)                       │
+  │  └─ DB balance: 0 (reserved on send)                           │
+  │                                                                │
+  │  🔐 Claim Authority (3LZh792t...)                              │
+  │  ├─ SOL:  4.999  (paid claim tx fee)                           │
+  │  └─ USDC: 25     (received from escrow vault)                  │
+  │                                                                │
+  │  📦 Escrow PDA: CLOSED ❌ (rent returned to sender)             │
+  │  🏦 Vault PDA:  CLOSED ❌ (rent returned to sender)             │
+  │                                                                │
+  │  📱 Recipient:                                                  │
+  │  └─ ₹2,336 received in bank via UPI                            │
+  │                                                                │
+  │  💰 Net cost to sender: $25.00 USDC + ~$0.001 SOL              │
+  │  💰 Net cost to platform: ~$0.001 SOL (claim tx fee)            │
+  │                                                                │
+  └──────────────────────────────────────────────────────────────┘
+```
+
+### 🔄 Alternative Path: Refund (No Claim Within 48h)
+
+```
+  BEFORE REFUND                           AFTER REFUND
+  ═════════════                           ════════════
+
+  Vault PDA                               Vault PDA
+  ┌─────────────┐                         ┌─────────────┐
+  │ USDC: 25    │────── 25 USDC ─────────►│ CLOSED ❌    │
+  └─────────────┘          │              └─────────────┘
+                           ▼
+  Sender ATA (GuDuFKeX...) ◄──────────    Sender ATA (GuDuFKeX...)
+  ┌─────────────┐                         ┌─────────────┐
+  │ USDC: 75    │                         │ USDC: 100   │  Full refund! ✅
+  └─────────────┘                         └─────────────┘
+
+  Escrow PDA: CLOSED ❌ (rent → sender)
+  Vault PDA:  CLOSED ❌ (rent → sender)
+  Status: ESCROWED → REFUNDED
+```
+
+### 🔑 Key Insight: Why PDAs?
+
+```
+  Regular wallet:  "I have the private key, I control the funds"
+  PDA (escrow):    "The PROGRAM controls the funds — rules are code"
+
+  ┌──────────────────────────────────────────────────────────┐
+  │  Only the escrow program can sign for the escrow PDA     │
+  │  ├─ deposit: anyone (if they're the sender)              │
+  │  ├─ claim:   ONLY claim authority can trigger             │
+  │  ├─ refund:  anyone, but ONLY after deadline passes       │
+  │  └─ cancel:  ONLY the original sender                     │
+  │                                                            │
+  │  Seeds are deterministic — anyone can derive the PDA      │
+  │  address, but NOBODY can sign for it except the program   │
+  └──────────────────────────────────────────────────────────┘
+```
 
 ---
 

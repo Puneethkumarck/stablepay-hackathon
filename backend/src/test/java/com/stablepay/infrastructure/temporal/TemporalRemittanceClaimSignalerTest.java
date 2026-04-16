@@ -1,7 +1,6 @@
 package com.stablepay.infrastructure.temporal;
 
 import static com.stablepay.testutil.SolanaFixtures.SOME_CLAIM_AUTHORITY_PRIVATE_KEY;
-import static com.stablepay.testutil.SolanaFixtures.SOME_CLAIM_AUTHORITY_PUBLIC_KEY;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_CLAIM_TOKEN;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;
@@ -55,10 +54,15 @@ class TemporalRemittanceClaimSignalerTest {
         then(workflowClient).should().newWorkflowStub(RemittanceLifecycleWorkflow.class, expectedWorkflowId);
         then(workflowStub).should().claimSubmitted(signalCaptor.capture());
 
+        var usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+        var claimAuthorityPubkey = org.sol4k.Keypair.fromSecretKey(
+                org.sol4k.Base58.decode(SOME_CLAIM_AUTHORITY_PRIVATE_KEY)).getPublicKey();
+        var expectedAta = PublicKey.findProgramDerivedAddress(claimAuthorityPubkey, usdcMint)
+                .getPublicKey().toBase58();
         var expected = ClaimSignal.builder()
                 .claimToken(SOME_CLAIM_TOKEN)
                 .upiId(SOME_UPI_ID)
-                .destinationAddress(SOME_CLAIM_AUTHORITY_PUBLIC_KEY)
+                .destinationAddress(expectedAta)
                 .build();
         assertThat(signalCaptor.getValue())
                 .usingRecursiveComparison()

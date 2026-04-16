@@ -2,6 +2,7 @@ package com.stablepay.infrastructure.solana;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import org.sol4k.Base58;
@@ -10,6 +11,8 @@ import org.sol4k.Keypair;
 import org.sol4k.PublicKey;
 import org.sol4k.TransactionMessage;
 import org.sol4k.VersionedTransaction;
+import org.sol4k.instruction.CreateAssociatedTokenAccountInstruction;
+import org.sol4k.instruction.Instruction;
 import org.springframework.stereotype.Component;
 
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
@@ -97,12 +100,24 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
             var destination = new PublicKey(destinationTokenAccount);
             var senderWallet = new PublicKey(senderWalletAddress);
 
-            var instruction = escrowInstructionBuilder.buildClaimInstruction(
-                    remittanceId, claimAuthorityKeypair.getPublicKey(), destination, senderWallet);
+            var instructions = new ArrayList<Instruction>();
+
+            // Create the recipient ATA if it doesn't exist on-chain
+            if (!accountExists(destination)) {
+                var claimAuthorityPubkey = claimAuthorityKeypair.getPublicKey();
+                log.info("Recipient ATA {} does not exist, adding CreateAssociatedTokenAccount instruction",
+                        destination.toBase58());
+                instructions.add(new CreateAssociatedTokenAccountInstruction(
+                        claimAuthorityPubkey, destination, claimAuthorityPubkey,
+                        solanaProperties.usdcMint()));
+            }
+
+            instructions.add(escrowInstructionBuilder.buildClaimInstruction(
+                    remittanceId, claimAuthorityKeypair.getPublicKey(), destination, senderWallet));
 
             var blockhash = solanaConnection.getLatestBlockhash();
             var message = TransactionMessage.newMessage(
-                    claimAuthorityKeypair.getPublicKey(), blockhash, instruction);
+                    claimAuthorityKeypair.getPublicKey(), blockhash, instructions);
             var transaction = new VersionedTransaction(message);
             transaction.sign(claimAuthorityKeypair);
 
@@ -116,6 +131,16 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
         } catch (Exception e) {
             throw SolanaTransactionException.submissionFailed(
                     "claim:" + remittanceId, e);
+        }
+    }
+
+    private boolean accountExists(PublicKey address) {
+        try {
+            var accountInfo = solanaConnection.getAccountInfo(address);
+            return accountInfo != null;
+        } catch (Exception e) {
+            log.debug("Account {} does not exist or query failed: {}", address.toBase58(), e.getMessage());
+            return false;
         }
     }
 
