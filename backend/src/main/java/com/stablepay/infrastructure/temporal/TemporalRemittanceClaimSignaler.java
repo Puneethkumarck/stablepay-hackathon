@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.sol4k.Base58;
 import org.sol4k.Keypair;
+import org.sol4k.PublicKey;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
@@ -32,23 +33,26 @@ public class TemporalRemittanceClaimSignaler implements RemittanceClaimSignaler 
         var workflow = workflowClient.newWorkflowStub(
                 RemittanceLifecycleWorkflow.class, workflowId);
 
-        var destinationAddress = resolveClaimDestination();
+        var destinationTokenAccount = resolveClaimDestinationAta();
         var signal = ClaimSignal.builder()
                 .claimToken(claimToken)
                 .upiId(upiId)
-                .destinationAddress(destinationAddress)
+                .destinationAddress(destinationTokenAccount)
                 .build();
 
         workflow.claimSubmitted(signal);
         log.info("Claim signal sent for workflowId={}", workflowId);
     }
 
-    private String resolveClaimDestination() {
+    private String resolveClaimDestinationAta() {
         var privateKeyStr = solanaProperties.claimAuthorityPrivateKey();
         if (privateKeyStr == null || privateKeyStr.isBlank()) {
             throw SolanaTransactionException.claimAuthorityNotConfigured();
         }
-        return Keypair.fromSecretKey(Base58.decode(privateKeyStr))
-                .getPublicKey().toBase58();
+        var claimAuthorityPubkey = Keypair.fromSecretKey(Base58.decode(privateKeyStr)).getPublicKey();
+        var ata = PublicKey.findProgramDerivedAddress(claimAuthorityPubkey, solanaProperties.usdcMint());
+        log.info("Resolved claim authority ATA: {} (owner: {})", ata.getPublicKey().toBase58(),
+                claimAuthorityPubkey.toBase58());
+        return ata.getPublicKey().toBase58();
     }
 }
