@@ -156,6 +156,9 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
             peerFutures = peerSidecars.stream()
                     .map(peer -> triggerPeerSigning(ceremonyId, peer, peerKeyShareData, transactionBytes, allSigningPartyIds))
                     .toList();
+        } else {
+            log.warn("No peer key share data for ceremony {} — peer signing skipped, "
+                    + "this will likely fail in a {}-of-{} setup", ceremonyId, threshold, totalParties);
         }
 
         var request = SignRequest.newBuilder()

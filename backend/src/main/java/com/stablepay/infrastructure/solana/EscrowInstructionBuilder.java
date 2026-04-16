@@ -201,7 +201,8 @@ public class EscrowInstructionBuilder {
                 // nonce produces on-curve point, try next
             }
         }
-        throw new RuntimeException("Unable to find program derived address");
+        throw SolanaTransactionException.pdaDerivationFailed("exhausted all 256 nonces",
+                new IllegalStateException("No valid off-curve PDA found for given seeds"));
     }
 
     private static PublicKey createProgramAddress(

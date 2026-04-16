@@ -185,22 +185,44 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
 
                 try (var is = conn.getInputStream()) {
                     var response = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                    if (response.contains("\"error\"")) {
+                        throw new RuntimeException("RPC error: " + response);
+                    }
                     var resultStart = response.indexOf("\"result\":\"");
                     if (resultStart < 0) {
-                        throw new RuntimeException("RPC error: " + response);
+                        throw new RuntimeException("Unexpected RPC response: " + response);
                     }
                     var sigStart = resultStart + "\"result\":\"".length();
                     var sigEnd = response.indexOf("\"", sigStart);
                     return response.substring(sigStart, sigEnd);
                 }
+            } catch (SolanaTransactionException e) {
+                throw e;
             } catch (Exception e) {
-                throw SolanaTransactionException.submissionFailed("sendWithSkipPreflight", e);
+                throw SolanaTransactionException.submissionFailed("sendWithSkipPreflight",
+                        readRpcErrorDetails(conn, e));
             } finally {
                 if (conn != null) {
                     conn.disconnect();
                 }
             }
         }
+    }
+
+    private Exception readRpcErrorDetails(java.net.HttpURLConnection conn, Exception original) {
+        if (conn == null) {
+            return original;
+        }
+        try (var errorStream = conn.getErrorStream()) {
+            if (errorStream != null) {
+                var errorBody = new String(errorStream.readAllBytes(), StandardCharsets.UTF_8);
+                log.error("Solana RPC error response: {}", errorBody);
+                return new RuntimeException("RPC error: " + errorBody, original);
+            }
+        } catch (Exception ignored) {
+            log.warn("Failed to read RPC error stream: {}", ignored.getMessage());
+        }
+        return original;
     }
 
     private Keypair resolveClaimAuthorityKeypair() {
