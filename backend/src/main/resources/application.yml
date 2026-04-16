@@ -47,8 +47,8 @@ stablepay:
       port: ${MPC_SIDECAR_PORT:50051}
       deadline-ms: ${MPC_SIDECAR_DEADLINE_MS:30000}
   solana:
-    rpc-url: https://api.devnet.solana.com
-    escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:11111111111111111111111111111111}
+    rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
+    escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:6G9X8RArxw6f6n41wRKZMsgzRtHuUgPSkYipyjQu8NXD}
     usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
   transak:
@@ -80,6 +80,10 @@ stablepay:
       - Content-Type
       - Authorization
     max-age: 3600
+
+logging:
+  level:
+    com.stablepay: ${LOG_LEVEL:INFO}
 
 springdoc:
   api-docs:
