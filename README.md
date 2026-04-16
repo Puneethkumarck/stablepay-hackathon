@@ -723,90 +723,186 @@ pub struct Escrow {
 
 ## 🏦 Solana Accounting Model: Where Every Dollar Goes
 
-> A visual walkthrough of every wallet, PDA, and token account involved in a $25 remittance — from the moment the sender taps "Send" to the recipient receiving INR in their bank.
+> A visual walkthrough of every wallet, PDA, and token account involved in a $25 remittance — from program deployment to the recipient receiving INR in their bank.
 
 ### 🗝️ The Players
 
+On Solana, there are different kinds of accounts. Here's what each one is, with a real-world analogy:
+
+| | Solana Concept | Real-World Analogy | What It Does |
+|---|---|---|---|
+| 🔑 | **Wallet** (System Account) | Your **physical wallet** with cash | Holds SOL for tx fees. Has a private key you sign with. Cannot hold tokens directly — needs a Token Account for that. |
+| 🪙 | **Token Account** (ATA) | A **bank account** for one specific currency | Holds USDC (or any SPL token) on behalf of a wallet. One per currency — you have a separate USDC account, BONK account, etc. Address auto-derived from your wallet + token type. |
+| 📦 | **PDA** (Program Derived Address) | A **locked safety deposit box** at the bank | No one has the key — only the program's rules can open it. "Release funds when the authority says OK." Used for escrow vaults and trustless custody. |
+| 🏭 | **Mint** | The **US Treasury** / central bank that prints money | Defines a token type (like USDC). Has a "mint authority" — the only entity that can create new tokens. Circle is the mint authority for real USDC. |
+| ⚙️ | **Program** | The **rulebook** at an escrow company | Code deployed once to Solana, reused forever by all transactions. "Hold the buyer's money. Release when conditions met. Refund if timeout." Our escrow program handles every remittance with the same rules. |
+
+```
+Think of the whole system like this:
+
+  👤 You (wallet)  ──►  🏦 Your bank account (ATA)  ──►  📦 Escrow company (PDA)
+      │                         │                              │
+      has SOL                   has USDC                       has locked USDC
+      (cash for fees)           (your balance)                 (held until rules say release)
+      │                         │                              │
+      signs with                managed by                     controlled by
+      private key               Token Program                  Escrow Program
+```
+
+Now the actual wallets involved in StablePay:
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                        WALLETS & ACCOUNTS                                │
+│                        STABLEPAY WALLETS                                 │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  👤 SENDER MPC WALLET                                                    │
-│  ├─ Address: DQoGcVse...  (Ed25519 — no one holds the full key)         │
-│  ├─ Type: System account (holds SOL for tx fees)                         │
-│  └─ Token Account (ATA): GuDuFKeX...  (holds USDC)                      │
-│                                                                          │
-│  🏛️ DEPLOYER WALLET                                                     │
+│  🏛️ DEPLOYER WALLET (one-time setup)                                    │
 │  ├─ Address: 58gFSCTW...                                                 │
-│  ├─ Role: Deployed the escrow program, pays for program storage          │
-│  └─ Not involved in transactions after deployment                        │
+│  ├─ Role: Deploys the escrow program to Solana (one-time operation)      │
+│  ├─ Becomes the "upgrade authority" — can update the program later       │
+│  ├─ Pays ~2 SOL for program storage rent                                 │
+│  ├─ In production: would be a multisig for security                      │
+│  └─ ⚠️ NOT involved in any remittance transaction after deployment       │
 │                                                                          │
-│  🔐 CLAIM AUTHORITY                                                      │
+│  👤 SENDER MPC WALLET (one per user)                                     │
+│  ├─ Address: DQoGcVse...  (Ed25519 — no one holds the full private key) │
+│  ├─ Created via MPC DKG — key split across 2 sidecars                    │
+│  ├─ SOL balance: pays for deposit tx fees + account rent                 │
+│  └─ Token Account (ATA): GuDuFKeX... — holds the user's USDC            │
+│                                                                          │
+│  🔐 CLAIM AUTHORITY (one per StablePay deployment)                       │
 │  ├─ Address: 3LZh792t...  (backend-controlled keypair)                   │
-│  ├─ Role: Authorizes claim & refund — the only key that can release USDC│
-│  ├─ Token Account (ATA): 2KKehH5e...  (receives USDC on claim)          │
-│  └─ Pays tx fees for claim/refund transactions                           │
+│  ├─ The ONLY key that can release USDC from escrow (via claim)           │
+│  ├─ Stored as CLAIM_AUTHORITY_PRIVATE_KEY in .env                        │
+│  ├─ Token Account (ATA): 2KKehH5e... — receives USDC when claims happen │
+│  ├─ Pays tx fees for claim/refund operations                             │
+│  └─ In production: would be a multisig or HSM-backed key                 │
 │                                                                          │
-│  📦 ESCROW PDA (per remittance)                                          │
-│  ├─ Address: derived from ["escrow", remittance_id]                      │
-│  ├─ Type: Program-owned account (data: sender, amount, deadline, etc.)   │
-│  └─ Created on deposit, closed on claim/refund (rent → sender)           │
+│  📦 ESCROW PDA + 🏦 VAULT PDA (one pair per remittance)                  │
+│  ├─ Escrow: stores metadata (sender, amount, deadline, status)           │
+│  ├─ Vault: SPL Token Account that holds the locked USDC                  │
+│  ├─ Both created on deposit, both closed on claim/refund                 │
+│  ├─ Rent SOL always returned to sender when accounts close               │
+│  └─ No private key exists — only the escrow program can move funds       │
 │                                                                          │
-│  🏦 VAULT PDA (per escrow)                                               │
-│  ├─ Address: derived from ["vault", escrow_pubkey]                       │
-│  ├─ Type: SPL Token Account — holds the locked USDC                      │
-│  ├─ Authority: escrow PDA (only the program can move funds)              │
-│  └─ Created on deposit, closed on claim/refund (rent → sender)           │
-│                                                                          │
-│  🪙 USDC MINT                                                            │
-│  ├─ Address: CAUBK3cr... (test mint) / 4zMMC9sr... (devnet USDC)        │
-│  └─ 6 decimals — $25.00 = 25,000,000 lamports                           │
-│                                                                          │
-│  ⚙️ ESCROW PROGRAM                                                       │
-│  ├─ Address: 7C2zsbhg...                                                 │
-│  └─ Custom Anchor program — deposit, claim, refund, cancel               │
+│  🏭 USDC MINT                                                            │
+│  ├─ Devnet: Circle's USDC (4zMMC9sr...) or test mint (CAUBK3cr...)      │
+│  ├─ Mint authority: whoever created the mint (Circle, or us for tests)   │
+│  └─ We use a test mint for E2E testing because we can't mint real USDC   │
 │                                                                          │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 📖 The Story of a $25 Remittance
 
+#### Act 0: 🚀 Program Deployment (one-time — NOT per transaction)
+
+> The escrow program is deployed **once** to Solana. It's like publishing a smart contract. Every remittance reuses the same program code — only the data accounts (escrow + vault) are created per transaction.
+
+```
+  🏛️ Deployer Wallet                        Solana Network
+  58gFSCTW...
+  ┌─────────────┐     anchor deploy         ┌─────────────────────────┐
+  │ SOL: 5.0    │──────────────────────────►│ ⚙️ Program Account       │
+  │             │     ~2 SOL for rent       │ 7C2zsbhg...             │
+  │ Upgrade     │                           │ Code: deposit, claim,   │
+  │ Authority 🔑│                           │       refund, cancel    │
+  └─────────────┘                           │ Size: ~285 KB           │
+                                            │ Owner: BPF Loader       │
+       After deployment:                    └─────────────────────────┘
+       Deployer SOL: 5.0 → 3.0
+       Program lives on-chain permanently    ✅ Deployed once, used forever
+       Deployer is NOT involved in any
+       remittance transaction after this
+```
+
+**In production:**
+- Deploy once to mainnet (costs ~2 SOL ≈ $300 at current prices)
+- Transfer upgrade authority to a multisig
+- Program is immutable after authority is revoked (optional)
+
 #### Act 1: 🔑 Wallet Creation (MPC DKG)
 
-```
-  MPC Sidecar 0          MPC Sidecar 1
-  ┌──────────┐          ┌──────────┐
-  │ Party 0  │◄════════►│ Party 1  │    P2P DKG ceremony
-  │ (gRPC)   │  rounds  │ (gRPC)   │    over ports 7000↔7001
-  └────┬─────┘          └──────────┘
-       │
-       ▼
-  Key Share 0 ──► stored in DB       Key Share 1 ──► stored in DB
-  (primary)       (wallets table)    (peer)          (peer_key_share_data)
+> A sender signs up and gets a Solana wallet. But unlike MetaMask, **no one ever sees a seed phrase**. The private key is split across two MPC sidecars using a Distributed Key Generation ceremony.
 
-  Result: Solana address DQoGcVse... created
-          🔒 Full private key NEVER exists — not even in memory
+```
+  Backend                MPC Sidecar 0          MPC Sidecar 1
+  ┌──────────┐          ┌──────────┐          ┌──────────┐
+  │ POST     │─ gRPC ──►│ Party 0  │◄════════►│ Party 1  │
+  │ /api/    │          │ partyId=0│  P2P DKG │ partyId=1│
+  │ wallets  │          │          │  rounds   │          │
+  └──────────┘          └────┬─────┘  7000↔7001└────┬─────┘
+                             │                      │
+                             ▼                      ▼
+                        Key Share 0            Key Share 1
+                        (primary)              (peer)
+                             │                      │
+                             └──────┬───────────────┘
+                                    ▼
+                            ┌──────────────┐
+                            │  PostgreSQL   │
+                            │  wallets table│
+                            │              │
+                            │ key_share_data│ ◄── Party 0's share
+                            │ peer_key_     │
+                            │ share_data    │ ◄── Party 1's share
+                            │ solana_address│ ◄── DQoGcVse...
+                            └──────────────┘
+
+  🔒 The full Ed25519 private key NEVER exists anywhere
+  🔒 Each sidecar only sees its own share during the ceremony
+  🔒 Key shares persist in DB — survive app restarts
+  🔒 Both sidecars needed to sign (2-of-2 threshold)
 ```
 
-**What's created on Solana:** Nothing yet! The wallet is just a key — no on-chain account until someone sends SOL to it.
+**What's created on Solana:** Nothing! A Solana "wallet" is just a keypair. The address `DQoGcVse...` exists mathematically but has no on-chain account yet. It becomes a real account when someone sends SOL to it.
 
 #### Act 2: 💰 Funding the Wallet
 
-```
-  Deployer Wallet              Sender MPC Wallet
-  58gFSCTW...                  DQoGcVse...
-  ┌─────────────┐              ┌─────────────┐
-  │ SOL: 5.0    │──── 1 SOL ──►│ SOL: 1.0    │  For tx fees
-  └─────────────┘              └─────────────┘
+> Before the sender can make a remittance, their MPC wallet needs SOL (for transaction fees) and USDC (the stablecoin to send). In production, this happens via Stripe ACH on-ramp. For the hackathon, we use a pre-funded treasury.
 
-  Deployer (mint authority)    Sender Token Account (ATA)
-                               GuDuFKeX...
-  ┌─────────────┐              ┌─────────────┐
-  │ Test USDC   │── 100 USDC ─►│ USDC: 100   │  Sender's USDC
-  │ Mint        │              └─────────────┘
-  └─────────────┘
 ```
+  🏛️ Deployer / Treasury               👤 Sender MPC Wallet
+  58gFSCTW...                           DQoGcVse...
+
+  Step 1: Send SOL for tx fees
+  ┌─────────────┐                       ┌─────────────┐
+  │ SOL: 5.0    │───── 1 SOL ─────────►│ SOL: 1.0    │
+  └─────────────┘                       └─────────────┘
+  (This creates the sender's system account on-chain!)
+
+
+  Step 2: Create sender's USDC token account (ATA)
+  ┌────────────────────────────────────────────────────────────────┐
+  │  spl-token create-account USDC_MINT --owner DQoGcVse...       │
+  │                                                                │
+  │  Derives ATA address: GuDuFKeX... = PDA([DQoGcVse, TOKEN, MINT])│
+  │  Creates a new SPL Token Account on-chain                      │
+  │  Owner: DQoGcVse... (the MPC wallet)                           │
+  │  Mint: USDC                                                    │
+  │  Balance: 0                                                    │
+  └────────────────────────────────────────────────────────────────┘
+
+
+  Step 3: Mint/transfer USDC to sender
+  🏭 USDC Mint                          Sender ATA (GuDuFKeX...)
+  ┌─────────────┐                       ┌─────────────┐
+  │ Mint Auth:  │──── 100 USDC ────────►│ USDC: 100   │
+  │ (deployer   │   (mint or transfer)  │ Owner: DQo..│
+  │  for test)  │                       │ Mint: USDC  │
+  └─────────────┘                       └─────────────┘
+
+  Mint authority can create tokens out of thin air (test only!)
+  In production: USDC comes from Circle via Stripe on-ramp
+```
+
+**After funding:**
+
+| Account | SOL | USDC | Notes |
+|---------|-----|------|-------|
+| 👤 Sender wallet `DQoGcVse...` | 1.0 | — | System account (holds SOL) |
+| 🪙 Sender ATA `GuDuFKeX...` | — | 100 | Token account (holds USDC) |
+| 🏛️ Deployer `58gFSCTW...` | 3.0 | — | Paid for program + funding |
 
 #### Act 3: 📤 Escrow Deposit ($25 USDC)
 
