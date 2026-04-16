@@ -4,7 +4,7 @@ status: approved
 created: 2026-04-16
 updated: 2026-04-16
 issue: STA-72
-revision: 4 (third review pass — race conditions, money precision, refund ordering)
+revision: 5 (fourth review pass — Option C refund, webhook lookup by funding_id, merged finalize activity, tighter amount validation)
 ---
 
 # Stripe On-Ramp Integration — Spec
@@ -43,19 +43,16 @@ This closes the gap where funding is currently a DB-only operation with no Strip
 ### US-2: Refund funding order
 **As a** sender,
 **I want to** refund a funding order,
-**So that** my USDC is returned to the treasury and my fiat is refunded via Stripe.
+**So that** my fiat is refunded via Stripe.
 
 **Acceptance criteria:**
 - `POST /api/funding-orders/{fundingId}/refund` initiates a refund
-- Validates sender has sufficient USDC: checks both on-chain ATA balance and DB `available_balance`
+- Validates sender still holds the USDC on-chain: sender ATA balance >= refund amount AND DB `available_balance` >= refund amount
 - If insufficient USDC (already spent on remittances): rejects with SP-0025 `InsufficientBalanceForRefundException`
-- **Order matters:** Stripe refund FIRST, then USDC return on-chain
-  - If Stripe refund fails → abort, user still has USDC (no loss)
-  - If Stripe refund succeeds but USDC return fails → REFUND_FAILED (platform risk, manual resolution)
-- USDC transferred from sender ATA back to treasury ATA on-chain
-- FundingOrder transitions: FUNDED → REFUND_INITIATED → REFUNDED
-- If on-chain USDC return or Stripe refund fails: REFUND_INITIATED → REFUND_FAILED
-- Wallet `available_balance` and `total_balance` decremented
+- Stripe refund executed via `PaymentGateway.refund`
+- On Stripe success: FundingOrder transitions FUNDED → REFUND_INITIATED → REFUNDED; wallet `available_balance` and `total_balance` decremented in the same transaction as the REFUNDED status flip
+- On Stripe failure: FundingOrder transitions FUNDED → REFUND_INITIATED → REFUND_FAILED (manual resolution)
+- **On-chain USDC is NOT returned to treasury.** Sender's ATA is owned by sender's MPC wallet, so only the MPC key can authorize a debit. Hackathon accepts that devnet test-USDC remains in the sender's ATA post-refund; the on-chain balance check acts as a gate to prevent refunding USDC already spent on remittances. See §9.3 and appendix #20.
 
 ### US-3: Webhook idempotency and failure handling
 **As the** system,
@@ -201,14 +198,16 @@ application/dto/
 | REFUND_INITIATED | USDC return or Stripe refund failed | REFUND_FAILED |
 
 **Ordering in `InitiateFundingHandler`:**
-1. Save FundingOrder with status `PAYMENT_CONFIRMED` to DB **first**
-2. Then call Stripe to create PaymentIntent
+1. Save FundingOrder with status `PAYMENT_CONFIRMED` to DB **first** (fundingId is the durable key)
+2. Then call Stripe to create PaymentIntent with `metadata.funding_id = fundingId.toString()` and `metadata.wallet_id = walletId.toString()`
 3. Update FundingOrder with `stripePaymentIntentId`
 4. If Stripe call fails: transition to `FAILED`
 
-This ordering is critical because with `confirm: true`, Stripe may fire the webhook **before** the fund endpoint returns. If the FundingOrder isn't saved yet, the webhook can't find it. Saving first guarantees the record exists when the webhook arrives.
+This ordering is critical because with `confirm: true`, Stripe may fire the webhook **before** the fund endpoint returns. **The webhook looks up FundingOrder by `metadata.funding_id` (echoed back by Stripe in the event), NOT by PaymentIntent ID** — because PI ID isn't persisted until step 3. Looking up by funding_id guarantees the record is found regardless of timing.
 
-**USD to USDC conversion:** 1 USD = 1 USDC (hackathon assumption). Stripe amount in cents = `amountUsdc × 100`. Conversion done in `StripePaymentAdapter`.
+**Concurrent fund requests:** the duplicate-order check (`findByWalletIdAndStatusIn(walletId, [PAYMENT_CONFIRMED])`) is not atomic with the insert. Two simultaneous fund calls for the same wallet can both pass the check. The DB backstop is a partial unique index `UNIQUE(wallet_id) WHERE status = 'PAYMENT_CONFIRMED'` (see §6). The handler catches `DataIntegrityViolationException` and maps it to SP-0022.
+
+**USD to USDC conversion:** 1 USD = 1 USDC (hackathon assumption). Stripe amount in cents = `amountUsdc × 100`. Amount is validated to **2 decimal places max** (Stripe requires whole cents); sub-cent amounts rejected at the API layer by `@Digits(integer=5, fraction=2)`. Conversion done in `StripePaymentAdapter` via `amount.movePointRight(2).longValueExact()`.
 
 ## 4. API Contracts
 
@@ -222,7 +221,7 @@ Content-Type: application/json
 ```
 
 **Validation:**
-- `amount`: required, positive, min 1.00, max 10000.00, max 6 decimal places
+- `amount`: required, positive, min 1.00, max 10000.00, **max 2 decimal places** (Stripe requires whole cents; sub-cent amounts rejected as `@Digits(integer=5, fraction=2)` violation → SP-0003)
 
 **Response 201:**
 ```json
@@ -337,21 +336,21 @@ WalletFundingWorkflow.execute(WalletFundingRequest)
     │   ├─ Sign with treasury keypair
     │   └─ Submit to Solana RPC
     │
-    ├─ Activity 5: updateWalletBalance           (10s timeout, 3 retries)
-    │   ├─ Load wallet with pessimistic lock
-    │   ├─ Check if balance already incremented (idempotency guard)
-    │   └─ DB: available_balance += amount, total_balance += amount
-    │
-    └─ Activity 6: updateFundingOrderStatus      (10s timeout, 3 retries)
-        └─ PAYMENT_CONFIRMED → FUNDED
+    └─ Activity 5: finalizeFunding                (15s timeout, 3 retries, @Transactional)
+        ├─ Load wallet with pessimistic lock (SELECT ... FOR UPDATE)
+        ├─ Load FundingOrder by fundingId
+        ├─ Idempotency guard: if FundingOrder.status == FUNDED → return (no-op)
+        ├─ DB: available_balance += amount, total_balance += amount
+        ├─ FundingOrder.status = FUNDED, updated_at = now()
+        └─ Commit (status flip + balance increment in ONE transaction)
 ```
 
 **Failure handling:**
 - If any activity exhausts retries, the workflow fails
 - `CompleteFundingHandler` catches workflow failure and transitions FundingOrder to `FAILED`
-- The on-chain state is the source of truth — if USDC was transferred but DB update failed, Temporal retries the DB update
+- The on-chain state is the source of truth — if USDC was transferred but DB update failed, Temporal retries `finalizeFunding`
 
-**Activity 5 idempotency:** `updateWalletBalance` must check whether this specific funding order was already applied (e.g., via a query for the FundingOrder status) before incrementing balance, to prevent double-increment on Temporal retry.
+**Why activities 5 and 6 are merged (rev 5 fix):** previously `updateWalletBalance` and `updateFundingOrderStatus` were separate activities with a status-based idempotency guard. That guard was broken: status stayed `PAYMENT_CONFIRMED` until the *second* activity, so a retry of activity 5 (commit succeeded, ack failed) would re-read `PAYMENT_CONFIRMED` and increment again. Merging them makes the status flip and the increment atomic; the first successful commit sets `FUNDED`, and any retry finds `FUNDED` on re-read and short-circuits.
 
 **Input:**
 ```java
@@ -383,6 +382,14 @@ CREATE TABLE funding_orders (
 CREATE INDEX idx_funding_orders_wallet_id ON funding_orders(wallet_id);
 CREATE INDEX idx_funding_orders_stripe_pi ON funding_orders(stripe_payment_intent_id);
 CREATE INDEX idx_funding_orders_status ON funding_orders(status);
+
+-- At most one in-flight PAYMENT_CONFIRMED order per wallet. DB-level backstop
+-- for the non-atomic read-then-insert in InitiateFundingHandler. A race past
+-- the handler check surfaces as DataIntegrityViolationException, which is
+-- translated to SP-0022 FundingAlreadyInProgressException.
+CREATE UNIQUE INDEX idx_funding_orders_one_active_per_wallet
+    ON funding_orders(wallet_id)
+    WHERE status = 'PAYMENT_CONFIRMED';
 ```
 
 **Note:** `stripe_client_secret` is NOT persisted. It is returned only in the initial POST response and discarded. Storing it would be a security risk — it allows anyone to confirm the payment.
@@ -531,27 +538,41 @@ Sender              API              Stripe           Webhook
   │                  │                 │◄────────────────│                │
 ```
 
-### 9.3 Refund Path
+### 9.3 Refund Path (Stripe-only with on-chain balance gate)
 
 ```
 Sender              API              Solana           Stripe
   │ POST /refund     │                 │                 │
   │─────────────────►│                 │                 │
-  │                  │ Check ATA       │                 │
-  │                  │ balance >= amt   │                 │
-  │                  │────────────────►│                 │
-  │                  │ USDC return     │                 │
-  │                  │ sender → treasury                 │
-  │                  │────────────────►│                 │
+  │                  │ Load FundingOrder                 │
+  │                  │ must be FUNDED  │                 │
+  │                  │ (else SP-0023)  │                 │
   │                  │                 │                 │
-  │                  │ Stripe refund(pi_...)              │
+  │                  │ Check sender ATA│                 │
+  │                  │ balance >= amt  │                 │
+  │                  │────────────────►│                 │
+  │                  │◄───────────────│                 │
+  │                  │ (else SP-0025)  │                 │
+  │                  │                 │                 │
+  │                  │ status: FUNDED  │                 │
+  │                  │ → REFUND_INITIATED                │
+  │                  │                 │                 │
+  │                  │ Stripe refund(pi_...)             │
   │                  │──────────────────────────────────►│
+  │                  │                 │    success      │
+  │                  │◄──────────────────────────────────│
   │                  │                 │                 │
-  │                  │ REFUND_INITIATED│                 │
-  │  {status:        │ → REFUNDED     │                 │
-  │   REFUND_INITIATED}               │                 │
+  │                  │ In ONE tx:      │                 │
+  │                  │  wallet.balance -= amt            │
+  │                  │  status: REFUNDED                 │
+  │  {status:        │                 │                 │
+  │   REFUND_INITIATED}                │                 │
   │◄─────────────────│                 │                 │
 ```
+
+**On Stripe failure:** `status: REFUND_INITIATED → REFUND_FAILED`. Wallet balance not decremented. Manual resolution.
+
+**Why no on-chain USDC return:** Sender's ATA is owned by the sender's MPC wallet, not the treasury. Only the MPC key can authorize a debit. Adding MPC-signed return would require wiring `MpcWalletClient` into the refund path plus a full signing ceremony — out of scope for the hackathon. On devnet the USDC is a test token with no monetary value, so it remaining in the sender ATA is acceptable. The on-chain balance check prevents refunding USDC that's already been spent on a remittance (which would be a real platform loss). See appendix #20.
 
 ## 10. Error Handling
 
@@ -559,7 +580,7 @@ Sender              API              Solana           Stripe
 |---|---|---|---|
 | SP-0020 | 404 | FundingOrderNotFoundException | `GET /funding-orders/{id}` or `POST /refund` — order not found |
 | SP-0021 | 502 | FundingFailedException | Stripe PaymentIntent creation failed in `InitiateFundingHandler` |
-| SP-0022 | 409 | FundingAlreadyCompletedException | `POST /fund` called for a wallet that already has a PAYMENT_CONFIRMED or FUNDED order for the same request (idempotency) |
+| SP-0022 | 409 | FundingAlreadyInProgressException | `POST /fund` called for a wallet that already has a `PAYMENT_CONFIRMED` (in-flight) order. Thrown by the handler's pre-check OR mapped from `DataIntegrityViolationException` on the partial unique index race. |
 | SP-0023 | 409 | RefundNotAllowedException | `POST /refund` on a FundingOrder not in FUNDED status |
 | SP-0024 | 502 | RefundFailedException | Stripe refund API or on-chain USDC return failed |
 | SP-0025 | 400 | InsufficientBalanceForRefundException | Refund requested but sender's on-chain ATA or DB balance is less than refund amount (USDC already spent on remittances) |
@@ -567,10 +588,11 @@ Sender              API              Solana           Stripe
 **GlobalExceptionHandler additions:**
 - `FundingOrderNotFoundException` → 404
 - `FundingFailedException` → 502
-- `FundingAlreadyCompletedException` → 409
+- `FundingAlreadyInProgressException` → 409
 - `RefundNotAllowedException` → 409
 - `RefundFailedException` → 502
 - `InsufficientBalanceForRefundException` → 400
+- `DataIntegrityViolationException` (scoped to funding_orders wallet_id unique violation) → translate to 409 SP-0022
 
 ## 11. Testing Strategy
 
@@ -616,9 +638,10 @@ Sender              API              Solana           Stripe
 | Domain | `domain/funding/port/FundingWorkflowStarter.java` |
 | Domain | `domain/funding/exception/FundingOrderNotFoundException.java` |
 | Domain | `domain/funding/exception/FundingFailedException.java` |
-| Domain | `domain/funding/exception/FundingAlreadyCompletedException.java` |
+| Domain | `domain/funding/exception/FundingAlreadyInProgressException.java` |
 | Domain | `domain/funding/exception/RefundNotAllowedException.java` |
 | Domain | `domain/funding/exception/InsufficientBalanceForRefundException.java` |
+| Domain | `domain/funding/exception/RefundFailedException.java` |
 | Infra | `infrastructure/stripe/StripePaymentAdapter.java` |
 | Infra | `infrastructure/stripe/StripeProperties.java` |
 | Infra | `infrastructure/stripe/StripeConfig.java` |
@@ -645,7 +668,7 @@ Sender              API              Solana           Stripe
 | `application/dto/FundWalletRequest.java` | Add `@Min(1)`, `@Max(10000)`, `@Digits(integer=5, fraction=6)` |
 | `application/config/GlobalExceptionHandler.java` | Add handlers for 5 new funding exceptions |
 | `infrastructure/solana/TreasuryServiceAdapter.java` | Replace stub with real SPL + SOL transfers. Depends on `SolanaProperties` (for USDC mint address), `Connection` (for RPC). Uses `SplTransferInstruction(from, to, owner, mint, amount, decimals=6)` for USDC and `TransferInstruction(from, to, lamports)` for SOL. Treasury keypair loaded from `stablepay.treasury.private-key`. |
-| `domain/wallet/port/TreasuryService.java` | Add `transferSol`, `getSolBalance`, `getUsdcBalance`, `createAtaIfNeeded` |
+| `domain/wallet/port/TreasuryService.java` | Rename `transferFromTreasury` → `transferUsdc`. Add `transferSol`, `getSolBalance`, `getUsdcBalance`, `createAtaIfNeeded`. (The sole existing caller `FundWalletHandler` is being deleted; no backwards-compat alias needed.) |
 | `infrastructure/temporal/TaskQueue.java` | Add `WALLET_FUNDING` task queue |
 | `infrastructure/temporal/TemporalConfig.java` | Refactor to register BOTH workers (remittance + funding) before calling `workerFactory.start()` once. Current code calls `start()` in the remittance worker bean — must be moved to a separate `@Bean` that depends on both workers. |
 | `build.gradle.kts` | Add `com.stripe:stripe-java:28.2.0` |
@@ -716,10 +739,21 @@ Sender              API              Solana           Stripe
 | 15 | Remittance refund doesn't release wallet DB balance (pre-existing bug) | Noted as known issue. Refund balance check uses on-chain ATA balance as primary source of truth, DB balance as secondary. On-chain balance is accurate even if DB is stale. |
 | 16 | FundingOrderRepository port methods not specified | Added explicit method signatures: findByFundingId, findByStripePaymentIntentId, findByWalletIdAndStatusIn. |
 | 17 | TreasuryServiceAdapter needs SolanaProperties for mint + decimals | Documented dependency: SplTransferInstruction needs (from, to, owner, mint, amount, decimals=6). |
-| 18 | Webhook looks up by PaymentIntent ID but repo method not listed | Added findByStripePaymentIntentId to FundingOrderRepository port. Webhook extracts PI ID from event, not from metadata. |
+| 18 | Webhook lookup race against save→Stripe ordering | **Revised (rev 5):** Webhook looks up FundingOrder by `metadata.funding_id` (set on PaymentIntent create, echoed in event), NOT by PaymentIntent ID. PI ID is only persisted after Stripe returns, so a webhook arriving in the save→Stripe window would miss on a PI-ID lookup. `funding_id` is the durable key. `findByStripePaymentIntentId` remains on the port for duplicate-PI detection and refund handler lookup. |
 | 19 | Race: webhook arrives before InitiateFundingHandler saves FundingOrder | Save FundingOrder to DB FIRST (status PAYMENT_CONFIRMED), then call Stripe API, then update with PI ID. Record exists when webhook arrives. |
-| 20 | Refund ordering: USDC return vs Stripe refund — who goes first? | Stripe refund first. If Stripe fails → abort (user keeps USDC, no loss). If USDC return fails after Stripe refund → REFUND_FAILED (platform risk, manual resolution). |
+| 20 | Refund ordering: USDC return vs Stripe refund | **Revised (rev 5):** On-chain USDC return removed entirely. Sender's ATA is owned by the sender's MPC wallet; treasury cannot sign a debit. Refund is Stripe-only, gated by an on-chain balance check (SP-0025) that blocks refunds once USDC has been spent on a remittance. USDC remains in the sender ATA after refund — acceptable on devnet (test tokens). Production would require MPC-signed return. State machine: FUNDED → REFUND_INITIATED → (Stripe ok → REFUNDED; Stripe fail → REFUND_FAILED). |
 | 21 | USD-to-USDC conversion not specified | 1 USD = 1 USDC (hackathon). Stripe amount = amountUsdc × 100 cents. Conversion in StripePaymentAdapter. |
 | 22 | FundWalletHandler.java not in delete list | Added to modified files: delete FundWalletHandler (replaced by InitiateFundingHandler). |
 | 23 | Webhook controller needs raw body for signature verification | Documented: must use HttpServletRequest.getInputStream() or @RequestBody String, not typed DTO. Jackson would break HMAC. |
 | 24 | stripe_payment_intent_id missing UNIQUE constraint | Added UNIQUE to migration column definition. |
+
+## Appendix: Edge Cases Addressed in Rev 5
+
+| # | Issue | Resolution |
+|---|---|---|
+| 25 | Activity-5 status-based idempotency guard was broken | Merged `updateWalletBalance` + `updateFundingOrderStatus` into a single transactional activity `finalizeFunding`. Status flip and balance increment commit atomically, so any retry after a successful commit finds status=FUNDED and short-circuits. |
+| 26 | Amount validation (6 decimal places) would crash Stripe conversion | Tightened `FundWalletRequest.amount` to `@Digits(integer=5, fraction=2)`. Stripe requires whole cents; `amount.movePointRight(2).longValueExact()` would throw `ArithmeticException` on sub-cent values. |
+| 27 | SP-0022 exception name misleading | Renamed `FundingAlreadyCompletedException` → `FundingAlreadyInProgressException`. Thrown when a `PAYMENT_CONFIRMED` (in-flight) order exists — not a completed one. |
+| 28 | CompleteFundingHandler idempotency missed refund terminal states | Added REFUND_INITIATED, REFUNDED, REFUND_FAILED to the "ignore silently" list. A stale webhook replay after a refund must not re-start the funding workflow. |
+| 29 | Concurrent fund requests can race past the duplicate-order check | Added partial unique index `UNIQUE(wallet_id) WHERE status = 'PAYMENT_CONFIRMED'`. Handler catches `DataIntegrityViolationException` and maps to SP-0022. |
+| 30 | Webhook endpoint security config not specified | `/webhooks/stripe` must be permitted without auth and excluded from CSRF. Signature verification via `Webhook.constructEvent(payload, sig, secret, 300)` is the authentication mechanism. |
