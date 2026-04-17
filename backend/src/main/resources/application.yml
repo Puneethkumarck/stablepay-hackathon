@@ -54,8 +54,8 @@ stablepay:
   stripe:
     api-key: ${STRIPE_API_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-    test-mode: ${STRIPE_TEST_MODE:true}
-    auto-confirm: ${STRIPE_AUTO_CONFIRM:true}
+    test-mode: ${STRIPE_TEST_MODE:false}
+    auto-confirm: ${STRIPE_AUTO_CONFIRM:false}
     test-payment-method: ${STRIPE_TEST_PAYMENT_METHOD:pm_card_visa}
     currency: ${STRIPE_CURRENCY:usd}
   transak:

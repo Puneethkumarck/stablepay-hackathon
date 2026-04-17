@@ -1,7 +1,6 @@
 package com.stablepay.infrastructure.stripe;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
 import org.springframework.stereotype.Component;
 
@@ -27,6 +26,7 @@ public class StripePaymentAdapter implements PaymentGateway {
 
     @Override
     public PaymentResult initiatePayment(PaymentRequest request) {
+        validateAmount(request.amountUsdc(), "amountUsdc");
         log.info("Initiating Stripe PaymentIntent fundingId={} walletId={}",
                 request.fundingId(), request.walletId());
         try {
@@ -38,7 +38,9 @@ public class StripePaymentAdapter implements PaymentGateway {
                     .status(intent.getStatus())
                     .build();
         } catch (StripeException e) {
-            throw FundingFailedException.stripeError(e.getMessage(), e);
+            log.warn("Stripe PaymentIntent creation failed fundingId={} code={} status={} requestId={}",
+                    request.fundingId(), e.getCode(), e.getStatusCode(), e.getRequestId(), e);
+            throw FundingFailedException.stripeError("[" + e.getCode() + "] " + e.getMessage(), e);
         } catch (ArithmeticException e) {
             throw FundingFailedException.stripeError(
                     "Amount precision exceeds Stripe's cent granularity", e);
@@ -47,14 +49,18 @@ public class StripePaymentAdapter implements PaymentGateway {
 
     @Override
     public void refund(String paymentIntentId, BigDecimal amount) {
-        Objects.requireNonNull(paymentIntentId, "paymentIntentId");
-        Objects.requireNonNull(amount, "amount");
+        if (paymentIntentId == null || paymentIntentId.isBlank()) {
+            throw FundingFailedException.invalidRequest("paymentIntentId is required for refund");
+        }
+        validateAmount(amount, "refund amount");
         log.info("Initiating Stripe refund paymentIntentId={}", paymentIntentId);
         try {
             var params = buildRefundParams(paymentIntentId, amount);
             stripeClient.refunds().create(params);
         } catch (StripeException e) {
-            throw FundingFailedException.stripeError(e.getMessage(), e);
+            log.warn("Stripe refund failed paymentIntentId={} code={} status={} requestId={}",
+                    paymentIntentId, e.getCode(), e.getStatusCode(), e.getRequestId(), e);
+            throw FundingFailedException.stripeError("[" + e.getCode() + "] " + e.getMessage(), e);
         } catch (ArithmeticException e) {
             throw FundingFailedException.stripeError(
                     "Amount precision exceeds Stripe's cent granularity", e);
@@ -82,5 +88,14 @@ public class StripePaymentAdapter implements PaymentGateway {
                 .setPaymentIntent(paymentIntentId)
                 .setAmount(cents)
                 .build();
+    }
+
+    private void validateAmount(BigDecimal amount, String fieldName) {
+        if (amount == null) {
+            throw FundingFailedException.invalidRequest(fieldName + " is required");
+        }
+        if (amount.signum() <= 0) {
+            throw FundingFailedException.invalidRequest(fieldName + " must be positive");
+        }
     }
 }

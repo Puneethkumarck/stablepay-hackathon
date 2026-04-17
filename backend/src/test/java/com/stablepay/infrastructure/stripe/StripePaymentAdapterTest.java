@@ -184,6 +184,7 @@ class StripePaymentAdapterTest {
         assertThatThrownBy(() -> adapter.initiatePayment(request))
                 .isInstanceOf(FundingFailedException.class)
                 .hasMessageContaining("SP-0021")
+                .hasMessageContaining("[card_error]")
                 .hasCause(stripeException);
     }
 
@@ -254,16 +255,77 @@ class StripePaymentAdapterTest {
     void shouldRejectNullAmountOnRefund() {
         // when / then
         assertThatThrownBy(() -> adapter.refund(SOME_STRIPE_PAYMENT_INTENT_ID, null))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessage("amount");
+                .isInstanceOf(FundingFailedException.class)
+                .hasMessageContaining("SP-0022")
+                .hasMessageContaining("refund amount is required");
     }
 
     @Test
     void shouldRejectNullPaymentIntentIdOnRefund() {
         // when / then
         assertThatThrownBy(() -> adapter.refund(null, SOME_AMOUNT_USDC))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessage("paymentIntentId");
+                .isInstanceOf(FundingFailedException.class)
+                .hasMessageContaining("SP-0022")
+                .hasMessageContaining("paymentIntentId is required");
+    }
+
+    @Test
+    void shouldRejectBlankPaymentIntentIdOnRefund() {
+        // when / then
+        assertThatThrownBy(() -> adapter.refund("   ", SOME_AMOUNT_USDC))
+                .isInstanceOf(FundingFailedException.class)
+                .hasMessageContaining("SP-0022")
+                .hasMessageContaining("paymentIntentId is required");
+    }
+
+    @Test
+    void shouldRejectNonPositiveAmountOnRefund() {
+        // when / then
+        assertThatThrownBy(() -> adapter.refund(SOME_STRIPE_PAYMENT_INTENT_ID, BigDecimal.ZERO))
+                .isInstanceOf(FundingFailedException.class)
+                .hasMessageContaining("SP-0022")
+                .hasMessageContaining("refund amount must be positive");
+    }
+
+    @Test
+    void shouldRejectNullAmountOnInitiatePayment() {
+        // given
+        var request = PaymentRequest.builder()
+                .fundingId(SOME_FUNDING_ID)
+                .walletId(SOME_WALLET_ID)
+                .currency(SOME_STRIPE_CURRENCY)
+                .build();
+
+        // when / then
+        assertThatThrownBy(() -> adapter.initiatePayment(request))
+                .isInstanceOf(FundingFailedException.class)
+                .hasMessageContaining("SP-0022")
+                .hasMessageContaining("amountUsdc is required");
+    }
+
+    @Test
+    void shouldRejectNonPositiveAmountOnInitiatePayment() {
+        // given
+        var request = paymentRequest().toBuilder().amountUsdc(BigDecimal.ZERO).build();
+
+        // when / then
+        assertThatThrownBy(() -> adapter.initiatePayment(request))
+                .isInstanceOf(FundingFailedException.class)
+                .hasMessageContaining("SP-0022")
+                .hasMessageContaining("amountUsdc must be positive");
+    }
+
+    @Test
+    void shouldWrapArithmeticExceptionOnRefund() {
+        // given
+        var overflowingAmount = new BigDecimal("92233720368547758.08");
+
+        // when / then
+        assertThatThrownBy(() -> adapter.refund(SOME_STRIPE_PAYMENT_INTENT_ID, overflowingAmount))
+                .isInstanceOf(FundingFailedException.class)
+                .hasMessageContaining("SP-0021")
+                .hasMessageContaining("Amount precision")
+                .hasCauseInstanceOf(ArithmeticException.class);
     }
 
     @Test
@@ -297,6 +359,7 @@ class StripePaymentAdapterTest {
         assertThatThrownBy(() -> adapter.refund(SOME_STRIPE_PAYMENT_INTENT_ID, SOME_AMOUNT_USDC))
                 .isInstanceOf(FundingFailedException.class)
                 .hasMessageContaining("SP-0021")
+                .hasMessageContaining("[invalid_request_error]")
                 .hasCause(stripeException);
     }
 
