@@ -375,8 +375,8 @@ CREATE TABLE funding_orders (
     amount_usdc                NUMERIC(19, 6) NOT NULL,
     stripe_payment_intent_id   VARCHAR(255) UNIQUE,
     status                     VARCHAR(50) NOT NULL DEFAULT 'PAYMENT_CONFIRMED',
-    created_at                 TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at                 TIMESTAMP
+    created_at                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                 TIMESTAMPTZ
 );
 
 CREATE INDEX idx_funding_orders_wallet_id ON funding_orders(wallet_id);
@@ -757,3 +757,4 @@ Sender              API              Solana           Stripe
 | 28 | CompleteFundingHandler idempotency missed refund terminal states | Added REFUND_INITIATED, REFUNDED, REFUND_FAILED to the "ignore silently" list. A stale webhook replay after a refund must not re-start the funding workflow. |
 | 29 | Concurrent fund requests can race past the duplicate-order check | Added partial unique index `UNIQUE(wallet_id) WHERE status = 'PAYMENT_CONFIRMED'`. Handler catches `DataIntegrityViolationException` and maps to SP-0022. |
 | 30 | Webhook endpoint security config not specified | `/webhooks/stripe` must be permitted without auth and excluded from CSRF. Signature verification via `Webhook.constructEvent(payload, sig, secret, 300)` is the authentication mechanism. |
+| 31 | `funding_orders.created_at`/`updated_at` typed as `TIMESTAMP` would lose timezone info | Switched to `TIMESTAMPTZ` in V5 migration to match V1–V4 (`wallets`, `remittances`, `claim_tokens`) and round-trip cleanly with Java `Instant`. Same 8-byte storage; normalizes to UTC on write. |

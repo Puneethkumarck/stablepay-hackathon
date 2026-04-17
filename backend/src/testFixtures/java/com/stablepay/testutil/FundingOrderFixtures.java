@@ -30,4 +30,12 @@ public final class FundingOrderFixtures {
                 .createdAt(SOME_CREATED_AT)
                 .updatedAt(SOME_UPDATED_AT);
     }
+
+    public static FundingOrder.FundingOrderBuilder fundingOrderBuilder(Long walletId) {
+        return FundingOrder.builder()
+                .fundingId(UUID.randomUUID())
+                .walletId(walletId)
+                .amountUsdc(SOME_AMOUNT_USDC)
+                .status(FundingStatus.PAYMENT_CONFIRMED);
+    }
 }

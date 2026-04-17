@@ -1,6 +1,6 @@
 package com.stablepay.infrastructure.db.funding;
 
-import static com.stablepay.testutil.FundingOrderFixtures.SOME_AMOUNT_USDC;
+import static com.stablepay.testutil.FundingOrderFixtures.fundingOrderBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -47,16 +47,6 @@ class FundingOrderRepositoryIntegrationTest {
         return walletRepository.save(wallet).id();
     }
 
-    private FundingOrder buildOrder(Long walletId, FundingStatus status, String paymentIntentId) {
-        return FundingOrder.builder()
-                .fundingId(UUID.randomUUID())
-                .walletId(walletId)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .stripePaymentIntentId(paymentIntentId)
-                .status(status)
-                .build();
-    }
-
     @Nested
     class Save {
 
@@ -64,7 +54,9 @@ class FundingOrderRepositoryIntegrationTest {
         void shouldSaveAndAssignId() {
             // given
             var walletId = createWalletAndReturnId();
-            var order = buildOrder(walletId, FundingStatus.PAYMENT_CONFIRMED, "pi_save_" + System.nanoTime());
+            var order = fundingOrderBuilder(walletId)
+                    .stripePaymentIntentId("pi_save_" + System.nanoTime())
+                    .build();
 
             // when
             var saved = fundingOrderRepository.save(order);
@@ -81,8 +73,9 @@ class FundingOrderRepositoryIntegrationTest {
         void shouldPersistStatusUpdates() {
             // given
             var walletId = createWalletAndReturnId();
-            var saved = fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.PAYMENT_CONFIRMED, "pi_status_" + System.nanoTime()));
+            var saved = fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .stripePaymentIntentId("pi_status_" + System.nanoTime())
+                    .build());
 
             // when
             fundingOrderRepository.save(saved.toBuilder().status(FundingStatus.FUNDED).build());
@@ -101,8 +94,9 @@ class FundingOrderRepositoryIntegrationTest {
         void shouldFindOrderByFundingId() {
             // given
             var walletId = createWalletAndReturnId();
-            var order = buildOrder(walletId, FundingStatus.PAYMENT_CONFIRMED, "pi_findfid_" + System.nanoTime());
-            var saved = fundingOrderRepository.save(order);
+            var saved = fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .stripePaymentIntentId("pi_findfid_" + System.nanoTime())
+                    .build());
 
             // when
             var found = fundingOrderRepository.findByFundingId(saved.fundingId());
@@ -133,8 +127,9 @@ class FundingOrderRepositoryIntegrationTest {
             // given
             var walletId = createWalletAndReturnId();
             var paymentIntentId = "pi_findpi_" + System.nanoTime();
-            var saved = fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.PAYMENT_CONFIRMED, paymentIntentId));
+            var saved = fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .stripePaymentIntentId(paymentIntentId)
+                    .build());
 
             // when
             var found = fundingOrderRepository.findByStripePaymentIntentId(paymentIntentId);
@@ -164,12 +159,17 @@ class FundingOrderRepositoryIntegrationTest {
         void shouldReturnOrdersMatchingWalletAndStatuses() {
             // given
             var walletId = createWalletAndReturnId();
-            var confirmed = fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.PAYMENT_CONFIRMED, "pi_in_confirmed_" + System.nanoTime()));
-            var funded = fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.FUNDED, "pi_in_funded_" + System.nanoTime()));
-            fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.FAILED, "pi_in_failed_" + System.nanoTime()));
+            var confirmed = fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .stripePaymentIntentId("pi_in_confirmed_" + System.nanoTime())
+                    .build());
+            var funded = fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .status(FundingStatus.FUNDED)
+                    .stripePaymentIntentId("pi_in_funded_" + System.nanoTime())
+                    .build());
+            fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .status(FundingStatus.FAILED)
+                    .stripePaymentIntentId("pi_in_failed_" + System.nanoTime())
+                    .build());
 
             // when
             var found = fundingOrderRepository.findByWalletIdAndStatusIn(
@@ -186,8 +186,9 @@ class FundingOrderRepositoryIntegrationTest {
             // given
             var walletId = createWalletAndReturnId();
             var otherWalletId = createWalletAndReturnId();
-            fundingOrderRepository.save(
-                    buildOrder(otherWalletId, FundingStatus.PAYMENT_CONFIRMED, "pi_other_" + System.nanoTime()));
+            fundingOrderRepository.save(fundingOrderBuilder(otherWalletId)
+                    .stripePaymentIntentId("pi_other_" + System.nanoTime())
+                    .build());
 
             // when
             var found = fundingOrderRepository.findByWalletIdAndStatusIn(
@@ -205,11 +206,13 @@ class FundingOrderRepositoryIntegrationTest {
         void shouldRejectSecondActiveOrderForSameWallet() {
             // given
             var walletId = createWalletAndReturnId();
-            fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.PAYMENT_CONFIRMED, "pi_active_a_" + System.nanoTime()));
+            fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .stripePaymentIntentId("pi_active_a_" + System.nanoTime())
+                    .build());
             entityManager.flush();
-            var duplicate = buildOrder(
-                    walletId, FundingStatus.PAYMENT_CONFIRMED, "pi_active_b_" + System.nanoTime());
+            var duplicate = fundingOrderBuilder(walletId)
+                    .stripePaymentIntentId("pi_active_b_" + System.nanoTime())
+                    .build();
 
             // when / then
             assertThatThrownBy(() -> {
@@ -222,12 +225,18 @@ class FundingOrderRepositoryIntegrationTest {
         void shouldAllowMultipleNonActiveOrdersForSameWallet() {
             // given
             var walletId = createWalletAndReturnId();
-            fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.FUNDED, "pi_inactive_a_" + System.nanoTime()));
-            fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.FAILED, "pi_inactive_b_" + System.nanoTime()));
-            fundingOrderRepository.save(
-                    buildOrder(walletId, FundingStatus.REFUNDED, "pi_inactive_c_" + System.nanoTime()));
+            fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .status(FundingStatus.FUNDED)
+                    .stripePaymentIntentId("pi_inactive_a_" + System.nanoTime())
+                    .build());
+            fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .status(FundingStatus.FAILED)
+                    .stripePaymentIntentId("pi_inactive_b_" + System.nanoTime())
+                    .build());
+            fundingOrderRepository.save(fundingOrderBuilder(walletId)
+                    .status(FundingStatus.REFUNDED)
+                    .stripePaymentIntentId("pi_inactive_c_" + System.nanoTime())
+                    .build());
 
             // when
             entityManager.flush();
