@@ -11,5 +11,9 @@ public record FundingInitiationResult(
 ) {
     public FundingInitiationResult {
         requireNonNull(order, "order cannot be null");
+        requireNonNull(clientSecret, "clientSecret cannot be null");
+        if (clientSecret.isBlank()) {
+            throw new IllegalArgumentException("clientSecret cannot be blank");
+        }
     }
 }

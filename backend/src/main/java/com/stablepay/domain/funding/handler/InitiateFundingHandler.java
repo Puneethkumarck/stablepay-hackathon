@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
@@ -24,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(noRollbackFor = FundingFailedException.class)
+@Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = FundingFailedException.class)
 public class InitiateFundingHandler {
 
     private final WalletRepository walletRepository;
@@ -70,8 +71,8 @@ public class InitiateFundingHandler {
         } catch (FundingFailedException e) {
             var failed = saved.toBuilder().status(FundingStatus.FAILED).build();
             fundingOrderRepository.save(failed);
-            log.warn("Funding failed fundingId={} walletId={}: {}",
-                    saved.fundingId(), walletId, e.getMessage());
+            log.error("Funding failed fundingId={} walletId={}",
+                    saved.fundingId(), walletId, e);
             throw e;
         }
     }

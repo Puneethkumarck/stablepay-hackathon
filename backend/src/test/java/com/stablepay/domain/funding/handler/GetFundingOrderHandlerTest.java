@@ -37,10 +37,9 @@ class GetFundingOrderHandlerTest {
         var result = getFundingOrderHandler.handle(SOME_FUNDING_ID);
 
         // then
-        var expected = fundingOrderBuilder().build();
         assertThat(result)
                 .usingRecursiveComparison()
-                .isEqualTo(expected);
+                .isEqualTo(order);
     }
 
     @Test
