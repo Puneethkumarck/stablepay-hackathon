@@ -9,14 +9,24 @@ import org.junit.jupiter.api.Test;
 class FundingOrderTest {
 
     @Test
-    void shouldBuildFundingOrderWithAllFields() {
+    void shouldAcceptNullForOptionalFields() {
         // given
-        var expected = fundingOrderBuilder().build();
+        var builder = fundingOrderBuilder()
+                .id(null)
+                .stripePaymentIntentId(null)
+                .createdAt(null)
+                .updatedAt(null);
 
         // when
-        var actual = expected.toBuilder().build();
+        var actual = builder.build();
 
         // then
+        var expected = fundingOrderBuilder()
+                .id(null)
+                .stripePaymentIntentId(null)
+                .createdAt(null)
+                .updatedAt(null)
+                .build();
         assertThat(actual).usingRecursiveComparison().isEqualTo(expected);
     }
 
