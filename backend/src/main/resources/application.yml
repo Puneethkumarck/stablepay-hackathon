@@ -51,6 +51,13 @@ stablepay:
     escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:7C2zsbhgDnxQuC1Nd2rzXQfsfnKazQWFpoUJNqS8zWij}
     usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
+  stripe:
+    api-key: ${STRIPE_API_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    test-mode: ${STRIPE_TEST_MODE:true}
+    auto-confirm: ${STRIPE_AUTO_CONFIRM:true}
+    test-payment-method: ${STRIPE_TEST_PAYMENT_METHOD:pm_card_visa}
+    currency: ${STRIPE_CURRENCY:usd}
   transak:
     enabled: ${TRANSAK_ENABLED:false}
     api-key: ${TRANSAK_API_KEY:}
