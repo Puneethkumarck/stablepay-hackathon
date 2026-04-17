@@ -1326,22 +1326,6 @@ stablepay-hackathon/
 
 ---
 
-## Documentation
-
-| Document | Description |
-|---|---|
-| [CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Java/Spring Boot conventions |
-| [TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md) | BDDMockito, recursive comparison, no generic matchers |
-| [SOLANA_CODING_STANDARDS.md](docs/SOLANA_CODING_STANDARDS.md) | Anchor program standards |
-| [ADR.md](docs/ADR.md) | Architecture decision records |
-| [E2E_FLOW.md](docs/E2E_FLOW.md) | End-to-end user journey |
-| [ROADMAP.md](docs/ROADMAP.md) | Implementation timeline |
-| [BRAINSTORM.md](docs/BRAINSTORM.md) | Market research and strategy |
-| [COMPETITIVE_ANALYSIS.md](docs/COMPETITIVE_ANALYSIS.md) | Market positioning analysis |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution workflow |
-
----
-
 ## Contributing
 
 All work goes through feature branches and pull requests. Never commit directly to `main`.
