@@ -6,7 +6,6 @@ import static com.stablepay.testutil.FundingOrderFixtures.SOME_FUNDING_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_STRIPE_PAYMENT_INTENT_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_WALLET_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.fundingOrderBuilder;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -209,17 +208,13 @@ class FundingControllerTest {
         given(getFundingOrderHandler.handle(SOME_FUNDING_ID)).willReturn(order);
         given(fundingApiMapper.toResponse(order)).willReturn(response);
 
-        // when
-        var result = mockMvc.perform(get("/api/funding-orders/{fundingId}", SOME_FUNDING_ID))
+        // when / then
+        mockMvc.perform(get("/api/funding-orders/{fundingId}", SOME_FUNDING_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fundingId").value(SOME_FUNDING_ID.toString()))
                 .andExpect(jsonPath("$.status").value("FUNDED"))
                 .andExpect(jsonPath("$.stripePaymentIntentId").value(SOME_STRIPE_PAYMENT_INTENT_ID))
-                .andReturn();
-
-        // then
-        assertThat(result.getResponse().getContentAsString())
-                .doesNotContain("stripeClientSecret");
+                .andExpect(jsonPath("$.stripeClientSecret").doesNotExist());
     }
 
     @Test

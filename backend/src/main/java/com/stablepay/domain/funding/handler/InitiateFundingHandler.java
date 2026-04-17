@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,8 +32,9 @@ public class InitiateFundingHandler {
     private final FundingOrderRepository fundingOrderRepository;
 
     public FundingInitiationResult handle(Long walletId, BigDecimal amount) {
-        walletRepository.findById(walletId)
-                .orElseThrow(() -> WalletNotFoundException.byId(walletId));
+        if (!walletRepository.existsById(walletId)) {
+            throw WalletNotFoundException.byId(walletId);
+        }
 
         var activeOrders = fundingOrderRepository.findByWalletIdAndStatusIn(
                 walletId, List.of(FundingStatus.PAYMENT_CONFIRMED));
@@ -49,13 +49,7 @@ public class InitiateFundingHandler {
                 .status(FundingStatus.PAYMENT_CONFIRMED)
                 .build();
 
-        FundingOrder saved;
-        try {
-            saved = fundingOrderRepository.save(pending);
-        } catch (DataIntegrityViolationException e) {
-            log.info("Funding conflict detected for walletId={} — another order is in progress", walletId);
-            throw FundingAlreadyInProgressException.forWallet(walletId);
-        }
+        var saved = fundingOrderRepository.save(pending);
 
         try {
             var paymentResult = paymentGateway.initiatePayment(PaymentRequest.builder()

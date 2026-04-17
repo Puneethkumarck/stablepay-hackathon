@@ -9,4 +9,5 @@ public interface WalletRepository {
     Optional<Wallet> findById(Long id);
     Optional<Wallet> findByUserId(String userId);
     Optional<Wallet> findBySolanaAddress(String solanaAddress);
+    boolean existsById(Long id);
 }

@@ -4,7 +4,6 @@ import static com.stablepay.testutil.FundingOrderFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_STRIPE_PAYMENT_INTENT_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_WALLET_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.fundingOrderBuilder;
-import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -14,7 +13,6 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.times;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,10 +21,10 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.exception.FundingFailedException;
+import com.stablepay.domain.funding.model.FundingInitiationResult;
 import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
 import com.stablepay.domain.funding.model.PaymentRequest;
@@ -62,8 +60,7 @@ class InitiateFundingHandlerTest {
     @Test
     void shouldPersistOrderCallStripeAndReturnClientSecret() {
         // given
-        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(true);
         given(fundingOrderRepository.findByWalletIdAndStatusIn(
                 SOME_WALLET_ID, List.of(FundingStatus.PAYMENT_CONFIRMED))).willReturn(List.of());
 
@@ -106,17 +103,21 @@ class InitiateFundingHandlerTest {
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .build();
 
+        var expectedResult = FundingInitiationResult.builder()
+                .order(expectedSecondSave)
+                .clientSecret(SOME_CLIENT_SECRET)
+                .build();
+
         assertThat(firstSave).usingRecursiveComparison().isEqualTo(expectedFirstSave);
         assertThat(secondSave).usingRecursiveComparison().isEqualTo(expectedSecondSave);
         assertThat(paymentRequest).usingRecursiveComparison().isEqualTo(expectedPaymentRequest);
-        assertThat(result.order()).usingRecursiveComparison().isEqualTo(expectedSecondSave);
-        assertThat(result.clientSecret()).isEqualTo(SOME_CLIENT_SECRET);
+        assertThat(result).usingRecursiveComparison().isEqualTo(expectedResult);
     }
 
     @Test
     void shouldThrowWhenWalletNotFound() {
         // given
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.empty());
+        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(false);
 
         // when / then
         assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC))
@@ -130,8 +131,7 @@ class InitiateFundingHandlerTest {
     @Test
     void shouldThrowWhenActiveOrderAlreadyExists() {
         // given
-        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(true);
 
         var existing = fundingOrderBuilder().build();
         given(fundingOrderRepository.findByWalletIdAndStatusIn(
@@ -148,14 +148,13 @@ class InitiateFundingHandlerTest {
     }
 
     @Test
-    void shouldTranslateDataIntegrityViolationToFundingAlreadyInProgress() {
+    void shouldPropagateFundingAlreadyInProgressFromAdapter() {
         // given
-        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(true);
         given(fundingOrderRepository.findByWalletIdAndStatusIn(
                 SOME_WALLET_ID, List.of(FundingStatus.PAYMENT_CONFIRMED))).willReturn(List.of());
 
-        willThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint"))
+        willThrow(FundingAlreadyInProgressException.forWallet(SOME_WALLET_ID))
                 .given(fundingOrderRepository).save(argThat(o -> o != null && o.walletId().equals(SOME_WALLET_ID)));
 
         // when / then
@@ -169,8 +168,7 @@ class InitiateFundingHandlerTest {
     @Test
     void shouldTransitionOrderToFailedWhenStripeFails() {
         // given
-        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(true);
         given(fundingOrderRepository.findByWalletIdAndStatusIn(
                 SOME_WALLET_ID, List.of(FundingStatus.PAYMENT_CONFIRMED))).willReturn(List.of());
 

@@ -43,4 +43,9 @@ class WalletRepositoryAdapter implements WalletRepository {
     public Optional<Wallet> findBySolanaAddress(String solanaAddress) {
         return jpaRepository.findBySolanaAddress(solanaAddress).map(mapper::toDomain);
     }
+
+    @Override
+    public boolean existsById(Long id) {
+        return jpaRepository.existsById(id);
+    }
 }
