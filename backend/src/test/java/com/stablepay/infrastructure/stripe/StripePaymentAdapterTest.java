@@ -207,6 +207,66 @@ class StripePaymentAdapterTest {
     }
 
     @Test
+    void shouldUseCurrencyFromRequestWhenProvided() throws StripeException {
+        // given
+        var request = paymentRequest().toBuilder().currency("eur").build();
+        given(stripeClient.paymentIntents()).willReturn(paymentIntentService);
+        given(paymentIntentService.create(paymentIntentParamsCaptor.capture())).willReturn(paymentIntent);
+        stubPaymentIntentGetters();
+
+        // when
+        adapter.initiatePayment(request);
+
+        // then
+        var expected = PaymentIntentCreateParams.builder()
+                .setAmount(2500L)
+                .setCurrency("eur")
+                .putMetadata("funding_id", SOME_FUNDING_ID.toString())
+                .putMetadata("wallet_id", SOME_WALLET_ID.toString())
+                .setConfirm(true)
+                .setPaymentMethod(SOME_STRIPE_TEST_PAYMENT_METHOD)
+                .build();
+        assertThat(paymentIntentParamsCaptor.getValue())
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+    }
+
+    @Test
+    void shouldFallBackToConfigCurrencyWhenRequestCurrencyNull() throws StripeException {
+        // given
+        var request = PaymentRequest.builder()
+                .fundingId(SOME_FUNDING_ID)
+                .walletId(SOME_WALLET_ID)
+                .amountUsdc(SOME_AMOUNT_USDC)
+                .build();
+        given(stripeClient.paymentIntents()).willReturn(paymentIntentService);
+        given(paymentIntentService.create(paymentIntentParamsCaptor.capture())).willReturn(paymentIntent);
+        stubPaymentIntentGetters();
+
+        // when
+        adapter.initiatePayment(request);
+
+        // then
+        assertThat(paymentIntentParamsCaptor.getValue().getCurrency()).isEqualTo(SOME_STRIPE_CURRENCY);
+    }
+
+    @Test
+    void shouldRejectNullAmountOnRefund() {
+        // when / then
+        assertThatThrownBy(() -> adapter.refund(SOME_STRIPE_PAYMENT_INTENT_ID, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("amount");
+    }
+
+    @Test
+    void shouldRejectNullPaymentIntentIdOnRefund() {
+        // when / then
+        assertThatThrownBy(() -> adapter.refund(null, SOME_AMOUNT_USDC))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("paymentIntentId");
+    }
+
+    @Test
     void shouldRefundViaStripe() throws StripeException {
         // given
         given(stripeClient.refunds()).willReturn(refundService);

@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.stripe;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 import org.springframework.stereotype.Component;
 
@@ -46,6 +47,8 @@ public class StripePaymentAdapter implements PaymentGateway {
 
     @Override
     public void refund(String paymentIntentId, BigDecimal amount) {
+        Objects.requireNonNull(paymentIntentId, "paymentIntentId");
+        Objects.requireNonNull(amount, "amount");
         log.info("Initiating Stripe refund paymentIntentId={}", paymentIntentId);
         try {
             var params = buildRefundParams(paymentIntentId, amount);
@@ -60,9 +63,10 @@ public class StripePaymentAdapter implements PaymentGateway {
 
     private PaymentIntentCreateParams buildPaymentIntentParams(PaymentRequest request) {
         var cents = request.amountUsdc().movePointRight(2).longValueExact();
+        var currency = request.currency() != null ? request.currency() : stripeProperties.currency();
         var builder = PaymentIntentCreateParams.builder()
                 .setAmount(cents)
-                .setCurrency(stripeProperties.currency())
+                .setCurrency(currency)
                 .putMetadata("funding_id", request.fundingId().toString())
                 .putMetadata("wallet_id", request.walletId().toString());
         if (stripeProperties.testMode() && stripeProperties.autoConfirm()) {
