@@ -4,3 +4,7 @@ stablepay:
     workflow-run-timeout: PT2H
     claim-expiry-timeout: PT48H
     claim-base-url: https://claim.stablepay.app/
+  stripe:
+    api-key: sk_test_stablepay
+    test-mode: true
+    auto-confirm: true

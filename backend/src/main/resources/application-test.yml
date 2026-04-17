@@ -15,3 +15,7 @@ spring:
 stablepay:
   mpc:
     enabled: false
+  stripe:
+    api-key: sk_test_stablepay
+    test-mode: true
+    auto-confirm: true
