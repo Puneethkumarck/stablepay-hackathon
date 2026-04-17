@@ -5,8 +5,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
+import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
 import com.stablepay.domain.funding.port.FundingOrderRepository;
@@ -16,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 class FundingOrderRepositoryAdapter implements FundingOrderRepository {
+
+    private static final String ACTIVE_FUNDING_INDEX = "idx_funding_orders_one_active_per_wallet";
 
     private final FundingOrderJpaRepository jpaRepository;
     private final FundingOrderEntityMapper mapper;
@@ -28,8 +33,15 @@ class FundingOrderRepositoryAdapter implements FundingOrderRepository {
             entity.setCreatedAt(now);
         }
         entity.setUpdatedAt(now);
-        var saved = jpaRepository.save(entity);
-        return mapper.toDomain(saved);
+        try {
+            var saved = jpaRepository.saveAndFlush(entity);
+            return mapper.toDomain(saved);
+        } catch (DataIntegrityViolationException e) {
+            if (isActiveFundingConflict(e)) {
+                throw FundingAlreadyInProgressException.forWallet(order.walletId());
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -47,5 +59,20 @@ class FundingOrderRepositoryAdapter implements FundingOrderRepository {
         return jpaRepository.findByWalletIdAndStatusIn(walletId, statuses).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    private boolean isActiveFundingConflict(Throwable t) {
+        while (t != null) {
+            if (t instanceof ConstraintViolationException cve
+                    && ACTIVE_FUNDING_INDEX.equals(cve.getConstraintName())) {
+                return true;
+            }
+            var msg = t.getMessage();
+            if (msg != null && msg.contains(ACTIVE_FUNDING_INDEX)) {
+                return true;
+            }
+            t = t.getCause();
+        }
+        return false;
     }
 }

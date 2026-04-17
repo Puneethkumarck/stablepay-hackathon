@@ -13,9 +13,9 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
 import com.stablepay.domain.funding.port.FundingOrderRepository;
@@ -209,16 +209,15 @@ class FundingOrderRepositoryIntegrationTest {
             fundingOrderRepository.save(fundingOrderBuilder(walletId)
                     .stripePaymentIntentId("pi_active_a_" + System.nanoTime())
                     .build());
-            entityManager.flush();
             var duplicate = fundingOrderBuilder(walletId)
                     .stripePaymentIntentId("pi_active_b_" + System.nanoTime())
                     .build();
 
             // when / then
-            assertThatThrownBy(() -> {
-                fundingOrderRepository.save(duplicate);
-                entityManager.flush();
-            }).isInstanceOf(DataIntegrityViolationException.class);
+            assertThatThrownBy(() -> fundingOrderRepository.save(duplicate))
+                    .isInstanceOf(FundingAlreadyInProgressException.class)
+                    .hasMessageContaining("SP-0022")
+                    .hasMessageContaining(walletId.toString());
         }
 
         @Test

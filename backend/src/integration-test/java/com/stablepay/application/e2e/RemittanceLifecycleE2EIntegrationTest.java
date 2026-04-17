@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.wallet.model.GeneratedKey;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
+import com.stablepay.domain.wallet.port.WalletRepository;
 import com.stablepay.test.PgTest;
 
 import lombok.SneakyThrows;
@@ -42,6 +44,9 @@ class RemittanceLifecycleE2EIntegrationTest {
 
     @Autowired
     private UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
+
+    @Autowired
+    private WalletRepository walletRepository;
 
     @BeforeEach
     void setUp() {
@@ -113,20 +118,13 @@ class RemittanceLifecycleE2EIntegrationTest {
         return walletId.longValue();
     }
 
-    @SneakyThrows
     private void fundWallet(Long walletId) {
-        // given
-        var body = """
-                { "amount": 100.00 }
-                """;
-
-        // when / then
-        mockMvc.perform(post("/api/wallets/{id}/fund", walletId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.availableBalance").value(100.00))
-                .andExpect(jsonPath("$.totalBalance").value(100.00));
+        var wallet = walletRepository.findBySolanaAddress(E2E_SOLANA_ADDRESS).orElseThrow();
+        assertThat(wallet.id()).isEqualTo(walletId);
+        walletRepository.save(wallet.toBuilder()
+                .availableBalance(BigDecimal.valueOf(100))
+                .totalBalance(BigDecimal.valueOf(100))
+                .build());
     }
 
     @SneakyThrows

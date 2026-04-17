@@ -15,6 +15,9 @@ import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
+import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
+import com.stablepay.domain.funding.exception.FundingFailedException;
+import com.stablepay.domain.funding.exception.FundingOrderNotFoundException;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
@@ -120,6 +123,30 @@ public class GlobalExceptionHandler {
             RemittanceNotFoundException ex, HttpServletRequest request) {
         log.warn("Remittance not found: {}", ex.getMessage());
         return buildResponse("SP-0010", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(FundingOrderNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleFundingOrderNotFound(
+            FundingOrderNotFoundException ex, HttpServletRequest request) {
+        log.warn("Funding order not found: {}", ex.getMessage());
+        return buildResponse("SP-0020", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(FundingFailedException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ErrorResponse handleFundingFailed(
+            FundingFailedException ex, HttpServletRequest request) {
+        log.error("Funding failed: {}", ex.getMessage());
+        return buildResponse("SP-0021", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(FundingAlreadyInProgressException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleFundingAlreadyInProgress(
+            FundingAlreadyInProgressException ex, HttpServletRequest request) {
+        log.warn("Funding already in progress: {}", ex.getMessage());
+        return buildResponse("SP-0022", ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
