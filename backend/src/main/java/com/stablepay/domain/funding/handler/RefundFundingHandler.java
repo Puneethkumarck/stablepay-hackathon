@@ -47,7 +47,7 @@ public class RefundFundingHandler {
             throw RefundNotAllowedException.forStatus(order.status());
         }
 
-        var wallet = walletRepository.findById(order.walletId())
+        var wallet = walletRepository.findByIdForUpdate(order.walletId())
                 .orElseThrow(() -> WalletNotFoundException.byId(order.walletId()));
 
         var amount = order.amountUsdc();

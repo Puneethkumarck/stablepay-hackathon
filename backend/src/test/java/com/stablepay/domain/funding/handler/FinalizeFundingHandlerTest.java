@@ -60,7 +60,7 @@ class FinalizeFundingHandlerTest {
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .status(FundingStatus.PAYMENT_CONFIRMED)
                 .build();
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByIdForUpdate(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
 
         // when
@@ -92,14 +92,14 @@ class FinalizeFundingHandlerTest {
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .status(FundingStatus.FUNDED)
                 .build();
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByIdForUpdate(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
 
         // when
         handler.handle(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC);
 
         // then
-        then(walletRepository).should().findById(SOME_WALLET_ID);
+        then(walletRepository).should().findByIdForUpdate(SOME_WALLET_ID);
         then(walletRepository).shouldHaveNoMoreInteractions();
         then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
         then(fundingOrderRepository).shouldHaveNoMoreInteractions();
@@ -125,7 +125,7 @@ class FinalizeFundingHandlerTest {
                 .build();
         var fundedOrder = pendingOrder.toBuilder().status(FundingStatus.FUNDED).build();
 
-        given(walletRepository.findById(SOME_WALLET_ID))
+        given(walletRepository.findByIdForUpdate(SOME_WALLET_ID))
                 .willReturn(Optional.of(initialWallet))
                 .willReturn(Optional.of(creditedWallet));
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID))
@@ -151,7 +151,7 @@ class FinalizeFundingHandlerTest {
     @Test
     void shouldThrowWhenWalletNotFound() {
         // given
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.empty());
+        given(walletRepository.findByIdForUpdate(SOME_WALLET_ID)).willReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> handler.handle(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC))
@@ -165,7 +165,7 @@ class FinalizeFundingHandlerTest {
     void shouldThrowWhenFundingOrderNotFound() {
         // given
         var wallet = walletBuilder().id(SOME_WALLET_ID).build();
-        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByIdForUpdate(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.empty());
 
         // when / then
@@ -173,7 +173,7 @@ class FinalizeFundingHandlerTest {
                 .isInstanceOf(FundingOrderNotFoundException.class)
                 .hasMessageContaining("SP-0020");
 
-        then(walletRepository).should().findById(SOME_WALLET_ID);
+        then(walletRepository).should().findByIdForUpdate(SOME_WALLET_ID);
         then(walletRepository).shouldHaveNoMoreInteractions();
     }
 }

@@ -31,7 +31,7 @@ public class FinalizeFundingHandler {
         requireNonNull(walletId, "walletId cannot be null");
         requireNonNull(amountUsdc, "amountUsdc cannot be null");
 
-        var wallet = walletRepository.findById(walletId)
+        var wallet = walletRepository.findByIdForUpdate(walletId)
                 .orElseThrow(() -> WalletNotFoundException.byId(walletId));
         var order = fundingOrderRepository.findByFundingId(fundingId)
                 .orElseThrow(() -> FundingOrderNotFoundException.byFundingId(fundingId));
