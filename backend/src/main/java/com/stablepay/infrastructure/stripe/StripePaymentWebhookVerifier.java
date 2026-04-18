@@ -4,13 +4,15 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablepay.domain.funding.exception.InvalidWebhookSignatureException;
 import com.stablepay.domain.funding.model.PaymentWebhookEvent;
 import com.stablepay.domain.funding.model.WebhookEventType;
 import com.stablepay.domain.funding.port.PaymentWebhookVerifier;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
-import com.stripe.model.PaymentIntent;
 import com.stripe.net.Webhook;
 
 import lombok.RequiredArgsConstructor;
@@ -21,15 +23,16 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class StripePaymentWebhookVerifier implements PaymentWebhookVerifier {
 
-    static final String EVENT_PAYMENT_SUCCEEDED = "payment_intent.succeeded";
-    static final String EVENT_PAYMENT_FAILED = "payment_intent.payment_failed";
+    private static final String EVENT_PAYMENT_SUCCEEDED = "payment_intent.succeeded";
+    private static final String EVENT_PAYMENT_FAILED = "payment_intent.payment_failed";
     private static final long REPLAY_TOLERANCE_SECONDS = 300L;
+    private static final String FUNDING_ID_METADATA_KEY = "funding_id";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final StripeProperties stripeProperties;
 
     @Override
-    public PaymentWebhookEvent verify(String payload, String signature)
-            throws InvalidWebhookSignatureException {
+    public PaymentWebhookEvent verify(String payload, String signature) {
         Event event;
         try {
             event = Webhook.constructEvent(
@@ -40,20 +43,12 @@ public class StripePaymentWebhookVerifier implements PaymentWebhookVerifier {
 
         var type = mapType(event.getType());
         if (type == WebhookEventType.UNKNOWN) {
-            return PaymentWebhookEvent.builder()
-                    .eventId(event.getId())
-                    .type(WebhookEventType.UNKNOWN)
-                    .fundingId(null)
-                    .build();
+            return unknownEvent(event.getId());
         }
 
-        var fundingId = extractFundingId(event);
+        var fundingId = extractFundingIdFromPayload(payload, event);
         if (fundingId == null) {
-            return PaymentWebhookEvent.builder()
-                    .eventId(event.getId())
-                    .type(WebhookEventType.UNKNOWN)
-                    .fundingId(null)
-                    .build();
+            return unknownEvent(event.getId());
         }
         return PaymentWebhookEvent.builder()
                 .eventId(event.getId())
@@ -73,22 +68,23 @@ public class StripePaymentWebhookVerifier implements PaymentWebhookVerifier {
         };
     }
 
-    private UUID extractFundingId(Event event) {
-        var maybeObject = event.getDataObjectDeserializer().getObject();
-        if (maybeObject.isEmpty()) {
-            log.warn("Stripe event eventId={} type={} has no deserializable data object",
-                    event.getId(), event.getType());
+    // Parses funding_id from the raw JSON payload instead of the Stripe SDK's typed
+    // PaymentIntent. event.getDataObjectDeserializer().getObject() returns Optional.empty()
+    // when the webhook's api_version differs from the SDK's pinned version — which would
+    // silently drop legitimate events. The metadata JSON path is stable across Stripe API
+    // versions, so parsing it directly is safe.
+    private UUID extractFundingIdFromPayload(String payload, Event event) {
+        JsonNode root;
+        try {
+            root = OBJECT_MAPPER.readTree(payload);
+        } catch (JsonProcessingException e) {
+            log.warn("Unable to parse Stripe webhook payload eventId={}: {}",
+                    event.getId(), e.getMessage());
             return null;
         }
-        var stripeObject = maybeObject.get();
-        if (!(stripeObject instanceof PaymentIntent paymentIntent)) {
-            log.warn("Stripe event eventId={} type={} data is not a PaymentIntent (actual={})",
-                    event.getId(), event.getType(), stripeObject.getClass().getName());
-            return null;
-        }
-        var metadata = paymentIntent.getMetadata();
-        var raw = metadata == null ? null : metadata.get("funding_id");
-        if (raw == null) {
+        var raw = root.path("data").path("object").path("metadata")
+                .path(FUNDING_ID_METADATA_KEY).asText(null);
+        if (raw == null || raw.isBlank()) {
             log.warn("Stripe event eventId={} type={} missing funding_id metadata",
                     event.getId(), event.getType());
             return null;
@@ -100,5 +96,13 @@ public class StripePaymentWebhookVerifier implements PaymentWebhookVerifier {
                     event.getId(), raw);
             return null;
         }
+    }
+
+    private PaymentWebhookEvent unknownEvent(String eventId) {
+        return PaymentWebhookEvent.builder()
+                .eventId(eventId)
+                .type(WebhookEventType.UNKNOWN)
+                .fundingId(null)
+                .build();
     }
 }

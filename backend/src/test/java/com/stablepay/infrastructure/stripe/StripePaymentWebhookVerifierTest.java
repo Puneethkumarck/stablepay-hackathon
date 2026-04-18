@@ -22,6 +22,8 @@ import lombok.SneakyThrows;
 
 class StripePaymentWebhookVerifierTest {
 
+    private static final String LEGACY_API_VERSION = "2020-08-27";
+
     private StripeProperties stripeProperties;
     private StripePaymentWebhookVerifier verifier;
 
@@ -41,7 +43,8 @@ class StripePaymentWebhookVerifierTest {
     @Test
     void shouldParsePaymentSucceededEvent() {
         // given
-        var payload = buildEventPayload("payment_intent.succeeded", SOME_FUNDING_ID.toString());
+        var payload = buildEventPayload(
+                "payment_intent.succeeded", com.stripe.Stripe.API_VERSION, SOME_FUNDING_ID.toString());
         var signature = signPayload(payload);
 
         // when
@@ -59,7 +62,10 @@ class StripePaymentWebhookVerifierTest {
     @Test
     void shouldParsePaymentFailedEvent() {
         // given
-        var payload = buildEventPayload("payment_intent.payment_failed", SOME_FUNDING_ID.toString());
+        var payload = buildEventPayload(
+                "payment_intent.payment_failed",
+                com.stripe.Stripe.API_VERSION,
+                SOME_FUNDING_ID.toString());
         var signature = signPayload(payload);
 
         // when
@@ -69,6 +75,25 @@ class StripePaymentWebhookVerifierTest {
         var expected = PaymentWebhookEvent.builder()
                 .eventId(SOME_STRIPE_WEBHOOK_EVENT_ID)
                 .type(WebhookEventType.PAYMENT_FAILED)
+                .fundingId(SOME_FUNDING_ID)
+                .build();
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+    }
+
+    @Test
+    void shouldExtractFundingIdWhenApiVersionDiffersFromSdk() {
+        // given
+        var payload = buildEventPayload(
+                "payment_intent.succeeded", LEGACY_API_VERSION, SOME_FUNDING_ID.toString());
+        var signature = signPayload(payload);
+
+        // when
+        var result = verifier.verify(payload, signature);
+
+        // then
+        var expected = PaymentWebhookEvent.builder()
+                .eventId(SOME_STRIPE_WEBHOOK_EVENT_ID)
+                .type(WebhookEventType.PAYMENT_SUCCEEDED)
                 .fundingId(SOME_FUNDING_ID)
                 .build();
         assertThat(result).usingRecursiveComparison().isEqualTo(expected);
@@ -95,7 +120,8 @@ class StripePaymentWebhookVerifierTest {
     @Test
     void shouldThrowOnInvalidSignature() {
         // given
-        var payload = buildEventPayload("payment_intent.succeeded", SOME_FUNDING_ID.toString());
+        var payload = buildEventPayload(
+                "payment_intent.succeeded", com.stripe.Stripe.API_VERSION, SOME_FUNDING_ID.toString());
         var bogusSignature = "t=1700000000,v1=deadbeef";
 
         // when / then
@@ -107,7 +133,27 @@ class StripePaymentWebhookVerifierTest {
     @Test
     void shouldReturnUnknownWhenFundingIdMalformed() {
         // given
-        var payload = buildEventPayload("payment_intent.succeeded", "not-a-uuid");
+        var payload = buildEventPayload(
+                "payment_intent.succeeded", com.stripe.Stripe.API_VERSION, "not-a-uuid");
+        var signature = signPayload(payload);
+
+        // when
+        var result = verifier.verify(payload, signature);
+
+        // then
+        var expected = PaymentWebhookEvent.builder()
+                .eventId(SOME_STRIPE_WEBHOOK_EVENT_ID)
+                .type(WebhookEventType.UNKNOWN)
+                .fundingId(null)
+                .build();
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+    }
+
+    @Test
+    void shouldReturnUnknownWhenFundingIdMissingFromMetadata() {
+        // given
+        var payload = buildEventPayloadWithoutFundingId(
+                "payment_intent.succeeded", com.stripe.Stripe.API_VERSION);
         var signature = signPayload(payload);
 
         // when
@@ -130,8 +176,7 @@ class StripePaymentWebhookVerifierTest {
         return "t=" + timestamp + ",v1=" + v1;
     }
 
-    private String buildEventPayload(String eventType, String fundingIdMetadata) {
-        var apiVersion = resolveApiVersion();
+    private String buildEventPayload(String eventType, String apiVersion, String fundingIdMetadata) {
         return """
             {
               "id": "%s",
@@ -159,8 +204,32 @@ class StripePaymentWebhookVerifierTest {
                     fundingIdMetadata);
     }
 
+    private String buildEventPayloadWithoutFundingId(String eventType, String apiVersion) {
+        return """
+            {
+              "id": "%s",
+              "object": "event",
+              "api_version": "%s",
+              "type": "%s",
+              "data": {
+                "object": {
+                  "id": "%s",
+                  "object": "payment_intent",
+                  "amount": 2500,
+                  "currency": "usd",
+                  "status": "succeeded",
+                  "metadata": {}
+                }
+              }
+            }
+            """.formatted(
+                    SOME_STRIPE_WEBHOOK_EVENT_ID,
+                    apiVersion,
+                    eventType,
+                    SOME_STRIPE_PAYMENT_INTENT_ID);
+    }
+
     private String buildOtherEventPayload(String eventType) {
-        var apiVersion = resolveApiVersion();
         return """
             {
               "id": "%s",
@@ -174,12 +243,6 @@ class StripePaymentWebhookVerifierTest {
                 }
               }
             }
-            """.formatted(SOME_STRIPE_WEBHOOK_EVENT_ID, apiVersion, eventType);
-    }
-
-    private String resolveApiVersion() {
-        // com.stripe.Stripe.API_VERSION is the SDK's bundled API version. When the event's
-        // api_version matches, EventDataObjectDeserializer.getObject() returns a typed object.
-        return com.stripe.Stripe.API_VERSION;
+            """.formatted(SOME_STRIPE_WEBHOOK_EVENT_ID, com.stripe.Stripe.API_VERSION, eventType);
     }
 }

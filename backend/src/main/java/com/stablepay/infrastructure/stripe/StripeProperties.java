@@ -13,7 +13,7 @@ import lombok.Builder;
 @Builder(toBuilder = true)
 public record StripeProperties(
     @NotBlank @Pattern(regexp = "^sk_.+", message = "apiKey must start with sk_") String apiKey,
-    String webhookSecret,
+    @NotBlank String webhookSecret,
     boolean testMode,
     boolean autoConfirm,
     String testPaymentMethod,

@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.stablepay.domain.funding.exception.InvalidWebhookSignatureException;
 import com.stablepay.domain.funding.handler.CompleteFundingHandler;
 import com.stablepay.domain.funding.handler.FailFundingHandler;
+import com.stablepay.domain.funding.model.PaymentWebhookEvent;
 import com.stablepay.domain.funding.port.PaymentWebhookVerifier;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,17 +41,12 @@ public class StripeWebhookController {
     public ResponseEntity<Void> receive(
             @RequestBody String payload,
             @RequestHeader("Stripe-Signature") String signature) {
-        try {
-            var event = paymentWebhookVerifier.verify(payload, signature);
-            dispatch(event);
-        } catch (InvalidWebhookSignatureException e) {
-            log.warn("Rejecting Stripe webhook with invalid signature: {}", e.getMessage());
-            throw e;
-        }
+        var event = paymentWebhookVerifier.verify(payload, signature);
+        dispatch(event);
         return ResponseEntity.ok().build();
     }
 
-    private void dispatch(com.stablepay.domain.funding.model.PaymentWebhookEvent event) {
+    private void dispatch(PaymentWebhookEvent event) {
         try {
             switch (event.type()) {
                 case PAYMENT_SUCCEEDED -> completeFundingHandler.handle(event.fundingId());
