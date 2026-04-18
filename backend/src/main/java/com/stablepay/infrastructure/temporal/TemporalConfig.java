@@ -94,7 +94,6 @@ public class TemporalConfig {
         return worker;
     }
 
-    // Must be called exactly ONCE after ALL workers are registered.
     @Bean
     @Profile("!test")
     CommandLineRunner workerFactoryStarter(WorkerFactory workerFactory, List<Worker> workers) {

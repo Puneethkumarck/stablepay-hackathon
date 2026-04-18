@@ -62,7 +62,6 @@ public class TemporalTestConfig {
         return worker;
     }
 
-    // Starts the TestWorkflowEnvironment exactly once after ALL workers are registered.
     @Bean
     TemporalEnvironmentStarter temporalEnvironmentStarter(
             TestWorkflowEnvironment testEnv, List<Worker> workers) {

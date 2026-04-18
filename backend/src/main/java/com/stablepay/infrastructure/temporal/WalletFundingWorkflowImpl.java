@@ -50,9 +50,6 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
         log.info("Wallet funding workflow completed fundingId={}", request.fundingId());
     }
 
-    // Treasury depletion is a permanent business failure — don't retry.
-    // IllegalArgumentException signals a programming error upstream (non-positive
-    // amount) that will not change across retries.
     private static ActivityOptions treasuryCheckOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
@@ -65,11 +62,6 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
                 .build();
     }
 
-    // 10s initial interval gives Solana confirmation time to propagate so the
-    // pre-check on a retry reads the post-transfer balance rather than stale
-    // pre-transfer state. Combined with the pre-check short-circuit this
-    // narrows (but does not eliminate) the double-send window. Revisit after
-    // STA-84 adds signature-persisted idempotency.
     private static ActivityOptions solTopUpOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
@@ -89,11 +81,6 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
                 .build();
     }
 
-    // transferUsdc has no signature-persistence idempotency, so a timed-out
-    // activity that actually succeeded on-chain could be retried and produce a
-    // second USDC transfer. Until STA-84 adds signature persistence keyed by
-    // fundingId, cap this activity at a single attempt and let the workflow
-    // fail (operators re-drive).
     private static ActivityOptions transferOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(60))
