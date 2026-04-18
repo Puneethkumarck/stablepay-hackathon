@@ -1,4 +1,4 @@
-package com.stablepay.infrastructure.transak;
+package com.stablepay.infrastructure.disbursement;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;

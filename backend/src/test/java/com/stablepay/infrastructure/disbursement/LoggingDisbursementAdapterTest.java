@@ -1,4 +1,4 @@
-package com.stablepay.infrastructure.transak;
+package com.stablepay.infrastructure.disbursement;
 
 import static com.stablepay.testutil.WorkflowFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;

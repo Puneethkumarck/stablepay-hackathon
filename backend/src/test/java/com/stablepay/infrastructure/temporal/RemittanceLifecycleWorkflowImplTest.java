@@ -402,7 +402,7 @@ class RemittanceLifecycleWorkflowImplTest {
                 SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
-        willThrow(new RuntimeException("Transak API unavailable"))
+        willThrow(new RuntimeException("Disbursement provider unavailable"))
                 .given(activities).disburseInr(
                         SOME_UPI_ID,
                         SOME_AMOUNT_USDC,
