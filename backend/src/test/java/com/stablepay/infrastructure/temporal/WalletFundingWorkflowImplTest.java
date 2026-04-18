@@ -16,6 +16,7 @@ import static org.mockito.Mockito.never;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.BDDMockito;
 
 import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
 
@@ -71,12 +72,12 @@ class WalletFundingWorkflowImplTest {
         newWorkflow().execute(requestBuilder().build());
 
         // then
-        var inOrder = org.mockito.BDDMockito.inOrder(activities);
-        inOrder.verify(activities).checkTreasuryBalance(SOME_AMOUNT_USDC);
-        inOrder.verify(activities).ensureSolBalance(SOME_SENDER_ADDRESS);
-        inOrder.verify(activities).createAtaIfNeeded(SOME_SENDER_ADDRESS);
-        inOrder.verify(activities).transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC);
-        inOrder.verify(activities).finalizeFunding(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC);
+        var inOrder = BDDMockito.inOrder(activities);
+        then(activities).should(inOrder).checkTreasuryBalance(SOME_AMOUNT_USDC);
+        then(activities).should(inOrder).ensureSolBalance(SOME_SENDER_ADDRESS);
+        then(activities).should(inOrder).createAtaIfNeeded(SOME_SENDER_ADDRESS);
+        then(activities).should(inOrder).transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC);
+        then(activities).should(inOrder).finalizeFunding(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC);
     }
 
     @Test

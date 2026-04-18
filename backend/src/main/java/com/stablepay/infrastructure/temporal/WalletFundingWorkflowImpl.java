@@ -45,11 +45,18 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
         log.info("Wallet funding workflow completed fundingId={}", request.fundingId());
     }
 
+    // Treasury depletion is a permanent business failure — don't retry. Any
+    // other exception (RPC transient) must retry up to 3 times so a flaky
+    // Solana RPC call doesn't permanently fail an otherwise-fundable workflow.
     private static ActivityOptions treasuryCheckOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
                 .setRetryOptions(RetryOptions.newBuilder()
-                        .setMaximumAttempts(1)
+                        .setMaximumAttempts(3)
+                        .setInitialInterval(Duration.ofSeconds(1))
+                        .setBackoffCoefficient(2.0)
+                        .setDoNotRetry(
+                                "com.stablepay.domain.wallet.exception.TreasuryDepletedException")
                         .build())
                 .build();
     }
