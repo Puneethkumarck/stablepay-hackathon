@@ -18,6 +18,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.EnumSource.Mode;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -116,17 +119,18 @@ class RefundFundingHandlerTest {
         then(paymentGateway).shouldHaveNoInteractions();
     }
 
-    @Test
-    void shouldThrowWhenOrderStatusIsNotFunded() {
+    @ParameterizedTest
+    @EnumSource(value = FundingStatus.class, names = "FUNDED", mode = Mode.EXCLUDE)
+    void shouldThrowWhenOrderStatusIsNotFunded(FundingStatus nonFundedStatus) {
         // given
-        var order = fundingOrderBuilder().status(FundingStatus.PAYMENT_CONFIRMED).build();
+        var order = fundingOrderBuilder().status(nonFundedStatus).build();
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
 
         // when / then
         assertThatThrownBy(() -> refundFundingHandler.handle(SOME_FUNDING_ID))
                 .isInstanceOf(RefundNotAllowedException.class)
                 .hasMessageContaining("SP-0023")
-                .hasMessageContaining("PAYMENT_CONFIRMED");
+                .hasMessageContaining(nonFundedStatus.name());
 
         then(walletRepository).shouldHaveNoInteractions();
         then(treasuryService).shouldHaveNoInteractions();

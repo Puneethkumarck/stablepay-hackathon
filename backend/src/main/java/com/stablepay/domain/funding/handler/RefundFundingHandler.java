@@ -6,8 +6,10 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.funding.exception.FundingFailedException;
 import com.stablepay.domain.funding.exception.FundingOrderNotFoundException;
 import com.stablepay.domain.funding.exception.InsufficientBalanceForRefundException;
 import com.stablepay.domain.funding.exception.RefundFailedException;
@@ -27,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(noRollbackFor = RefundFailedException.class)
+@Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = RefundFailedException.class)
 public class RefundFundingHandler {
 
     private final FundingOrderRepository fundingOrderRepository;
@@ -56,7 +58,7 @@ public class RefundFundingHandler {
 
         try {
             paymentGateway.refund(order.stripePaymentIntentId(), amount);
-        } catch (RuntimeException e) {
+        } catch (FundingFailedException e) {
             var refundFailed = refundInitiated.toBuilder().status(FundingStatus.REFUND_FAILED).build();
             fundingOrderRepository.save(refundFailed);
             log.error(
