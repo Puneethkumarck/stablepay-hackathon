@@ -106,6 +106,9 @@ services:
       STABLEPAY_MPC_PEER_SIDECARS: 1=mpc-sidecar-1:50051:mpc-sidecar-0:7000
       STABLEPAY_ESCROW_PROGRAM_ID: 6G9X8RArxw6f6n41wRKZMsgzRtHuUgPSkYipyjQu8NXD
       CLAIM_AUTHORITY_PRIVATE_KEY: 2JxcWkDJuBPCexd2hyWpZ3HXMBQLDkWWGWuRzkHmDvqoBNBBqC9jsnr1d5bznamozwVrrj7A5hLomkHhZYaP6SbY
+      STRIPE_API_KEY: ${STRIPE_API_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      TREASURY_PRIVATE_KEY: ${TREASURY_PRIVATE_KEY}
     depends_on:
       postgres:
         condition: service_healthy

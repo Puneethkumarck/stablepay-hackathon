@@ -1,6 +1,8 @@
 package com.stablepay.application.config;
 
 import static com.stablepay.testutil.TestClockConfig.FIXED_INSTANT;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,6 +18,7 @@ import jakarta.validation.constraints.NotBlank;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
@@ -120,6 +123,24 @@ class GlobalExceptionHandlerTest {
 
         @PostMapping("/test/validation")
         public void validation(@Valid @RequestBody ValidationRequest request) {}
+
+        @GetMapping("/test/funding-active-index-violation")
+        public void fundingActiveIndexViolation() {
+            throw new DataIntegrityViolationException(
+                    "could not execute statement",
+                    new RuntimeException(
+                            "ERROR: duplicate key value violates unique constraint "
+                                    + "\"idx_funding_orders_one_active_per_wallet\""));
+        }
+
+        @GetMapping("/test/unrelated-data-integrity-violation")
+        public void unrelatedDataIntegrityViolation() {
+            throw new DataIntegrityViolationException(
+                    "could not execute statement",
+                    new RuntimeException(
+                            "ERROR: duplicate key value violates unique constraint "
+                                    + "\"some_other_unique_index\""));
+        }
 
         record ValidationRequest(@NotBlank String name) {}
     }
@@ -271,6 +292,32 @@ class GlobalExceptionHandlerTest {
                         "SP-0010: Remittance not found: 11111111-1111-1111-1111-111111111111"))
                 .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
                 .andExpect(jsonPath("$.path").value("/test/remittance-not-found"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn409WithFundingAlreadyInProgressWhenPartialUniqueIndexViolated() {
+        // given — stub throws DataIntegrityViolationException mentioning the funding_orders active index
+
+        // when / then
+        mockMvc.perform(get("/test/funding-active-index-violation"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("SP-0022"))
+                .andExpect(jsonPath("$.message").value(
+                        "Funding already in progress for this wallet"))
+                .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
+                .andExpect(jsonPath("$.path").value("/test/funding-active-index-violation"));
+    }
+
+    @Test
+    void shouldBubbleUpDataIntegrityViolationWhenConstraintIsUnrelated() {
+        // given — stub throws DataIntegrityViolationException for an unrelated constraint
+
+        // when / then
+        assertThatThrownBy(() -> mockMvc.perform(get("/test/unrelated-data-integrity-violation")))
+                .satisfies(thrown -> assertThat(thrown)
+                        .rootCause()
+                        .hasMessageContaining("some_other_unique_index"));
     }
 
     @Test

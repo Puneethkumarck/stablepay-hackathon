@@ -30,6 +30,11 @@
 			"key": "userId",
 			"value": "user-001",
 			"type": "string"
+		},
+		{
+			"key": "fundingId",
+			"value": "",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -73,8 +78,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/wallets",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "wallets"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"wallets"
+							]
 						},
 						"description": "Creates an MPC-backed Solana wallet for the given user.\n\n**Response:** 201 Created\n\n**Errors:**\n- 400 (SP-0003): Validation error\n- 409 (SP-0008): Wallet already exists for this user"
 					}
@@ -87,13 +97,17 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"if (pm.response.code === 200) {",
+									"pm.test('Funding order created', function () {",
+									"    pm.response.to.have.status(201);",
 									"    var json = pm.response.json();",
-									"    pm.test('Wallet funded successfully', function () {",
-									"        pm.expect(json.availableBalance).to.be.a('number');",
-									"        pm.expect(json.totalBalance).to.be.a('number');",
-									"    });",
-									"}"
+									"    pm.expect(json.fundingId).to.be.a('string');",
+									"    pm.expect(json.walletId).to.be.a('number');",
+									"    pm.expect(json.amountUsdc).to.be.a('number');",
+									"    pm.expect(json.status).to.equal('PAYMENT_CONFIRMED');",
+									"    pm.expect(json.stripePaymentIntentId).to.be.a('string');",
+									"    pm.expect(json.stripeClientSecret).to.be.a('string');",
+									"    pm.collectionVariables.set('fundingId', json.fundingId);",
+									"});"
 								]
 							}
 						}
@@ -112,10 +126,94 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/wallets/{{walletId}}/fund",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "wallets", "{{walletId}}", "fund"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"wallets",
+								"{{walletId}}",
+								"fund"
+							]
 						},
-						"description": "Adds demo USDC from the treasury to the wallet.\n\n**Errors:**\n- 404 (SP-0006): Wallet not found\n- 503 (SP-0007): Treasury depleted"
+						"description": "Creates a Stripe PaymentIntent and returns a funding order reference plus a one-time Stripe client secret. The wallet is actually credited only after Stripe confirms the payment via webhook (`/webhooks/stripe`).\n\n**Errors:**\n- 400 (SP-0003): Amount validation failed\n- 404 (SP-0006): Wallet not found\n- 409 (SP-0022): Funding already in progress for this wallet\n- 502 (SP-0021): Stripe PaymentIntent creation failed"
+					}
+				}
+			]
+		},
+		{
+			"name": "Funding",
+			"description": "Stripe-backed funding order status + refund",
+			"item": [
+				{
+					"name": "Get Funding Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Funding order returned', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.fundingId).to.be.a('string');",
+									"    pm.expect(json.status).to.be.a('string');",
+									"    pm.expect(json.stripeClientSecret).to.be.undefined;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/funding-orders/{{fundingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"funding-orders",
+								"{{fundingId}}"
+							]
+						},
+						"description": "Returns the current status of a funding order. Never returns the Stripe client secret.\n\n**Errors:**\n- 404 (SP-0020): Funding order not found"
+					}
+				},
+				{
+					"name": "Refund Funding",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Funding refunded', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.status).to.equal('REFUNDED');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/funding-orders/{{fundingId}}/refund",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"funding-orders",
+								"{{fundingId}}",
+								"refund"
+							]
+						},
+						"description": "Refunds a FUNDED order via Stripe. Rejects if the sender's on-chain USDC balance or wallet available balance is below the original funding amount. On-chain USDC is not returned — the sender keeps the SPL tokens they received.\n\n**Errors:**\n- 404 (SP-0020): Funding order not found\n- 409 (SP-0023): Refund not allowed for current status\n- 409 (SP-0025): Insufficient balance for refund\n- 502 (SP-0024): Stripe refund failed"
 					}
 				}
 			]
@@ -149,8 +247,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/fx/USD-INR",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "fx", "USD-INR"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fx",
+								"USD-INR"
+							]
 						},
 						"description": "Returns the current exchange rate for USD → INR.\n\n**Errors:**\n- 400 (SP-0009): Unsupported currency corridor"
 					}
@@ -201,8 +305,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "remittances"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"remittances"
+							]
 						},
 						"description": "Initiates a new USD → INR remittance with a locked FX rate.\n\n**Response:** 201 Created\n\n**Errors:**\n- 400 (SP-0003): Validation error\n- 400 (SP-0002): Insufficient balance"
 					}
@@ -230,8 +339,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances/{{remittanceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "remittances", "{{remittanceId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"remittances",
+								"{{remittanceId}}"
+							]
 						},
 						"description": "Retrieves a remittance by its unique identifier.\n\n**Errors:**\n- 404 (SP-0010): Remittance not found"
 					}
@@ -259,8 +374,13 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances?senderId={{userId}}&page=0&size=20&sort=createdAt,desc",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "remittances"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"remittances"
+							],
 							"query": [
 								{
 									"key": "senderId",
@@ -315,8 +435,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "claims", "{{claimToken}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"claims",
+								"{{claimToken}}"
+							]
 						},
 						"description": "Retrieves remittance claim details by the claim token sent via SMS.\n\n**Errors:**\n- 404 (SP-0011): Claim token not found\n- 410 (SP-0013): Claim token expired"
 					}
@@ -352,8 +478,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "claims", "{{claimToken}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"claims",
+								"{{claimToken}}"
+							]
 						},
 						"description": "Submits a claim with the recipient's UPI ID to receive INR payout.\n\n**Errors:**\n- 404 (SP-0011): Claim token not found\n- 409 (SP-0012): Claim already submitted\n- 410 (SP-0013): Claim token expired"
 					}
@@ -407,8 +539,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/wallets",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "wallets"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"wallets"
+							]
 						}
 					}
 				},
@@ -444,8 +581,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/wallets/{{walletId}}/fund",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "wallets", "{{walletId}}", "fund"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"wallets",
+								"{{walletId}}",
+								"fund"
+							]
 						}
 					}
 				},
@@ -472,8 +616,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/fx/USD-INR",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "fx", "USD-INR"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fx",
+								"USD-INR"
+							]
 						}
 					}
 				},
@@ -516,8 +666,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "remittances"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"remittances"
+							]
 						}
 					}
 				},
@@ -545,8 +700,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances/{{remittanceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "remittances", "{{remittanceId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"remittances",
+								"{{remittanceId}}"
+							]
 						},
 						"description": "Poll this endpoint to watch status progression:\nINITIATED → ESCROWED → CLAIMED → DELIVERED\n\nWith Temporal running, status should advance to ESCROWED within seconds."
 					}
@@ -576,8 +737,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "claims", "{{claimToken}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"claims",
+								"{{claimToken}}"
+							]
 						},
 						"description": "The claimToken is automatically captured from the Create Remittance response."
 					}
@@ -613,8 +780,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/claims/{{claimToken}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "claims", "{{claimToken}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"claims",
+								"{{claimToken}}"
+							]
 						},
 						"description": "Submits the claim with a UPI ID. After this, the Temporal workflow will release escrow and disburse INR."
 					}
@@ -642,8 +815,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances/{{remittanceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "remittances", "{{remittanceId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"remittances",
+								"{{remittanceId}}"
+							]
 						},
 						"description": "After claim submission, poll for DELIVERED status.\nWith Temporal running: ESCROWED → CLAIMED → DELIVERED.\nWithout Temporal: status stays as-is (workflow not running)."
 					}
@@ -672,8 +851,13 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances?senderId=demo-user&page=0&size=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "remittances"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"remittances"
+							],
 							"query": [
 								{
 									"key": "senderId",
