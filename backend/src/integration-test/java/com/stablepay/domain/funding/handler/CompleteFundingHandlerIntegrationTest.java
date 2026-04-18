@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stablepay.domain.funding.model.FundingOrder;
@@ -62,14 +63,21 @@ class CompleteFundingHandlerIntegrationTest {
 
     @Test
     void shouldHandlePaymentSucceededInsideReadOnlyTransactionWithoutAcquiringRowLock() {
-        // given — CompleteFundingHandler runs with @Transactional(readOnly = true).
-        // Regression guard: if WalletRepository.findById were to issue SELECT ... FOR UPDATE
-        // (as it did before splitting findByIdForUpdate), PostgreSQL would fail with
-        // "cannot execute SELECT FOR NO KEY UPDATE in a read-only transaction"
-        // and every payment_intent.succeeded webhook would 500.
+        // given — regression guard for the actual failure mode observed in STA-82:
+        // when CompleteFundingHandler ran inside a read-only Spring tx, WalletRepository
+        // .findById issued SELECT ... FOR NO KEY UPDATE (because the JpaRepository had
+        // a global @Lock), and PostgreSQL refused it with "cannot execute SELECT FOR
+        // NO KEY UPDATE in a read-only transaction". We drive the handler explicitly
+        // inside a read-only transaction here so the assertion does not depend on the
+        // handler's own @Transactional metadata staying unchanged.
+        var readOnlyTemplate = new TransactionTemplate(transactionTemplate.getTransactionManager());
+        readOnlyTemplate.setReadOnly(true);
+        readOnlyTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
         // when / then
-        assertThatCode(() -> handler.handle(confirmedOrder.fundingId()))
+        assertThatCode(() ->
+                readOnlyTemplate.executeWithoutResult(
+                        status -> handler.handle(confirmedOrder.fundingId())))
                 .doesNotThrowAnyException();
     }
 }

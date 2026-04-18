@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Full E2E run for N customers: create wallet -> fund -> remit -> claim."""
 import json
+import os
 import subprocess
 import sys
 import time
@@ -52,38 +53,29 @@ def spl_balance(owner: str) -> str:
     return r.stdout.strip() if r.returncode == 0 else r.stderr.strip()
 
 
-def peer_key_share_bytes(wallet_id: int) -> int:
-    """Read peer_key_share_data length from DB. Returns 0 if NULL — wallet is broken."""
-    r = subprocess.run(
-        ["docker", "exec", "stablepay-hackathon-postgres-1",
-         "psql", "-U", "stablepay", "-d", "stablepay", "-tAc",
-         f"SELECT COALESCE(length(peer_key_share_data), 0) FROM wallets WHERE id={wallet_id};"],
-        capture_output=True, text=True)
-    try:
-        return int(r.stdout.strip())
-    except ValueError:
-        return 0
+SENSITIVE_KEYS = {"stripeClientSecret", "clientSecret"}
 
 
-def create_healthy_wallet(user_id: str, log_fn, max_attempts: int = 5) -> tuple[int, str, str] | None:
-    """Create wallet and retry if MPC DKG produced a broken key (null peer share).
-    Returns (walletId, solanaAddress, actualUserId) — the actualUserId changes per
-    attempt because each attempt needs a distinct userId (wallets are unique by userId)."""
-    for attempt in range(1, max_attempts + 1):
-        actual_user_id = f"{user_id}-a{attempt}"
-        req = {"userId": actual_user_id}
-        code, body = http("POST", "/api/wallets", req)
-        log_fn(f"1-create-wallet-attempt-{attempt}", "POST", "/api/wallets", req, code, body)
-        if code not in (200, 201):
-            continue
-        wid = body["id"]
-        addr = body["solanaAddress"]
-        peer_len = peer_key_share_bytes(wid)
-        if peer_len > 0:
-            return wid, addr, actual_user_id
-        print(f"  wallet {wid} has NULL peer_key_share_data (MPC DKG flake), retrying...",
-              flush=True)
-    return None
+def redact(value: Any) -> Any:
+    """Strip Stripe client secrets from API responses before writing to the report."""
+    if isinstance(value, dict):
+        return {k: "***REDACTED***" if k in SENSITIVE_KEYS else redact(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [redact(v) for v in value]
+    return value
+
+
+def create_wallet(user_id: str, log_fn) -> tuple[int, str] | None:
+    """Create a wallet in exactly one backend call. STA-85 guarantees the server
+    either returns a fully-formed wallet (both key shares persisted, DB NOT NULL
+    enforced) or fails with 5xx. Never silently retry a half-formed 201 — that
+    would mask the exact regression STA-85 is designed to catch."""
+    req = {"userId": user_id}
+    code, body = http("POST", "/api/wallets", req)
+    log_fn("1-create-wallet", "POST", "/api/wallets", req, code, body)
+    if code not in (200, 201):
+        return None
+    return body["id"], body["solanaAddress"]
 
 
 @dataclass
@@ -106,7 +98,7 @@ class RunResult:
 
     def log(self, step: str, method: str, path: str, req: Any, code: int, resp: Any):
         self.detail.append({"step": step, "method": method, "path": path,
-                            "request": req, "status": code, "response": resp})
+                            "request": redact(req), "status": code, "response": redact(resp)})
 
 
 def run_one(idx: int) -> RunResult:
@@ -114,16 +106,13 @@ def run_one(idx: int) -> RunResult:
     r = RunResult(index=idx, user_id=user_id)
     t0 = time.time()
     try:
-        # 1. Create wallet (retry if MPC DKG produces a broken key — a pre-existing
-        # flake where the peer sidecar times out but the backend logs success anyway,
-        # leaving peer_key_share_data NULL. Broken wallets can never sign, so we must
-        # discard them before funding, otherwise USDC gets stranded in their ATA.)
-        result = create_healthy_wallet(user_id, r.log)
+        # 1. Create wallet — STA-85 guarantees the server never returns a
+        # half-formed wallet. One attempt, fail the run on 5xx.
+        result = create_wallet(user_id, r.log)
         if result is None:
-            r.error = "could not create healthy wallet after 5 MPC DKG attempts"
+            r.error = "create wallet failed — expected 201, see detail log"
             return r
-        r.wallet_id, r.solana_address, actual_user_id = result
-        r.user_id = actual_user_id
+        r.wallet_id, r.solana_address = result
 
         # 2. Fund $2
         req = {"amount": float(AMOUNT_USDC)}
@@ -198,8 +187,24 @@ def run_one(idx: int) -> RunResult:
             r.error = f"final status = {r.final_status}, expected DELIVERED"
             return r
 
-        # 10. Final on-chain check (claim authority received USDC)
+        # 10. Final on-chain check — claim authority's ATA must show a numeric
+        # balance >= the amount we just delivered. If spl-token printed an error
+        # string or a value smaller than expected, the claim did not settle.
         r.on_chain_usdc_after_claim = spl_balance(CLAIM_AUTHORITY)
+        try:
+            claim_balance = float(r.on_chain_usdc_after_claim)
+        except ValueError:
+            r.error = (
+                "claim authority USDC balance unreadable after claim: "
+                + str(r.on_chain_usdc_after_claim)
+            )
+            return r
+        if claim_balance < float(AMOUNT_USDC):
+            r.error = (
+                f"claim authority USDC balance = {claim_balance}, "
+                f"expected >= {AMOUNT_USDC}"
+            )
+            return r
 
         r.passed = True
     finally:
@@ -328,14 +333,26 @@ def run_salvage(idx: int, wallet_id: int, user_id: str, amount_usdc: str) -> Run
     return r
 
 
+def parse_salvage_from_env() -> list[tuple[int, str, str]]:
+    """Optional opt-in via STABLEPAY_SALVAGE_WALLETS environment variable.
+    Format: "walletId:userId:amount,walletId:userId:amount,..."
+    Example: STABLEPAY_SALVAGE_WALLETS="12:e2e-10x-...:2.00,13:e2e-10x-...:1.00"
+    """
+    raw = os.environ.get("STABLEPAY_SALVAGE_WALLETS", "").strip()
+    if not raw:
+        return []
+    entries = []
+    for chunk in raw.split(","):
+        parts = chunk.strip().split(":", 2)
+        if len(parts) != 3:
+            print(f"  ignoring malformed salvage entry: {chunk!r}", flush=True)
+            continue
+        entries.append((int(parts[0]), parts[1], parts[2]))
+    return entries
+
+
 def main():
-    # Salvage list — healthy wallets from aborted prior runs with USDC already in ATA.
-    # Each tuple: (wallet_id, user_id, amount_usdc_as_str)
-    salvage = [
-        (12, "e2e-10x-1776530235849-4", "2.00"),
-        (13, "e2e-10x-1776530799226-1-a1", "1.00"),
-        (14, "e2e-10x-1776530808564-2-a1", "1.00"),
-    ]
+    salvage = parse_salvage_from_env()
     results: list[RunResult] = []
     for i, (wid, uid, amt) in enumerate(salvage, start=1):
         print(f"[{i}/{N_CUSTOMERS}] SALVAGE wallet={wid} userId={uid} amount=${amt}...", flush=True)

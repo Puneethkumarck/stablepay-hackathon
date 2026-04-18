@@ -11,6 +11,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 
+import jakarta.persistence.EntityManager;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,6 +28,9 @@ class WalletRepositoryIntegrationTest {
 
     @Autowired
     private WalletRepository walletRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void shouldSaveAndFindWalletById() {
@@ -130,9 +135,12 @@ class WalletRepositoryIntegrationTest {
                 .totalBalance(BigDecimal.ZERO)
                 .build();
 
-        // when / then
-        assertThatThrownBy(() -> walletRepository.save(wallet))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        // when / then — flush forces the INSERT so the DB NOT NULL check fires,
+        // rather than deferring until transaction commit
+        assertThatThrownBy(() -> {
+            walletRepository.save(wallet);
+            entityManager.flush();
+        }).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
@@ -148,9 +156,12 @@ class WalletRepositoryIntegrationTest {
                 .totalBalance(BigDecimal.ZERO)
                 .build();
 
-        // when / then
-        assertThatThrownBy(() -> walletRepository.save(wallet))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        // when / then — flush forces the INSERT so the DB NOT NULL check fires,
+        // rather than deferring until transaction commit
+        assertThatThrownBy(() -> {
+            walletRepository.save(wallet);
+            entityManager.flush();
+        }).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
@@ -166,8 +177,11 @@ class WalletRepositoryIntegrationTest {
                 .totalBalance(BigDecimal.ZERO)
                 .build();
 
-        // when / then
-        assertThatThrownBy(() -> walletRepository.save(wallet))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        // when / then — flush forces the INSERT so the DB NOT NULL check fires,
+        // rather than deferring until transaction commit
+        assertThatThrownBy(() -> {
+            walletRepository.save(wallet);
+            entityManager.flush();
+        }).isInstanceOf(DataIntegrityViolationException.class);
     }
 }

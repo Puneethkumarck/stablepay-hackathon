@@ -569,8 +569,8 @@ createAtaIfNeeded → transferUsdc → finalizeFunding`.
 **Environment**
 - Treasury wallet: `58gFSCTWosoJuVuzG8Vt5ZnfvJjeyx5PPZHhXMXr3ZSv` (deployer, 20 USDC + 1.5 SOL from Circle faucet)
 - USDC mint: `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (devnet Circle USDC)
-- Stripe test key: `sk_test_51TCRge…lsN00mxYvHSvf`
-- Webhook secret: from `stripe listen` (whsec_2103ca6a…)
+- Stripe test key: `sk_test_…` from local `.env` (never committed)
+- Webhook secret: `whsec_…` from `stripe listen` (never committed)
 
 **Scenario 1 — Happy path** (fundingId `79ee7b33-a9cd-41c4-9801-2ddec1ca76c0`, wallet 7 `HkgPMoLx8WvEiqfSkVU6xWBZQtYNmnVwtyRYPxeCSeGb`)
 

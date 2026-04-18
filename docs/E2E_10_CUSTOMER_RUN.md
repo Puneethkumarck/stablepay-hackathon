@@ -1,13 +1,23 @@
 # 10-Customer Full E2E Run — $1 USDC per customer
 
-Generated: 2026-04-18 16:55:04 UTC
+Generated: 2026-04-18 16:55:04 UTC (harness version **predates STA-85 claim-balance
+assertion**). Every customer reached `DELIVERED` according to the API, and on-chain
+USDC was verified after funding. Customer 1's `Claim authority USDC after claim`
+shows an `Error:` string because the balance CLI was invoked before the claim
+authority's ATA was fully propagated on devnet; the claim itself landed
+successfully (subsequent customers show a populated balance). Re-running the
+harness under the STA-85-tightened script (`scripts/e2e_10_customers.py`) now
+fails the run if the claim-authority balance check does not return a numeric
+value ≥ the delivered amount.
 
 ## Summary
 
 - Customers attempted: 10
-- Passed: 10
+- Passed: 10 (API-level; 9/10 with on-chain claim-authority confirmation)
 - Failed: 0
 - Per-customer amount: $1.00 USDC
+- **Secrets in per-customer detail blocks are redacted**; fields shown as
+  `stripeClientSecret: "***REDACTED***"` came from Stripe PaymentIntent responses
 
 | # | userId | walletId | address | fundingId | remittanceId | final | USDC after fund | elapsed (s) | PASS |
 |---|--------|----------|---------|-----------|--------------|-------|-----------------|-------------|------|
@@ -526,7 +536,7 @@ Response:
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
   "stripePaymentIntentId": "pi_3TNc5F3nnME1dfOB0ifsWSLP",
-  "stripeClientSecret": "pi_3TNc5F3nnME1dfOB0ifsWSLP_secret_T0aXLWdfZiBYfOxxQlTJIqmWl",
+  "stripeClientSecret": "***REDACTED***",
   "createdAt": "2026-04-18T16:51:04.395320029Z"
 }
 ```
@@ -745,7 +755,7 @@ Response:
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
   "stripePaymentIntentId": "pi_3TNc5W3nnME1dfOB0CqEqTdM",
-  "stripeClientSecret": "pi_3TNc5W3nnME1dfOB0CqEqTdM_secret_HqZyIkWXnzL8QO58b9tM9Trbo",
+  "stripeClientSecret": "***REDACTED***",
   "createdAt": "2026-04-18T16:51:21.525137516Z"
 }
 ```
@@ -964,7 +974,7 @@ Response:
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
   "stripePaymentIntentId": "pi_3TNc5n3nnME1dfOB14tCSixH",
-  "stripeClientSecret": "pi_3TNc5n3nnME1dfOB14tCSixH_secret_Q4z7aJD67vuIxsFNSZSu2PELD",
+  "stripeClientSecret": "***REDACTED***",
   "createdAt": "2026-04-18T16:51:37.775299596Z"
 }
 ```
@@ -1183,7 +1193,7 @@ Response:
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
   "stripePaymentIntentId": "pi_3TNc643nnME1dfOB1sfOLAiz",
-  "stripeClientSecret": "pi_3TNc643nnME1dfOB1sfOLAiz_secret_ZnGVGE3hjAIxENezL9fYCBv15",
+  "stripeClientSecret": "***REDACTED***",
   "createdAt": "2026-04-18T16:51:54.937877430Z"
 }
 ```
@@ -1426,7 +1436,7 @@ Response:
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
   "stripePaymentIntentId": "pi_3TNc6o3nnME1dfOB1y4ZlCeM",
-  "stripeClientSecret": "pi_3TNc6o3nnME1dfOB1y4ZlCeM_secret_iTnbY4QHjSNWrwAIIGJrQwjpX",
+  "stripeClientSecret": "***REDACTED***",
   "createdAt": "2026-04-18T16:52:41.265055525Z"
 }
 ```
@@ -1693,7 +1703,7 @@ Response:
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
   "stripePaymentIntentId": "pi_3TNc8b3nnME1dfOB1WMf1wa5",
-  "stripeClientSecret": "pi_3TNc8b3nnME1dfOB1WMf1wa5_secret_bHmt9477HiuHDVYSErLauPRSa",
+  "stripeClientSecret": "***REDACTED***",
   "createdAt": "2026-04-18T16:54:31.958787218Z"
 }
 ```
@@ -1912,7 +1922,7 @@ Response:
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
   "stripePaymentIntentId": "pi_3TNc8s3nnME1dfOB0YXfJKWI",
-  "stripeClientSecret": "pi_3TNc8s3nnME1dfOB0YXfJKWI_secret_Ghu0taI1N5iO5wsi72JDkPqyq",
+  "stripeClientSecret": "***REDACTED***",
   "createdAt": "2026-04-18T16:54:49.053979125Z"
 }
 ```

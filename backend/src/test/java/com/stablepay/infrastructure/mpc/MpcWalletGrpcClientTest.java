@@ -44,6 +44,12 @@ class MpcWalletGrpcClientTest {
     @Mock
     private TssSidecarGrpc.TssSidecarBlockingStub deadlineStub;
 
+    @Mock
+    private TssSidecarGrpc.TssSidecarBlockingStub peerStub;
+
+    @Mock
+    private TssSidecarGrpc.TssSidecarBlockingStub peerDeadlineStub;
+
     private MpcWalletGrpcClient client;
 
     private static final GenerateKeyRequest EXPECTED_KEYGEN_REQUEST = GenerateKeyRequest.newBuilder()
@@ -250,6 +256,87 @@ class MpcWalletGrpcClientTest {
             // when / then
             assertThatThrownBy(() -> client.generateKey())
                     .isInstanceOf(MpcKeyGenerationException.Permanent.class);
+        }
+
+        @Test
+        void shouldClassifyResourceExhaustedAsTransient() {
+            // given
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST))
+                    .willThrow(new StatusRuntimeException(Status.RESOURCE_EXHAUSTED));
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.Transient.class);
+        }
+
+        @Test
+        void shouldClassifyAbortedAsTransient() {
+            // given
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST))
+                    .willThrow(new StatusRuntimeException(Status.ABORTED));
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.Transient.class);
+        }
+
+        @Test
+        void shouldReturnPopulatedPeerKeyShareOnSuccessful2of2Ceremony() {
+            // given — production shape: 2-of-2 with a peer sidecar returning its share
+            var twoOfTwoClient = new MpcWalletGrpcClient(
+                    blockingStub,
+                    java.util.List.of(new MpcWalletGrpcClient.PeerSidecar(1, peerStub, Map.of())),
+                    SOME_DEADLINE_MS,
+                    () -> SOME_CEREMONY_ID, 0, 2, 2, Map.of());
+
+            var primaryResponse = GenerateKeyResponse.newBuilder()
+                    .setSolanaAddress(SOME_SOLANA_ADDRESS)
+                    .setPublicKey(ByteString.copyFrom(SOME_PUBLIC_KEY))
+                    .setKeyShareData(ByteString.copyFrom(SOME_KEY_SHARE_DATA))
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
+                    .build();
+            var peerResponse = GenerateKeyResponse.newBuilder()
+                    .setSolanaAddress(SOME_SOLANA_ADDRESS)
+                    .setPublicKey(ByteString.copyFrom(SOME_PUBLIC_KEY))
+                    .setKeyShareData(ByteString.copyFrom(SOME_PEER_KEY_SHARE_DATA))
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
+                    .build();
+            var twoOfTwoPrimaryRequest = GenerateKeyRequest.newBuilder()
+                    .setCeremonyId(SOME_CEREMONY_ID)
+                    .setPartyId(0)
+                    .setThreshold(2)
+                    .setTotalParties(2)
+                    .putAllPeerAddresses(Map.of())
+                    .build();
+            var twoOfTwoPeerRequest = GenerateKeyRequest.newBuilder()
+                    .setCeremonyId(SOME_CEREMONY_ID)
+                    .setPartyId(1)
+                    .setThreshold(2)
+                    .setTotalParties(2)
+                    .putAllPeerAddresses(Map.of())
+                    .build();
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(twoOfTwoPrimaryRequest)).willReturn(primaryResponse);
+            given(peerStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(peerDeadlineStub);
+            given(peerDeadlineStub.generateKey(twoOfTwoPeerRequest)).willReturn(peerResponse);
+
+            // when
+            var result = twoOfTwoClient.generateKey();
+
+            // then
+            var expected = GeneratedKey.builder()
+                    .solanaAddress(SOME_SOLANA_ADDRESS)
+                    .publicKey(SOME_PUBLIC_KEY)
+                    .keyShareData(SOME_KEY_SHARE_DATA)
+                    .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
+                    .build();
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
     }
 
