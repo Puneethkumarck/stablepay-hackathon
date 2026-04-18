@@ -114,13 +114,13 @@ class MpcWalletGrpcClientTest {
 
             // when / then
             assertThatThrownBy(() -> client.generateKey())
-                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .isInstanceOf(MpcKeyGenerationException.Permanent.class)
                     .hasMessageContaining("keygen protocol error");
         }
 
         @Test
-        void shouldThrowWhenStatusTimedOut() {
-            // given
+        void shouldThrowTransientWhenStatusTimedOut() {
+            // given — sidecar-reported timeouts are retryable: a fresh ceremony may succeed
             var response = GenerateKeyResponse.newBuilder()
                     .setStatus(sidecar.v1.Sidecar.Status.STATUS_TIMED_OUT)
                     .build();
@@ -131,12 +131,12 @@ class MpcWalletGrpcClientTest {
 
             // when / then
             assertThatThrownBy(() -> client.generateKey())
-                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .isInstanceOf(MpcKeyGenerationException.Transient.class)
                     .hasMessageContaining("ceremony timed out");
         }
 
         @Test
-        void shouldThrowWhenStatusUnspecified() {
+        void shouldThrowPermanentWhenStatusUnspecified() {
             // given
             var response = GenerateKeyResponse.newBuilder()
                     .setStatus(sidecar.v1.Sidecar.Status.STATUS_UNSPECIFIED)
@@ -148,12 +148,12 @@ class MpcWalletGrpcClientTest {
 
             // when / then
             assertThatThrownBy(() -> client.generateKey())
-                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .isInstanceOf(MpcKeyGenerationException.Permanent.class)
                     .hasMessageContaining("unexpected status");
         }
 
         @Test
-        void shouldThrowWhenEmptyAddress() {
+        void shouldThrowPermanentWhenEmptyAddress() {
             // given
             var response = GenerateKeyResponse.newBuilder()
                     .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
@@ -166,12 +166,12 @@ class MpcWalletGrpcClientTest {
 
             // when / then
             assertThatThrownBy(() -> client.generateKey())
-                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .isInstanceOf(MpcKeyGenerationException.Permanent.class)
                     .hasMessageContaining("empty Solana address");
         }
 
         @Test
-        void shouldThrowOnGrpcError() {
+        void shouldThrowTransientOnUnavailableGrpcError() {
             // given
             given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
                     .willReturn(deadlineStub);
@@ -180,7 +180,7 @@ class MpcWalletGrpcClientTest {
 
             // when / then
             assertThatThrownBy(() -> client.generateKey())
-                    .isInstanceOf(MpcKeyGenerationException.class)
+                    .isInstanceOf(MpcKeyGenerationException.Transient.class)
                     .hasCauseInstanceOf(StatusRuntimeException.class);
         }
 

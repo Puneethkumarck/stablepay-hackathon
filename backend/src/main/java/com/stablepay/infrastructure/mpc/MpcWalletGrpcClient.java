@@ -147,8 +147,19 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
 
         } catch (StatusRuntimeException ex) {
             log.error("gRPC call failed for key generation ceremony {}: {}", ceremonyId, ex.getStatus());
-            throw MpcKeyGenerationException.fromCause(ceremonyId, ex);
+            throw classifyGrpcFailure(ceremonyId, ex);
         }
+    }
+
+    private static MpcKeyGenerationException classifyGrpcFailure(
+            String ceremonyId, StatusRuntimeException ex) {
+        var code = ex.getStatus().getCode();
+        var reason = ex.getMessage();
+        return switch (code) {
+            case DEADLINE_EXCEEDED, UNAVAILABLE, RESOURCE_EXHAUSTED, ABORTED ->
+                    MpcKeyGenerationException.transientFailure(ceremonyId, reason, ex);
+            default -> MpcKeyGenerationException.permanentFailure(ceremonyId, reason, ex);
+        };
     }
 
     @Override
@@ -261,16 +272,18 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
     }
 
     void validateGenerateKeyResponse(String ceremonyId, GenerateKeyResponse response) {
+        if (response.getStatus() == Status.STATUS_TIMED_OUT) {
+            throw MpcKeyGenerationException.transientFailure(ceremonyId, "ceremony timed out");
+        }
         if (response.getStatus() != Status.STATUS_COMPLETED) {
             var reason = switch (response.getStatus()) {
                 case STATUS_FAILED -> response.getErrorMessage();
-                case STATUS_TIMED_OUT -> "ceremony timed out";
                 default -> "unexpected status: " + response.getStatus();
             };
-            throw MpcKeyGenerationException.withCeremonyId(ceremonyId, reason);
+            throw MpcKeyGenerationException.permanentFailure(ceremonyId, reason);
         }
         if (response.getSolanaAddress().isBlank()) {
-            throw MpcKeyGenerationException.withCeremonyId(ceremonyId, "empty Solana address in response");
+            throw MpcKeyGenerationException.permanentFailure(ceremonyId, "empty Solana address in response");
         }
     }
 

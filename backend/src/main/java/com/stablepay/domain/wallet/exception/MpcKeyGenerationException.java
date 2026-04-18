@@ -1,8 +1,5 @@
 package com.stablepay.domain.wallet.exception;
 
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-
 public sealed class MpcKeyGenerationException extends RuntimeException
         permits MpcKeyGenerationException.Transient, MpcKeyGenerationException.Permanent {
 
@@ -13,26 +10,22 @@ public sealed class MpcKeyGenerationException extends RuntimeException
                 + ": peer key share missing after DKG (peer sidecar timed out or returned empty share)");
     }
 
-    public static MpcKeyGenerationException fromCause(String ceremonyId, Throwable cause) {
-        var message = ERROR_PREFIX + ceremonyId + ": " + cause.getMessage();
-        return isTransient(cause)
-                ? new Transient(message, cause)
-                : new Permanent(message, cause);
+    public static MpcKeyGenerationException transientFailure(
+            String ceremonyId, String reason, Throwable cause) {
+        return new Transient(ERROR_PREFIX + ceremonyId + ": " + reason, cause);
     }
 
-    public static MpcKeyGenerationException withCeremonyId(String ceremonyId, String reason) {
+    public static MpcKeyGenerationException transientFailure(String ceremonyId, String reason) {
+        return new Transient(ERROR_PREFIX + ceremonyId + ": " + reason);
+    }
+
+    public static MpcKeyGenerationException permanentFailure(
+            String ceremonyId, String reason, Throwable cause) {
+        return new Permanent(ERROR_PREFIX + ceremonyId + ": " + reason, cause);
+    }
+
+    public static MpcKeyGenerationException permanentFailure(String ceremonyId, String reason) {
         return new Permanent(ERROR_PREFIX + ceremonyId + ": " + reason);
-    }
-
-    private static boolean isTransient(Throwable cause) {
-        if (cause instanceof StatusRuntimeException grpc) {
-            var code = grpc.getStatus().getCode();
-            return code == Status.Code.DEADLINE_EXCEEDED
-                    || code == Status.Code.UNAVAILABLE
-                    || code == Status.Code.RESOURCE_EXHAUSTED
-                    || code == Status.Code.ABORTED;
-        }
-        return false;
     }
 
     private MpcKeyGenerationException(String message) {
