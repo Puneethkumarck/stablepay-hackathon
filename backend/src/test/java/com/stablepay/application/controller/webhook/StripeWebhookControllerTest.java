@@ -135,6 +135,7 @@ class StripeWebhookControllerTest {
                         .content(SOME_PAYLOAD))
                 .andExpect(status().isOk());
 
+        then(completeFundingHandler).should().handle(SOME_FUNDING_ID);
         then(failFundingHandler).shouldHaveNoInteractions();
     }
 }

@@ -54,7 +54,7 @@ public class StripeWebhookController {
                 case UNKNOWN -> log.debug(
                         "Ignoring unsupported Stripe event eventId={}", event.eventId());
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             // Always ACK 200 once signature is valid; Stripe would otherwise retry.
             log.error("Error dispatching Stripe webhook eventId={} type={}: {}",
                     event.eventId(), event.type(), e.getMessage(), e);

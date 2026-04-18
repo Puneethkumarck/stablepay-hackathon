@@ -18,6 +18,9 @@ public record WalletFundingWorkflowRequest(
         requireNonNull(fundingId, "fundingId cannot be null");
         requireNonNull(walletId, "walletId cannot be null");
         requireNonNull(senderSolanaAddress, "senderSolanaAddress cannot be null");
+        if (senderSolanaAddress.isBlank()) {
+            throw new IllegalArgumentException("senderSolanaAddress cannot be blank");
+        }
         requireNonNull(amountUsdc, "amountUsdc cannot be null");
     }
 }

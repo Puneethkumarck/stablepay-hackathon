@@ -132,4 +132,15 @@ class FailFundingHandlerTest {
         then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
         then(fundingOrderRepository).shouldHaveNoMoreInteractions();
     }
+
+    @Test
+    void shouldNoOpWhenFundingIdIsNull() {
+        // given (nothing stubbed)
+
+        // when
+        failFundingHandler.handle(null);
+
+        // then
+        then(fundingOrderRepository).shouldHaveNoInteractions();
+    }
 }

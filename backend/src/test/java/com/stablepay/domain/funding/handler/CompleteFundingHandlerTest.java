@@ -179,6 +179,44 @@ class CompleteFundingHandlerTest {
         // then
         then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
         then(fundingOrderRepository).shouldHaveNoMoreInteractions();
+        then(walletRepository).should().findById(SOME_WALLET_ID);
+        then(walletRepository).shouldHaveNoMoreInteractions();
+        then(fundingWorkflowStarter).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void shouldNoOpWhenFundingIdIsNull() {
+        // given (nothing stubbed)
+
+        // when
+        completeFundingHandler.handle(null);
+
+        // then
+        then(fundingOrderRepository).shouldHaveNoInteractions();
+        then(walletRepository).shouldHaveNoInteractions();
+        then(fundingWorkflowStarter).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void shouldMarkOrderFundedEvenWhenWorkflowStarterIsAbsent() {
+        // given
+        var handlerWithoutStarter = new CompleteFundingHandler(
+                fundingOrderRepository, walletRepository, Optional.empty());
+        var order = fundingOrderBuilder().status(FundingStatus.PAYMENT_CONFIRMED).build();
+        var wallet = walletBuilder().id(SOME_WALLET_ID).solanaAddress(SOME_SOLANA_ADDRESS).build();
+        given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
+        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+        given(fundingOrderRepository.save(fundingOrderCaptor.capture()))
+                .willAnswer(invocation -> invocation.<FundingOrder>getArgument(0));
+
+        // when
+        handlerWithoutStarter.handle(SOME_FUNDING_ID);
+
+        // then
+        var expectedSaved = order.toBuilder().status(FundingStatus.FUNDED).build();
+        assertThat(fundingOrderCaptor.getValue())
+                .usingRecursiveComparison()
+                .isEqualTo(expectedSaved);
         then(fundingWorkflowStarter).shouldHaveNoInteractions();
     }
 }

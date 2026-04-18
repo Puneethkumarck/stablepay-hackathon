@@ -34,6 +34,10 @@ public class CompleteFundingHandler {
     private final Optional<FundingWorkflowStarter> fundingWorkflowStarter;
 
     public void handle(UUID fundingId) {
+        if (fundingId == null) {
+            log.warn("Ignoring payment_succeeded with null fundingId");
+            return;
+        }
         var orderOpt = fundingOrderRepository.findByFundingId(fundingId);
         if (orderOpt.isEmpty()) {
             log.warn("Funding order not found on payment_succeeded fundingId={}", fundingId);

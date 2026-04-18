@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.stablepay.domain.funding.port.FundingWorkflowStarter;
 
@@ -23,8 +25,27 @@ public class TemporalFundingWorkflowStarter implements FundingWorkflowStarter {
 
     private final WorkflowClient workflowClient;
 
+    // Deferring the RPC until afterCommit prevents a dual-write hazard: if the caller's
+    // transaction rolls back after this method returned, the workflow would otherwise
+    // execute against funding-order state that was never persisted. Outside a transaction
+    // (startup hooks, tests) we fire immediately.
     @Override
     public void startFundingWorkflow(
+            UUID fundingId, Long walletId, String senderSolanaAddress, BigDecimal amountUsdc) {
+        Runnable startCall = () -> start(fundingId, walletId, senderSolanaAddress, amountUsdc);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    startCall.run();
+                }
+            });
+        } else {
+            startCall.run();
+        }
+    }
+
+    private void start(
             UUID fundingId, Long walletId, String senderSolanaAddress, BigDecimal amountUsdc) {
         var workflow = workflowClient.newWorkflowStub(
                 WalletFundingWorkflow.class,

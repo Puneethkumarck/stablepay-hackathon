@@ -28,6 +28,10 @@ public class FailFundingHandler {
     private final FundingOrderRepository fundingOrderRepository;
 
     public void handle(UUID fundingId) {
+        if (fundingId == null) {
+            log.warn("Ignoring payment_failed with null fundingId");
+            return;
+        }
         var orderOpt = fundingOrderRepository.findByFundingId(fundingId);
         if (orderOpt.isEmpty()) {
             log.warn("Funding order not found on payment_failed fundingId={}", fundingId);
