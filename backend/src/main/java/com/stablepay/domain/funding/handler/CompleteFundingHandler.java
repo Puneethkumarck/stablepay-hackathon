@@ -7,7 +7,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
 import com.stablepay.domain.funding.port.FundingOrderRepository;
 import com.stablepay.domain.funding.port.FundingWorkflowStarter;
@@ -19,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class CompleteFundingHandler {
 
     private static final Set<FundingStatus> TERMINAL_STATUSES = Set.of(
@@ -63,19 +62,18 @@ public class CompleteFundingHandler {
         }
         var wallet = walletOpt.get();
 
-        var funded = order.toBuilder().status(FundingStatus.FUNDED).build();
-        FundingOrder persisted = fundingOrderRepository.save(funded);
-        log.info("Funding order confirmed fundingId={} walletId={} status={}",
-                persisted.fundingId(), persisted.walletId(), persisted.status());
+        log.info(
+                "Starting wallet funding workflow fundingId={} walletId={}",
+                fundingId, order.walletId());
 
         fundingWorkflowStarter.ifPresentOrElse(
                 starter -> starter.startFundingWorkflow(
-                        persisted.fundingId(),
-                        persisted.walletId(),
+                        order.fundingId(),
+                        order.walletId(),
                         wallet.solanaAddress(),
-                        persisted.amountUsdc()),
+                        order.amountUsdc()),
                 () -> log.warn(
                         "FundingWorkflowStarter not configured; skipping workflow start for fundingId={}",
-                        persisted.fundingId()));
+                        order.fundingId()));
     }
 }

@@ -38,7 +38,7 @@ public class TreasuryServiceAdapter implements TreasuryService {
     private final TreasuryProperties treasuryProperties;
 
     @Override
-    public void transferSol(String destinationAddress, long lamports) {
+    public String transferSol(String destinationAddress, long lamports) {
         log.info("Treasury transferring {} lamports to {}", lamports, destinationAddress);
 
         try {
@@ -56,6 +56,7 @@ public class TreasuryServiceAdapter implements TreasuryService {
             var opContext = "treasury-sol:" + destinationAddress;
             var signature = sendWithSkipPreflight(transaction.serialize(), opContext);
             log.info("Treasury SOL transfer submitted with signature {}", signature);
+            return signature;
         } catch (SolanaTransactionException e) {
             throw e;
         } catch (Exception e) {
@@ -65,7 +66,7 @@ public class TreasuryServiceAdapter implements TreasuryService {
     }
 
     @Override
-    public void transferUsdc(String destinationAddress, BigDecimal amountUsdc) {
+    public String transferUsdc(String destinationAddress, BigDecimal amountUsdc) {
         log.info("Treasury transferring {} USDC to {}", amountUsdc, destinationAddress);
 
         try {
@@ -91,6 +92,7 @@ public class TreasuryServiceAdapter implements TreasuryService {
             var opContext = "treasury-usdc:" + destinationAddress;
             var signature = sendWithSkipPreflight(transaction.serialize(), opContext);
             log.info("Treasury USDC transfer submitted with signature {}", signature);
+            return signature;
         } catch (SolanaTransactionException e) {
             throw e;
         } catch (Exception e) {
@@ -107,6 +109,21 @@ public class TreasuryServiceAdapter implements TreasuryService {
         } catch (Exception e) {
             throw SolanaTransactionException.submissionFailed(
                     "treasury-sol-balance:" + address, e);
+        }
+    }
+
+    @Override
+    public BigDecimal getTreasuryUsdcBalance() {
+        var treasuryKeypair = resolveTreasuryKeypair();
+        var treasuryPubkey = treasuryKeypair.getPublicKey();
+        var ata = deriveAta(treasuryPubkey, solanaProperties.usdcMint());
+        try {
+            var balance = solanaConnection.getTokenAccountBalance(ata);
+            return new BigDecimal(balance.getAmount())
+                    .divide(USDC_SCALE, USDC_DECIMALS, RoundingMode.DOWN);
+        } catch (Exception e) {
+            throw SolanaTransactionException.submissionFailed(
+                    "treasury-usdc-balance:" + treasuryPubkey.toBase58(), e);
         }
     }
 
