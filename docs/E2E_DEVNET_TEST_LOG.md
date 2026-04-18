@@ -560,9 +560,54 @@ createAtaIfNeeded → transferUsdc → finalizeFunding`.
 
 | Scenario | API | Temporal | On-chain | Stripe | Status |
 |----------|-----|----------|----------|--------|--------|
-| Happy path fund | 201/200 | 5 activities | 25 USDC credited | PI succeeded | — |
-| Refund path | 200 REFUNDED | n/a | SPL retained in ATA | Refund created | — |
-| Refund reject (SP-0025) | 409 SP-0025 | n/a | No-op | No refund call | — |
+| Happy path fund | 201/200 | 5 activities | 10 USDC + 0.01 SOL credited | PI succeeded | **PASS** |
+| Refund path | 200 REFUNDED | n/a | SPL retained in ATA (10 USDC) | Refund created | **PASS** |
+| Refund reject (SP-0025) | 409 SP-0025 | n/a | No-op | No refund call | **PASS** |
 
-Fill in the Status column and append Stripe PI / refund IDs + devnet signatures
-once the run completes.
+### Real run — 2026-04-18
+
+**Environment**
+- Treasury wallet: `58gFSCTWosoJuVuzG8Vt5ZnfvJjeyx5PPZHhXMXr3ZSv` (deployer, 20 USDC + 1.5 SOL from Circle faucet)
+- USDC mint: `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (devnet Circle USDC)
+- Stripe test key: `sk_test_…` from local `.env` (never committed)
+- Webhook secret: `whsec_…` from `stripe listen` (never committed)
+
+**Scenario 1 — Happy path** (fundingId `79ee7b33-a9cd-41c4-9801-2ddec1ca76c0`, wallet 7 `HkgPMoLx8WvEiqfSkVU6xWBZQtYNmnVwtyRYPxeCSeGb`)
+
+| Step | Result |
+|------|--------|
+| `POST /api/wallets/7/fund {amount: 10.00}` | `201` `status=PAYMENT_CONFIRMED` `pi_3TNb4Y3nnME1dfOB0cfWtKqh` |
+| `payment_intent.succeeded` webhook | `200` `evt_3TNb4Y…0n5Zt4f4` |
+| Temporal `WalletFundingWorkflow` | 5 activities completed |
+| SOL top-up tx | `2BMDMyWDAxDW7dwXJusv5B5E1cZUyN7kyTfdi7EiJu9hLmy8Z2xjnSmBJ9koA1xTesYVEiZqtWent72REEbLQqVi` |
+| ATA create tx | `2Svfo1rstxQFCTdfZMGFYwXrXMR4yPyfRoB64jkNH8ZToJj5PbyvrdNZm3DafnUUKMHGyoht697f8g4D5i35bduf` |
+| USDC transfer tx | `2ysGHgqiMJUkzQCMjDnvMHzE7ZBhGgzNsm3xyV7RQLNeA6qrtyUVk3BAgeVJooEDgNj6mfkF7BHj38i8ovwYYp8K` |
+| On-chain after | ATA holds 10.000000 USDC, SOL=0.01 |
+| DB after | wallet 7 available=10.000000 total=10.000000, order status `FUNDED` |
+
+**Scenario 2 — Refund path** (same fundingId)
+
+| Step | Result |
+|------|--------|
+| `POST /api/funding-orders/79ee…/refund` | `200` `status=REFUNDED` |
+| Stripe webhooks | `refund.created`, `charge.refunded`, `refund.updated` all `200` |
+| On-chain USDC (invariant) | still 10.000000 (no claw-back — rev-5 §20) |
+| DB after | wallet 7 available=0 total=0, order status `REFUNDED` |
+
+**Scenario 3 — Refund reject** (fundingId `b73c695f-56ce-4484-8b66-9e5e8b615b25`, wallet 8 `F3samNB4bcqbBkUxUNhZsUgPvvPSGtDkCHJgXCtH32aF`)
+
+| Step | Result |
+|------|--------|
+| Fund 10 USDC, wait `FUNDED` | `pi_3TNb7n3nnME1dfOB1D47k8Rd`, on-chain 10 USDC |
+| `POST /api/remittances {amountUsdc: 10}` | `201` remittance `852302df-ce7c-4794-895b-839213a4be9b`, eventually `ESCROWED` |
+| Wallet after remittance | `available_balance=0`, `total_balance=10` |
+| `POST /api/funding-orders/b73c…/refund` | **`409`** `SP-0025` `"Insufficient balance for refund. Requested: 10.000000, Available: 0.000000"` |
+| Stripe refund call | **none made** (no `refund.created` event) |
+| DB after | order status unchanged `FUNDED`, wallet unchanged |
+
+### Fixes applied during E2E to make it pass
+
+1. **`docker-compose.yml`** — `SPRING_PROFILES_ACTIVE: docker` → `sandbox` (the `docker` profile never existed; backend fell back to defaults and tried `localhost:5432`).
+2. **`docker-compose.yml`** — added `STRIPE_TEST_MODE`, `STRIPE_AUTO_CONFIRM`, `STRIPE_TEST_PAYMENT_METHOD` env var wiring (STA-81 only added the 3 secrets, missed the toggles).
+3. **`StripePaymentAdapter.buildPaymentIntentParams`** — add `.addPaymentMethodType("card")` when auto-confirming. Without it, the Stripe account's dashboard-enabled redirect-based methods force a `return_url` requirement and auto-confirm fails.
+4. **`WalletJpaRepository` / `WalletRepository` / `WalletRepositoryAdapter`** — split `findById` (unlocked) from `findByIdForUpdate` (`PESSIMISTIC_WRITE`). `CompleteFundingHandler` runs in a `readOnly=true` transaction and only reads `solanaAddress`; the previous global `@Lock` on `findById` caused `ERROR: cannot execute SELECT FOR NO KEY UPDATE in a read-only transaction` and broke every webhook dispatch. `FinalizeFundingHandler` and `RefundFundingHandler` switched to `findByIdForUpdate` to keep their lock.

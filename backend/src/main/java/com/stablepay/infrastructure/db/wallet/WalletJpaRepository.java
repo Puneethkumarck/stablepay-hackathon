@@ -7,7 +7,9 @@ import jakarta.persistence.QueryHint;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
+import org.springframework.data.repository.query.Param;
 
 interface WalletJpaRepository extends JpaRepository<WalletEntity, Long> {
 
@@ -17,7 +19,8 @@ interface WalletJpaRepository extends JpaRepository<WalletEntity, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "4000")})
-    Optional<WalletEntity> findById(Long id);
+    @Query("select w from WalletEntity w where w.id = :id")
+    Optional<WalletEntity> findByIdForUpdate(@Param("id") Long id);
 
     Optional<WalletEntity> findBySolanaAddress(String solanaAddress);
 }

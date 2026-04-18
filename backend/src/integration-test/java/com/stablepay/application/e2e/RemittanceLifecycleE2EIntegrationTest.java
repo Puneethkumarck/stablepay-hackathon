@@ -35,6 +35,7 @@ class RemittanceLifecycleE2EIntegrationTest {
     private static final String E2E_SOLANA_ADDRESS = "E2eSoLaNa1234567890AbCdEfGhIjKlMnOpQrStUv";
     private static final byte[] E2E_PUBLIC_KEY = new byte[]{1, 2, 3, 4, 5, 6, 7, 8};
     private static final byte[] E2E_KEY_SHARE_DATA = new byte[]{10, 20, 30, 40, 50};
+    private static final byte[] E2E_PEER_KEY_SHARE_DATA = new byte[]{60, 70, 80, 90, 100};
 
     @Autowired
     private MockMvc mockMvc;
@@ -55,6 +56,7 @@ class RemittanceLifecycleE2EIntegrationTest {
                         .solanaAddress(E2E_SOLANA_ADDRESS)
                         .publicKey(E2E_PUBLIC_KEY)
                         .keyShareData(E2E_KEY_SHARE_DATA)
+                        .peerKeyShareData(E2E_PEER_KEY_SHARE_DATA)
                         .build());
     }
 

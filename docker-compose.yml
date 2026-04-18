@@ -88,7 +88,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: sandbox
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: stablepay
@@ -108,6 +108,9 @@ services:
       CLAIM_AUTHORITY_PRIVATE_KEY: 2JxcWkDJuBPCexd2hyWpZ3HXMBQLDkWWGWuRzkHmDvqoBNBBqC9jsnr1d5bznamozwVrrj7A5hLomkHhZYaP6SbY
       STRIPE_API_KEY: ${STRIPE_API_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_TEST_MODE: ${STRIPE_TEST_MODE:-false}
+      STRIPE_AUTO_CONFIRM: ${STRIPE_AUTO_CONFIRM:-false}
+      STRIPE_TEST_PAYMENT_METHOD: ${STRIPE_TEST_PAYMENT_METHOD:-pm_card_visa}
       TREASURY_PRIVATE_KEY: ${TREASURY_PRIVATE_KEY}
     depends_on:
       postgres:

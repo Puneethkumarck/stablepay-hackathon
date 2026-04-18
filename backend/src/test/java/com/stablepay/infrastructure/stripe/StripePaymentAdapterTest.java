@@ -105,6 +105,7 @@ class StripePaymentAdapterTest {
                 .putMetadata("wallet_id", SOME_WALLET_ID.toString())
                 .setConfirm(true)
                 .setPaymentMethod(SOME_STRIPE_TEST_PAYMENT_METHOD)
+                .addPaymentMethodType("card")
                 .build();
         assertThat(paymentIntentParamsCaptor.getValue())
                 .usingRecursiveComparison()
@@ -230,6 +231,7 @@ class StripePaymentAdapterTest {
                 .putMetadata("wallet_id", SOME_WALLET_ID.toString())
                 .setConfirm(true)
                 .setPaymentMethod(SOME_STRIPE_TEST_PAYMENT_METHOD)
+                .addPaymentMethodType("card")
                 .build();
         assertThat(paymentIntentParamsCaptor.getValue())
                 .usingRecursiveComparison()

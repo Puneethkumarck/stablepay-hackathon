@@ -82,6 +82,7 @@ public class StripePaymentAdapter implements PaymentGateway {
         if (stripeProperties.testMode() && stripeProperties.autoConfirm()) {
             builder.setConfirm(true);
             builder.setPaymentMethod(stripeProperties.testPaymentMethod());
+            builder.addPaymentMethodType("card");
         }
         return builder.build();
     }

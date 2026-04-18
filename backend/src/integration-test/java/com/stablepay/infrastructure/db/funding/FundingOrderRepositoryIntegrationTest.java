@@ -41,6 +41,9 @@ class FundingOrderRepositoryIntegrationTest {
         var wallet = Wallet.builder()
                 .userId("funding-user-" + unique)
                 .solanaAddress("funding-addr-" + unique)
+                .publicKey(new byte[]{1})
+                .keyShareData(new byte[]{2})
+                .peerKeyShareData(new byte[]{3})
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
                 .build();
