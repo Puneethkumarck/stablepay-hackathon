@@ -26,4 +26,10 @@ public class SolanaConfig {
     public Connection solanaConnection(SolanaProperties solanaProperties) {
         return new Connection(solanaProperties.rpcUrl());
     }
+
+    @Bean
+    public TreasuryProperties treasuryProperties(
+            @Value("${stablepay.treasury.private-key:}") String privateKey) {
+        return new TreasuryProperties(privateKey);
+    }
 }

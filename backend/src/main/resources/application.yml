@@ -51,6 +51,8 @@ stablepay:
     escrow-program-id: ${STABLEPAY_ESCROW_PROGRAM_ID:7C2zsbhgDnxQuC1Nd2rzXQfsfnKazQWFpoUJNqS8zWij}
     usdc-mint: ${USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     claim-authority-private-key: ${CLAIM_AUTHORITY_PRIVATE_KEY:}
+  treasury:
+    private-key: ${TREASURY_PRIVATE_KEY:}
   stripe:
     api-key: ${STRIPE_API_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
