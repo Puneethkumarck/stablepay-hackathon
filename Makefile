@@ -1,4 +1,4 @@
-.PHONY: up down restart logs ps infra urls clean build-backend help
+.PHONY: up down restart logs ps infra urls clean build-backend help stripe-listen
 
 COMPOSE := docker compose
 
@@ -81,3 +81,6 @@ e2e-full: up ## Start stack + wait + run E2E tests
 clean: ## Stop all services and remove volumes
 	@$(COMPOSE) down -v
 	@echo "StablePay stack stopped and volumes removed."
+
+stripe-listen: ## Forward Stripe webhook events to the local backend (requires `stripe` CLI)
+	stripe listen --forward-to localhost:8080/webhooks/stripe

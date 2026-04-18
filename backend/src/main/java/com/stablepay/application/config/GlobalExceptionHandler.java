@@ -5,7 +5,9 @@ import java.time.Instant;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -38,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private static final String FUNDING_ORDERS_ACTIVE_INDEX =
+            "idx_funding_orders_one_active_per_wallet";
 
     private final Clock clock;
 
@@ -183,6 +188,25 @@ public class GlobalExceptionHandler {
             InsufficientBalanceForRefundException ex, HttpServletRequest request) {
         log.warn("Insufficient balance for refund: {}", ex.getMessage());
         return buildResponse("SP-0025", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, HttpServletRequest request)
+            throws DataIntegrityViolationException {
+        var rootMessage = ex.getMostSpecificCause().getMessage();
+        if (rootMessage != null
+                && rootMessage.contains(FUNDING_ORDERS_ACTIVE_INDEX)) {
+            log.warn("Concurrent funding attempt violates {}: {}",
+                    FUNDING_ORDERS_ACTIVE_INDEX, rootMessage);
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(buildResponse(
+                            "SP-0022",
+                            "Funding already in progress for this wallet",
+                            request));
+        }
+        throw ex;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
