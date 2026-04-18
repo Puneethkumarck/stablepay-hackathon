@@ -6,7 +6,6 @@ import static com.stablepay.testutil.FundingOrderFixtures.SOME_WALLET_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.fundingOrderBuilder;
 import static com.stablepay.testutil.WalletFixtures.SOME_SOLANA_ADDRESS;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -15,12 +14,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
 import com.stablepay.domain.funding.port.FundingOrderRepository;
 import com.stablepay.domain.funding.port.FundingWorkflowStarter;
@@ -40,9 +36,6 @@ class CompleteFundingHandlerTest {
 
     private CompleteFundingHandler completeFundingHandler;
 
-    @Captor
-    private ArgumentCaptor<FundingOrder> fundingOrderCaptor;
-
     @BeforeEach
     void setUp() {
         completeFundingHandler = new CompleteFundingHandler(
@@ -50,23 +43,19 @@ class CompleteFundingHandlerTest {
     }
 
     @Test
-    void shouldMarkOrderFundedAndStartWorkflow() {
+    void shouldStartWorkflowWithoutFlippingStatus() {
         // given
         var order = fundingOrderBuilder().status(FundingStatus.PAYMENT_CONFIRMED).build();
         var wallet = walletBuilder().id(SOME_WALLET_ID).solanaAddress(SOME_SOLANA_ADDRESS).build();
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
         given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
-        given(fundingOrderRepository.save(fundingOrderCaptor.capture()))
-                .willAnswer(invocation -> invocation.<FundingOrder>getArgument(0));
 
         // when
         completeFundingHandler.handle(SOME_FUNDING_ID);
 
         // then
-        var expectedSaved = order.toBuilder().status(FundingStatus.FUNDED).build();
-        assertThat(fundingOrderCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(expectedSaved);
+        then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
+        then(fundingOrderRepository).shouldHaveNoMoreInteractions();
         then(fundingWorkflowStarter).should()
                 .startFundingWorkflow(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_SOLANA_ADDRESS, SOME_AMOUNT_USDC);
     }
@@ -198,7 +187,7 @@ class CompleteFundingHandlerTest {
     }
 
     @Test
-    void shouldMarkOrderFundedEvenWhenWorkflowStarterIsAbsent() {
+    void shouldStillValidateWhenWorkflowStarterIsAbsent() {
         // given
         var handlerWithoutStarter = new CompleteFundingHandler(
                 fundingOrderRepository, walletRepository, Optional.empty());
@@ -206,17 +195,13 @@ class CompleteFundingHandlerTest {
         var wallet = walletBuilder().id(SOME_WALLET_ID).solanaAddress(SOME_SOLANA_ADDRESS).build();
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
         given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
-        given(fundingOrderRepository.save(fundingOrderCaptor.capture()))
-                .willAnswer(invocation -> invocation.<FundingOrder>getArgument(0));
 
         // when
         handlerWithoutStarter.handle(SOME_FUNDING_ID);
 
         // then
-        var expectedSaved = order.toBuilder().status(FundingStatus.FUNDED).build();
-        assertThat(fundingOrderCaptor.getValue())
-                .usingRecursiveComparison()
-                .isEqualTo(expectedSaved);
+        then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
+        then(fundingOrderRepository).shouldHaveNoMoreInteractions();
         then(fundingWorkflowStarter).shouldHaveNoInteractions();
     }
 }
