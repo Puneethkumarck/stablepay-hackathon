@@ -10,10 +10,16 @@ node_modules/
 
 # Environment
 .env
-.env.local
+.env.*
+!.env.example
 
 # Anchor / Solana
 .anchor/
 target/
 test-ledger/
 *.dylib
+
+# Local-only planning specs (kept out of VCS)
+docs/specs/2026-04-18-001-upi-payout-integration-spec.md
+docs/specs/2026-04-18-001-upi-payout-issues.md
+docs/specs/2026-04-18-002-claim-authority-hardening-spec.md
