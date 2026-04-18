@@ -16,6 +16,11 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
 
     private static final Logger log = Workflow.getLogger(WalletFundingWorkflowImpl.class);
 
+    private static final String TREASURY_DEPLETED_EXCEPTION =
+            "com.stablepay.domain.wallet.exception.TreasuryDepletedException";
+    private static final String ILLEGAL_ARGUMENT_EXCEPTION =
+            "java.lang.IllegalArgumentException";
+
     private final WalletFundingActivities treasuryCheckActivity =
             Workflow.newActivityStub(WalletFundingActivities.class, treasuryCheckOptions());
     private final WalletFundingActivities solTopUpActivity =
@@ -45,9 +50,9 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
         log.info("Wallet funding workflow completed fundingId={}", request.fundingId());
     }
 
-    // Treasury depletion is a permanent business failure — don't retry. Any
-    // other exception (RPC transient) must retry up to 3 times so a flaky
-    // Solana RPC call doesn't permanently fail an otherwise-fundable workflow.
+    // Treasury depletion is a permanent business failure — don't retry.
+    // IllegalArgumentException signals a programming error upstream (non-positive
+    // amount) that will not change across retries.
     private static ActivityOptions treasuryCheckOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
@@ -55,16 +60,25 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
                         .setMaximumAttempts(3)
                         .setInitialInterval(Duration.ofSeconds(1))
                         .setBackoffCoefficient(2.0)
-                        .setDoNotRetry(
-                                "com.stablepay.domain.wallet.exception.TreasuryDepletedException")
+                        .setDoNotRetry(TREASURY_DEPLETED_EXCEPTION, ILLEGAL_ARGUMENT_EXCEPTION)
                         .build())
                 .build();
     }
 
+    // 10s initial interval gives Solana confirmation time to propagate so the
+    // pre-check on a retry reads the post-transfer balance rather than stale
+    // pre-transfer state. Combined with the pre-check short-circuit this
+    // narrows (but does not eliminate) the double-send window. Revisit after
+    // STA-84 adds signature-persisted idempotency.
     private static ActivityOptions solTopUpOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
-                .setRetryOptions(standardRetry())
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .setInitialInterval(Duration.ofSeconds(10))
+                        .setBackoffCoefficient(2.0)
+                        .setDoNotRetry(ILLEGAL_ARGUMENT_EXCEPTION)
+                        .build())
                 .build();
     }
 
@@ -79,15 +93,13 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
     // activity that actually succeeded on-chain could be retried and produce a
     // second USDC transfer. Until STA-84 adds signature persistence keyed by
     // fundingId, cap this activity at a single attempt and let the workflow
-    // fail (operators re-drive). ensureSolBalance stays retryable because its
-    // pre-check naturally short-circuits if the sender already holds SOL, and
-    // createAtaIfNeeded stays retryable because its pre-check detects an
-    // existing ATA.
+    // fail (operators re-drive).
     private static ActivityOptions transferOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(60))
                 .setRetryOptions(RetryOptions.newBuilder()
                         .setMaximumAttempts(1)
+                        .setDoNotRetry(ILLEGAL_ARGUMENT_EXCEPTION)
                         .build())
                 .build();
     }
@@ -104,6 +116,7 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
                 .setMaximumAttempts(3)
                 .setInitialInterval(Duration.ofSeconds(2))
                 .setBackoffCoefficient(2.0)
+                .setDoNotRetry(ILLEGAL_ARGUMENT_EXCEPTION)
                 .build();
     }
 }
