@@ -72,6 +72,15 @@ public class TemporalFundingWorkflowStarter implements FundingWorkflowStarter {
                     "Wallet funding workflow already started for fundingId={}. Skipping.",
                     fundingId,
                     e);
+        } catch (RuntimeException e) {
+            // FundingOrder is already FUNDED in the DB (this runs afterCommit). A Stripe
+            // retry will no-op on the terminal status, so this workflow will NOT be started
+            // by any future webhook. Log loudly so operators can manually reconcile.
+            // Follow-up: STA-84 adds an outbox + reconciler to recover automatically.
+            log.error(
+                    "CRITICAL: wallet funding workflow start FAILED after FUNDED committed "
+                            + "fundingId={} walletId={} — manual reconciliation required",
+                    fundingId, walletId, e);
         }
     }
 }

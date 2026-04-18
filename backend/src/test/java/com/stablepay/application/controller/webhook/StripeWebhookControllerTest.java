@@ -53,14 +53,16 @@ class StripeWebhookControllerTest {
         given(paymentWebhookVerifier.verify(SOME_PAYLOAD, SOME_SIGNATURE_HEADER))
                 .willThrow(InvalidWebhookSignatureException.withReason("tampered signature"));
 
-        // when / then
-        mockMvc.perform(post("/webhooks/stripe")
-                        .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SOME_PAYLOAD))
+        // when
+        var resultActions = mockMvc.perform(post("/webhooks/stripe")
+                .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SOME_PAYLOAD));
+
+        // then
+        resultActions
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("SP-0026"));
-
         then(completeFundingHandler).shouldHaveNoInteractions();
         then(failFundingHandler).shouldHaveNoInteractions();
     }
@@ -72,13 +74,14 @@ class StripeWebhookControllerTest {
         given(paymentWebhookVerifier.verify(SOME_PAYLOAD, SOME_SIGNATURE_HEADER))
                 .willReturn(SOME_PAYMENT_SUCCEEDED_EVENT);
 
-        // when / then
-        mockMvc.perform(post("/webhooks/stripe")
-                        .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SOME_PAYLOAD))
-                .andExpect(status().isOk());
+        // when
+        var resultActions = mockMvc.perform(post("/webhooks/stripe")
+                .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SOME_PAYLOAD));
 
+        // then
+        resultActions.andExpect(status().isOk());
         then(completeFundingHandler).should().handle(SOME_FUNDING_ID);
         then(failFundingHandler).shouldHaveNoInteractions();
     }
@@ -90,13 +93,14 @@ class StripeWebhookControllerTest {
         given(paymentWebhookVerifier.verify(SOME_PAYLOAD, SOME_SIGNATURE_HEADER))
                 .willReturn(SOME_PAYMENT_FAILED_EVENT);
 
-        // when / then
-        mockMvc.perform(post("/webhooks/stripe")
-                        .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SOME_PAYLOAD))
-                .andExpect(status().isOk());
+        // when
+        var resultActions = mockMvc.perform(post("/webhooks/stripe")
+                .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SOME_PAYLOAD));
 
+        // then
+        resultActions.andExpect(status().isOk());
         then(failFundingHandler).should().handle(SOME_FUNDING_ID);
         then(completeFundingHandler).shouldHaveNoInteractions();
     }
@@ -108,13 +112,14 @@ class StripeWebhookControllerTest {
         given(paymentWebhookVerifier.verify(SOME_PAYLOAD, SOME_SIGNATURE_HEADER))
                 .willReturn(SOME_UNKNOWN_EVENT);
 
-        // when / then
-        mockMvc.perform(post("/webhooks/stripe")
-                        .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SOME_PAYLOAD))
-                .andExpect(status().isOk());
+        // when
+        var resultActions = mockMvc.perform(post("/webhooks/stripe")
+                .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SOME_PAYLOAD));
 
+        // then
+        resultActions.andExpect(status().isOk());
         then(completeFundingHandler).shouldHaveNoInteractions();
         then(failFundingHandler).shouldHaveNoInteractions();
     }
@@ -128,13 +133,14 @@ class StripeWebhookControllerTest {
         willThrow(new RuntimeException("boom"))
                 .given(completeFundingHandler).handle(SOME_FUNDING_ID);
 
-        // when / then
-        mockMvc.perform(post("/webhooks/stripe")
-                        .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SOME_PAYLOAD))
-                .andExpect(status().isOk());
+        // when
+        var resultActions = mockMvc.perform(post("/webhooks/stripe")
+                .header("Stripe-Signature", SOME_SIGNATURE_HEADER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SOME_PAYLOAD));
 
+        // then
+        resultActions.andExpect(status().isOk());
         then(completeFundingHandler).should().handle(SOME_FUNDING_ID);
         then(failFundingHandler).shouldHaveNoInteractions();
     }

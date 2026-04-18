@@ -124,8 +124,11 @@ class StripePaymentWebhookVerifierTest {
                 "payment_intent.succeeded", com.stripe.Stripe.API_VERSION, SOME_FUNDING_ID.toString());
         var bogusSignature = "t=1700000000,v1=deadbeef";
 
-        // when / then
-        assertThatThrownBy(() -> verifier.verify(payload, bogusSignature))
+        // when
+        var thrown = assertThatThrownBy(() -> verifier.verify(payload, bogusSignature));
+
+        // then
+        thrown
                 .isInstanceOf(InvalidWebhookSignatureException.class)
                 .hasMessageContaining("SP-0026");
     }
