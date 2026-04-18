@@ -12,6 +12,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
 import java.math.BigDecimal;
 
@@ -81,6 +82,26 @@ class WalletFundingWorkflowImplTest {
         then(activities).should(inOrder).createAtaIfNeeded(SOME_SENDER_ADDRESS);
         then(activities).should(inOrder).transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC);
         then(activities).should(inOrder).finalizeFunding(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC);
+    }
+
+    @Test
+    void shouldFailWorkflowImmediatelyWhenUsdcTransferFails() {
+        // given
+        willThrow(new RuntimeException("Solana RPC down"))
+                .given(activities).transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC);
+        testEnv.start();
+
+        // when / then
+        assertThatThrownBy(() -> newWorkflow().execute(requestBuilder().build()))
+                .isInstanceOf(WorkflowFailedException.class)
+                .hasCauseInstanceOf(ActivityFailure.class);
+
+        then(activities).should().checkTreasuryBalance(SOME_AMOUNT_USDC);
+        then(activities).should().ensureSolBalance(SOME_SENDER_ADDRESS);
+        then(activities).should().createAtaIfNeeded(SOME_SENDER_ADDRESS);
+        then(activities).should(times(1)).transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC);
+        then(activities).should(never())
+                .finalizeFunding(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC);
     }
 
     @Test

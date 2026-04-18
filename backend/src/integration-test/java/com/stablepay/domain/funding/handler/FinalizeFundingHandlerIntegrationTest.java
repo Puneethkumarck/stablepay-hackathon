@@ -26,6 +26,10 @@ class FinalizeFundingHandlerIntegrationTest {
 
     private static final BigDecimal INITIAL_BALANCE = new BigDecimal("0.000000");
     private static final BigDecimal FUNDING_AMOUNT = new BigDecimal("25.000000");
+    private static final String[] WALLET_IGNORED_FIELDS =
+            {"id", "createdAt", "updatedAt"};
+    private static final String[] ORDER_IGNORED_FIELDS =
+            {"id", "createdAt", "updatedAt"};
 
     @Autowired
     private FinalizeFundingHandler handler;
@@ -39,25 +43,22 @@ class FinalizeFundingHandlerIntegrationTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
-    private Long walletId;
-    private UUID fundingId;
+    private Wallet initialWallet;
+    private FundingOrder initialOrder;
 
     @BeforeEach
     void setUp() {
         var unique = String.valueOf(System.nanoTime());
         transactionTemplate.executeWithoutResult(status -> {
-            var saved = walletRepository.save(Wallet.builder()
+            initialWallet = walletRepository.save(Wallet.builder()
                     .userId("finalize-user-" + unique)
                     .solanaAddress("finalize-addr-" + unique)
                     .availableBalance(INITIAL_BALANCE)
                     .totalBalance(INITIAL_BALANCE)
                     .build());
-            walletId = saved.id();
-
-            fundingId = UUID.randomUUID();
-            fundingOrderRepository.save(FundingOrder.builder()
-                    .fundingId(fundingId)
-                    .walletId(walletId)
+            initialOrder = fundingOrderRepository.save(FundingOrder.builder()
+                    .fundingId(UUID.randomUUID())
+                    .walletId(initialWallet.id())
                     .amountUsdc(FUNDING_AMOUNT)
                     .stripePaymentIntentId("pi_finalize_" + unique)
                     .status(FundingStatus.PAYMENT_CONFIRMED)
@@ -68,37 +69,58 @@ class FinalizeFundingHandlerIntegrationTest {
     @Test
     void shouldIncrementBalanceAndFlipToFundedOnFirstInvocation() {
         // when
-        handler.handle(fundingId, walletId, FUNDING_AMOUNT);
+        handler.handle(initialOrder.fundingId(), initialWallet.id(), FUNDING_AMOUNT);
 
         // then
-        var reloadedWallet = reloadWallet();
-        assertThat(reloadedWallet.availableBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
-        assertThat(reloadedWallet.totalBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
-        assertThat(reloadOrder().status()).isEqualTo(FundingStatus.FUNDED);
+        var expectedWallet = initialWallet.toBuilder()
+                .availableBalance(FUNDING_AMOUNT)
+                .totalBalance(FUNDING_AMOUNT)
+                .build();
+        assertThat(reloadWallet())
+                .usingRecursiveComparison()
+                .ignoringFields(WALLET_IGNORED_FIELDS)
+                .isEqualTo(expectedWallet);
+
+        var expectedOrder = initialOrder.toBuilder().status(FundingStatus.FUNDED).build();
+        assertThat(reloadOrder())
+                .usingRecursiveComparison()
+                .ignoringFields(ORDER_IGNORED_FIELDS)
+                .isEqualTo(expectedOrder);
     }
 
     @Test
     void shouldBeIdempotentWhenRetriedAfterSuccessfulCommit() {
         // given — first call commits in its own transaction
-        handler.handle(fundingId, walletId, FUNDING_AMOUNT);
+        handler.handle(initialOrder.fundingId(), initialWallet.id(), FUNDING_AMOUNT);
 
         // when — second call (Temporal retry after ack lost) in a new transaction
-        handler.handle(fundingId, walletId, FUNDING_AMOUNT);
+        handler.handle(initialOrder.fundingId(), initialWallet.id(), FUNDING_AMOUNT);
 
         // then — balance incremented exactly once, status stays FUNDED
-        var reloadedWallet = reloadWallet();
-        assertThat(reloadedWallet.availableBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
-        assertThat(reloadedWallet.totalBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
-        assertThat(reloadOrder().status()).isEqualTo(FundingStatus.FUNDED);
+        var expectedWallet = initialWallet.toBuilder()
+                .availableBalance(FUNDING_AMOUNT)
+                .totalBalance(FUNDING_AMOUNT)
+                .build();
+        assertThat(reloadWallet())
+                .usingRecursiveComparison()
+                .ignoringFields(WALLET_IGNORED_FIELDS)
+                .isEqualTo(expectedWallet);
+
+        var expectedOrder = initialOrder.toBuilder().status(FundingStatus.FUNDED).build();
+        assertThat(reloadOrder())
+                .usingRecursiveComparison()
+                .ignoringFields(ORDER_IGNORED_FIELDS)
+                .isEqualTo(expectedOrder);
     }
 
     private Wallet reloadWallet() {
         return transactionTemplate.execute(
-                status -> walletRepository.findById(walletId).orElseThrow());
+                status -> walletRepository.findById(initialWallet.id()).orElseThrow());
     }
 
     private FundingOrder reloadOrder() {
         return transactionTemplate.execute(
-                status -> fundingOrderRepository.findByFundingId(fundingId).orElseThrow());
+                status -> fundingOrderRepository.findByFundingId(initialOrder.fundingId())
+                        .orElseThrow());
     }
 }
