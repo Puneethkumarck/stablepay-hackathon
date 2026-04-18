@@ -1,4 +1,4 @@
-package com.stablepay.infrastructure.transak;
+package com.stablepay.infrastructure.disbursement;
 
 import java.math.BigDecimal;
 
