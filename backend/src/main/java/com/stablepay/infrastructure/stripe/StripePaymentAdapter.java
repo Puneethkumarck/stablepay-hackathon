@@ -10,6 +10,7 @@ import com.stablepay.domain.funding.model.PaymentResult;
 import com.stablepay.domain.funding.port.PaymentGateway;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 
@@ -56,7 +57,10 @@ public class StripePaymentAdapter implements PaymentGateway {
         log.info("Initiating Stripe refund paymentIntentId={}", paymentIntentId);
         try {
             var params = buildRefundParams(paymentIntentId, amount);
-            stripeClient.refunds().create(params);
+            var requestOptions = RequestOptions.builder()
+                    .setIdempotencyKey("refund-" + paymentIntentId)
+                    .build();
+            stripeClient.refunds().create(params, requestOptions);
         } catch (StripeException e) {
             log.warn("Stripe refund failed paymentIntentId={} code={} status={} requestId={}",
                     paymentIntentId, e.getCode(), e.getStatusCode(), e.getRequestId(), e);

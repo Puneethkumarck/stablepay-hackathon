@@ -19,6 +19,7 @@ import com.stablepay.application.dto.FundWalletRequest;
 import com.stablepay.application.dto.FundingOrderResponse;
 import com.stablepay.domain.funding.handler.GetFundingOrderHandler;
 import com.stablepay.domain.funding.handler.InitiateFundingHandler;
+import com.stablepay.domain.funding.handler.RefundFundingHandler;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -36,6 +37,7 @@ public class FundingController {
 
     private final InitiateFundingHandler initiateFundingHandler;
     private final GetFundingOrderHandler getFundingOrderHandler;
+    private final RefundFundingHandler refundFundingHandler;
     private final FundingApiMapper fundingApiMapper;
 
     @PostMapping("/wallets/{id}/fund")
@@ -72,6 +74,26 @@ public class FundingController {
     })
     public FundingOrderResponse getFundingOrder(@PathVariable UUID fundingId) {
         var order = getFundingOrderHandler.handle(fundingId);
+        return fundingApiMapper.toResponse(order);
+    }
+
+    @PostMapping("/funding-orders/{fundingId}/refund")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Refund a funded wallet",
+            description = "Refunds a FUNDED order via Stripe. Rejects if the sender's on-chain USDC "
+                    + "balance or wallet available balance is less than the funding amount. "
+                    + "No on-chain USDC is returned — the sender's test tokens stay in their ATA.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Refund completed"),
+        @ApiResponse(responseCode = "404", description = "Funding order not found",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "409", description = "Refund not allowed or balance insufficient",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "502", description = "Stripe refund failed",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public FundingOrderResponse refundFunding(@PathVariable UUID fundingId) {
+        var order = refundFundingHandler.handle(fundingId);
         return fundingApiMapper.toResponse(order);
     }
 }

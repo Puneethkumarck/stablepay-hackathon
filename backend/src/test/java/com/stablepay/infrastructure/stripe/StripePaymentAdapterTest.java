@@ -33,6 +33,7 @@ import com.stripe.exception.ApiException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 import com.stripe.service.PaymentIntentService;
@@ -61,6 +62,9 @@ class StripePaymentAdapterTest {
 
     @Captor
     private ArgumentCaptor<RefundCreateParams> refundParamsCaptor;
+
+    @Captor
+    private ArgumentCaptor<RequestOptions> requestOptionsCaptor;
 
     private StripeProperties testModeProperties;
     private StripeProperties autoConfirmDisabledProperties;
@@ -329,10 +333,11 @@ class StripePaymentAdapterTest {
     }
 
     @Test
-    void shouldRefundViaStripe() throws StripeException {
+    void shouldRefundViaStripeWithIdempotencyKey() throws StripeException {
         // given
         given(stripeClient.refunds()).willReturn(refundService);
-        given(refundService.create(refundParamsCaptor.capture())).willReturn(refund);
+        given(refundService.create(refundParamsCaptor.capture(), requestOptionsCaptor.capture()))
+                .willReturn(refund);
 
         // when
         adapter.refund(SOME_STRIPE_PAYMENT_INTENT_ID, SOME_AMOUNT_USDC);
@@ -345,6 +350,8 @@ class StripePaymentAdapterTest {
         assertThat(refundParamsCaptor.getValue())
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
+        assertThat(requestOptionsCaptor.getValue().getIdempotencyKey())
+                .isEqualTo("refund-" + SOME_STRIPE_PAYMENT_INTENT_ID);
     }
 
     @Test
@@ -353,7 +360,8 @@ class StripePaymentAdapterTest {
         given(stripeClient.refunds()).willReturn(refundService);
         var stripeException = new ApiException(
                 "charge_already_refunded", "req_xyz", "invalid_request_error", 400, null);
-        willThrow(stripeException).given(refundService).create(refundParamsCaptor.capture());
+        willThrow(stripeException).given(refundService)
+                .create(refundParamsCaptor.capture(), requestOptionsCaptor.capture());
 
         // when / then
         assertThatThrownBy(() -> adapter.refund(SOME_STRIPE_PAYMENT_INTENT_ID, SOME_AMOUNT_USDC))
