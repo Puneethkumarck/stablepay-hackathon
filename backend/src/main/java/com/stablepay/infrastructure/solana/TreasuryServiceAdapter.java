@@ -53,7 +53,8 @@ public class TreasuryServiceAdapter implements TreasuryService {
             var transaction = new VersionedTransaction(message);
             transaction.sign(treasuryKeypair);
 
-            var signature = sendWithSkipPreflight(transaction.serialize());
+            var opContext = "treasury-sol:" + destinationAddress;
+            var signature = sendWithSkipPreflight(transaction.serialize(), opContext);
             log.info("Treasury SOL transfer submitted with signature {}", signature);
         } catch (SolanaTransactionException e) {
             throw e;
@@ -74,7 +75,9 @@ public class TreasuryServiceAdapter implements TreasuryService {
             var usdcMint = solanaProperties.usdcMint();
             var treasuryAta = deriveAta(treasuryPubkey, usdcMint);
             var destinationAta = deriveAta(destinationOwner, usdcMint);
-            var amountBaseUnits = amountUsdc.multiply(USDC_SCALE).longValueExact();
+            var amountBaseUnits = amountUsdc.setScale(USDC_DECIMALS, RoundingMode.HALF_UP)
+                    .multiply(USDC_SCALE)
+                    .longValueExact();
 
             var instruction = new SplTransferInstruction(
                     treasuryAta, destinationAta, usdcMint, treasuryPubkey,
@@ -85,7 +88,8 @@ public class TreasuryServiceAdapter implements TreasuryService {
             var transaction = new VersionedTransaction(message);
             transaction.sign(treasuryKeypair);
 
-            var signature = sendWithSkipPreflight(transaction.serialize());
+            var opContext = "treasury-usdc:" + destinationAddress;
+            var signature = sendWithSkipPreflight(transaction.serialize(), opContext);
             log.info("Treasury USDC transfer submitted with signature {}", signature);
         } catch (SolanaTransactionException e) {
             throw e;
@@ -123,7 +127,7 @@ public class TreasuryServiceAdapter implements TreasuryService {
             return new BigDecimal(balance.getAmount())
                     .divide(USDC_SCALE, USDC_DECIMALS, RoundingMode.DOWN);
         } catch (Exception e) {
-            log.debug("USDC balance query failed for {} (ata {}): {} — treating as zero",
+            log.warn("USDC balance query for {} (ata {}) failed: {} — treating as zero (fail-closed)",
                     address, ata.toBase58(), e.getMessage());
             return BigDecimal.ZERO;
         }
@@ -152,7 +156,8 @@ public class TreasuryServiceAdapter implements TreasuryService {
             var transaction = new VersionedTransaction(message);
             transaction.sign(treasuryKeypair);
 
-            var signature = sendWithSkipPreflight(transaction.serialize());
+            var opContext = "treasury-ata:" + ownerAddress;
+            var signature = sendWithSkipPreflight(transaction.serialize(), opContext);
             log.info("ATA creation for owner {} submitted with signature {}", ownerAddress, signature);
         } catch (SolanaTransactionException e) {
             throw e;
@@ -172,13 +177,7 @@ public class TreasuryServiceAdapter implements TreasuryService {
     }
 
     private boolean accountExists(PublicKey address) {
-        try {
-            return solanaConnection.getAccountInfo(address) != null;
-        } catch (Exception e) {
-            log.debug("Account {} does not exist or query failed: {}",
-                    address.toBase58(), e.getMessage());
-            return false;
-        }
+        return solanaConnection.getAccountInfo(address) != null;
     }
 
     private Keypair resolveTreasuryKeypair() {
@@ -189,11 +188,12 @@ public class TreasuryServiceAdapter implements TreasuryService {
         return Keypair.fromSecretKey(Base58.decode(privateKeyStr));
     }
 
-    private String sendWithSkipPreflight(byte[] txBytes) {
+    private String sendWithSkipPreflight(byte[] txBytes, String opContext) {
         try {
             return solanaConnection.sendTransaction(txBytes);
         } catch (Exception preflightEx) {
-            log.warn("Preflight failed, retrying with skipPreflight: {}", preflightEx.getMessage());
+            log.warn("Preflight failed for {}, retrying with skipPreflight: {}",
+                    opContext, preflightEx.getMessage());
             var txBase64 = Base64.getEncoder().encodeToString(txBytes);
             HttpURLConnection conn = null;
             try {
@@ -227,7 +227,7 @@ public class TreasuryServiceAdapter implements TreasuryService {
                 }
             } catch (Exception e) {
                 throw SolanaTransactionException.submissionFailed(
-                        "treasury-skipPreflight", readRpcErrorDetails(conn, e));
+                        opContext + " (skipPreflight)", readRpcErrorDetails(conn, e));
             } finally {
                 if (conn != null) {
                     conn.disconnect();

@@ -35,6 +35,13 @@ import com.stablepay.domain.remittance.exception.SolanaTransactionException;
 @ExtendWith(MockitoExtension.class)
 class TreasuryServiceAdapterTest {
 
+    private static final byte[] SYSTEM_PROGRAM_ID =
+            new PublicKey("11111111111111111111111111111111").bytes();
+    private static final byte[] SPL_TOKEN_PROGRAM_ID =
+            new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").bytes();
+    private static final byte[] ASSOCIATED_TOKEN_PROGRAM_ID =
+            new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").bytes();
+
     @Mock
     private Connection solanaConnection;
 
@@ -46,6 +53,22 @@ class TreasuryServiceAdapterTest {
     private TreasuryProperties unconfiguredTreasury;
     private PublicKey treasuryPubkey;
     private PublicKey usdcMint;
+
+    private static boolean containsBytes(byte[] haystack, byte[] needle) {
+        if (needle.length == 0 || needle.length > haystack.length) {
+            return false;
+        }
+        outer:
+        for (var i = 0; i <= haystack.length - needle.length; i++) {
+            for (var j = 0; j < needle.length; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    continue outer;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
 
     @BeforeEach
     void setUp() {
@@ -79,6 +102,9 @@ class TreasuryServiceAdapterTest {
             var txBytes = txBytesCaptor.getValue();
             assertThat(txBytes[0]).isEqualTo((byte) 1);
             assertThat(txBytes.length).isGreaterThan(65);
+            assertThat(containsBytes(txBytes, SYSTEM_PROGRAM_ID))
+                    .as("SOL transfer must reference the System Program")
+                    .isTrue();
         }
 
         @Test
@@ -113,6 +139,9 @@ class TreasuryServiceAdapterTest {
             var txBytes = txBytesCaptor.getValue();
             assertThat(txBytes[0]).isEqualTo((byte) 1);
             assertThat(txBytes.length).isGreaterThan(65);
+            assertThat(containsBytes(txBytes, SPL_TOKEN_PROGRAM_ID))
+                    .as("USDC transfer must reference the SPL Token Program")
+                    .isTrue();
         }
 
         @Test
@@ -223,6 +252,9 @@ class TreasuryServiceAdapterTest {
             var txBytes = txBytesCaptor.getValue();
             assertThat(txBytes[0]).isEqualTo((byte) 1);
             assertThat(txBytes.length).isGreaterThan(65);
+            assertThat(containsBytes(txBytes, ASSOCIATED_TOKEN_PROGRAM_ID))
+                    .as("ATA creation must reference the Associated Token Program")
+                    .isTrue();
         }
 
         @Test
@@ -255,6 +287,24 @@ class TreasuryServiceAdapterTest {
             assertThatThrownBy(() -> adapter.createAtaIfNeeded(SOME_DESTINATION_WALLET))
                     .isInstanceOf(SolanaTransactionException.class)
                     .hasMessageContaining("SP-0015");
+        }
+
+        @Test
+        void shouldPropagateAccountInfoFailureInsteadOfAttemptingDuplicateCreate() {
+            // given
+            var adapter = new TreasuryServiceAdapter(
+                    solanaConnection, solanaProperties, configuredTreasury);
+            var ata = PublicKey.findProgramDerivedAddress(
+                    new PublicKey(SOME_DESTINATION_WALLET), usdcMint).getPublicKey();
+            given(solanaConnection.getAccountInfo(ata))
+                    .willThrow(new RuntimeException("rpc rate limited"));
+
+            // when / then
+            assertThatThrownBy(() -> adapter.createAtaIfNeeded(SOME_DESTINATION_WALLET))
+                    .isInstanceOf(SolanaTransactionException.class)
+                    .hasMessageContaining("SP-0010");
+            then(solanaConnection).should().getAccountInfo(ata);
+            then(solanaConnection).shouldHaveNoMoreInteractions();
         }
     }
 }
