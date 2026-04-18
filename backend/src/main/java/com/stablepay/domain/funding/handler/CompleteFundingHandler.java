@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class CompleteFundingHandler {
 
     private static final Set<FundingStatus> TERMINAL_STATUSES = Set.of(

@@ -17,11 +17,13 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.BDDMockito;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.stablepay.domain.funding.handler.FinalizeFundingHandler;
+import com.stablepay.domain.remittance.exception.SolanaTransactionException;
 import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
 import com.stablepay.domain.wallet.port.TreasuryService;
 
@@ -62,6 +64,20 @@ class WalletFundingActivitiesImplTest {
         assertThatThrownBy(() -> activities.checkTreasuryBalance(SOME_AMOUNT_USDC))
                 .isInstanceOf(TreasuryDepletedException.class)
                 .hasMessageContaining("SP-0007");
+    }
+
+    @Test
+    void shouldPropagateSolanaExceptionWhenBalanceQueryFails() {
+        // given
+        var rpcFailure = SolanaTransactionException.submissionFailed(
+                "treasury-usdc-balance", new RuntimeException("RPC 503"));
+        BDDMockito.willThrow(rpcFailure)
+                .given(treasuryService).getTreasuryUsdcBalance();
+
+        // when / then
+        assertThatThrownBy(() -> activities.checkTreasuryBalance(SOME_AMOUNT_USDC))
+                .isInstanceOf(SolanaTransactionException.class)
+                .hasMessageContaining("SP-0010");
     }
 
     @Test

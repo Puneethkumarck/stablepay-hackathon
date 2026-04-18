@@ -4,6 +4,7 @@ import static com.stablepay.testutil.FundingOrderFixtures.SOME_FUNDING_ID;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static com.stablepay.testutil.WalletFundingFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.WalletFundingFixtures.SOME_WALLET_ID;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -71,13 +72,13 @@ class FinalizeFundingHandlerTest {
                 .availableBalance(new BigDecimal("35.000000"))
                 .totalBalance(new BigDecimal("35.000000"))
                 .build();
-        org.assertj.core.api.Assertions.assertThat(walletCaptor.getValue())
+        assertThat(walletCaptor.getValue())
                 .usingRecursiveComparison()
                 .isEqualTo(expectedWallet);
 
         then(fundingOrderRepository).should().save(orderCaptor.capture());
         var expectedOrder = order.toBuilder().status(FundingStatus.FUNDED).build();
-        org.assertj.core.api.Assertions.assertThat(orderCaptor.getValue())
+        assertThat(orderCaptor.getValue())
                 .usingRecursiveComparison()
                 .isEqualTo(expectedOrder);
     }

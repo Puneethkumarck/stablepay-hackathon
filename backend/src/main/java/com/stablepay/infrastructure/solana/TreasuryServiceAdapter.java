@@ -112,10 +112,23 @@ public class TreasuryServiceAdapter implements TreasuryService {
         }
     }
 
+    // Strict balance query for authorization checks: propagates RPC failures as
+    // SolanaTransactionException so callers can distinguish "treasury depleted"
+    // from "RPC transiently unreachable". Does NOT use the fail-closed ZERO
+    // sentinel that getUsdcBalance uses for arbitrary addresses.
     @Override
     public BigDecimal getTreasuryUsdcBalance() {
         var treasuryKeypair = resolveTreasuryKeypair();
-        return getUsdcBalance(treasuryKeypair.getPublicKey().toBase58());
+        var treasuryPubkey = treasuryKeypair.getPublicKey();
+        var ata = deriveAta(treasuryPubkey, solanaProperties.usdcMint());
+        try {
+            var balance = solanaConnection.getTokenAccountBalance(ata);
+            return new BigDecimal(balance.getAmount())
+                    .divide(USDC_SCALE, USDC_DECIMALS, RoundingMode.DOWN);
+        } catch (Exception e) {
+            throw SolanaTransactionException.submissionFailed(
+                    "treasury-usdc-balance:" + treasuryPubkey.toBase58(), e);
+        }
     }
 
     @Override

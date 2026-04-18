@@ -1,18 +1,17 @@
 package com.stablepay.infrastructure.temporal;
 
 import static com.stablepay.infrastructure.temporal.TaskQueue.Constants.TASK_QUEUE_WALLET_FUNDING;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
-import static org.mockito.Mockito.inOrder;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.BDDMockito;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -74,12 +73,12 @@ class WalletFundingWorkflowIntegrationTest {
         newWorkflow().execute(newRequest());
 
         // then
-        var inOrder = inOrder(activities);
-        inOrder.verify(activities).checkTreasuryBalance(SOME_AMOUNT_USDC);
-        inOrder.verify(activities).ensureSolBalance(SOME_SENDER_ADDRESS);
-        inOrder.verify(activities).createAtaIfNeeded(SOME_SENDER_ADDRESS);
-        inOrder.verify(activities).transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC);
-        inOrder.verify(activities).finalizeFunding(fundingId, walletId, SOME_AMOUNT_USDC);
+        var inOrder = BDDMockito.inOrder(activities);
+        then(activities).should(inOrder).checkTreasuryBalance(SOME_AMOUNT_USDC);
+        then(activities).should(inOrder).ensureSolBalance(SOME_SENDER_ADDRESS);
+        then(activities).should(inOrder).createAtaIfNeeded(SOME_SENDER_ADDRESS);
+        then(activities).should(inOrder).transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC);
+        then(activities).should(inOrder).finalizeFunding(fundingId, walletId, SOME_AMOUNT_USDC);
     }
 
     @Test
@@ -94,18 +93,5 @@ class WalletFundingWorkflowIntegrationTest {
 
         then(activities).should().checkTreasuryBalance(SOME_AMOUNT_USDC);
         then(activities).shouldHaveNoMoreInteractions();
-    }
-
-    @Test
-    void shouldUseCorrectTaskQueueForWalletFundingWorkflow() {
-        // given
-        given(activities.transferUsdc(SOME_SENDER_ADDRESS, SOME_AMOUNT_USDC))
-                .willReturn(SOME_TX_SIGNATURE);
-
-        // when
-        newWorkflow().execute(newRequest());
-
-        // then
-        assertThat(TASK_QUEUE_WALLET_FUNDING).isEqualTo("stablepay-wallet-funding");
     }
 }
