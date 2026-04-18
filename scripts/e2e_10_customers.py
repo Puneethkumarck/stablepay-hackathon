@@ -23,8 +23,11 @@ def http(method: str, path: str, body: dict | None = None) -> tuple[int, dict | 
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method,
                                  headers={"Content-Type": "application/json"})
+    # 180s window covers up to 3 MPC DKG retries (30s each + backoff). STA-85
+    # makes the server side fail-fast at ~30s per attempt; the harness must
+    # wait longer than the longest legitimate server attempt.
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=180) as r:
             raw = r.read().decode()
             code = r.status
     except urllib.error.HTTPError as e:
