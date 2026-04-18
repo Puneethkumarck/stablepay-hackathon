@@ -13,6 +13,8 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,7 @@ import org.mockito.BDDMockito;
 import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
 
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.testing.TestWorkflowEnvironment;
@@ -83,13 +86,13 @@ class WalletFundingWorkflowImplTest {
     @Test
     void shouldFailWorkflowWhenTreasuryInsufficient() {
         // given
-        willThrow(TreasuryDepletedException.insufficientTreasury(SOME_AMOUNT_USDC, java.math.BigDecimal.ZERO))
+        willThrow(TreasuryDepletedException.insufficientTreasury(SOME_AMOUNT_USDC, BigDecimal.ZERO))
                 .given(activities).checkTreasuryBalance(SOME_AMOUNT_USDC);
         testEnv.start();
 
         // when / then
         assertThatThrownBy(() -> newWorkflow().execute(requestBuilder().build()))
-                .isInstanceOf(io.temporal.client.WorkflowFailedException.class)
+                .isInstanceOf(WorkflowFailedException.class)
                 .hasCauseInstanceOf(ActivityFailure.class);
 
         then(activities).should(never()).ensureSolBalance(SOME_SENDER_ADDRESS);

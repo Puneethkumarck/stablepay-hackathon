@@ -75,10 +75,20 @@ public class WalletFundingWorkflowImpl implements WalletFundingWorkflow {
                 .build();
     }
 
+    // transferUsdc has no signature-persistence idempotency, so a timed-out
+    // activity that actually succeeded on-chain could be retried and produce a
+    // second USDC transfer. Until STA-84 adds signature persistence keyed by
+    // fundingId, cap this activity at a single attempt and let the workflow
+    // fail (operators re-drive). ensureSolBalance stays retryable because its
+    // pre-check naturally short-circuits if the sender already holds SOL, and
+    // createAtaIfNeeded stays retryable because its pre-check detects an
+    // existing ATA.
     private static ActivityOptions transferOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(60))
-                .setRetryOptions(standardRetry())
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(1)
+                        .build())
                 .build();
     }
 

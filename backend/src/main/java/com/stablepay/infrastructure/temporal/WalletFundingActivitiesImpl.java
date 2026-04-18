@@ -27,7 +27,7 @@ public class WalletFundingActivitiesImpl implements WalletFundingActivities {
 
     @Override
     public void checkTreasuryBalance(BigDecimal amountUsdc) {
-        requireNonNull(amountUsdc, "amountUsdc cannot be null");
+        requirePositiveAmount(amountUsdc);
         var available = treasuryService.getTreasuryUsdcBalance();
         if (available.compareTo(amountUsdc) < 0) {
             log.error("Treasury USDC insufficient requested={} available={}", amountUsdc, available);
@@ -59,7 +59,7 @@ public class WalletFundingActivitiesImpl implements WalletFundingActivities {
     @Override
     public String transferUsdc(String senderSolanaAddress, BigDecimal amountUsdc) {
         requireNonNull(senderSolanaAddress, "senderSolanaAddress cannot be null");
-        requireNonNull(amountUsdc, "amountUsdc cannot be null");
+        requirePositiveAmount(amountUsdc);
         return treasuryService.transferUsdc(senderSolanaAddress, amountUsdc);
     }
 
@@ -67,7 +67,15 @@ public class WalletFundingActivitiesImpl implements WalletFundingActivities {
     public void finalizeFunding(UUID fundingId, Long walletId, BigDecimal amountUsdc) {
         requireNonNull(fundingId, "fundingId cannot be null");
         requireNonNull(walletId, "walletId cannot be null");
-        requireNonNull(amountUsdc, "amountUsdc cannot be null");
+        requirePositiveAmount(amountUsdc);
         finalizeFundingHandler.handle(fundingId, walletId, amountUsdc);
+    }
+
+    private static void requirePositiveAmount(BigDecimal amountUsdc) {
+        requireNonNull(amountUsdc, "amountUsdc cannot be null");
+        if (amountUsdc.signum() <= 0) {
+            throw new IllegalArgumentException(
+                    "amountUsdc must be positive, got: " + amountUsdc);
+        }
     }
 }
