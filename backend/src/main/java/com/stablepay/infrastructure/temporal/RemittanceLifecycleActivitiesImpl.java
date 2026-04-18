@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
+import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
@@ -78,13 +79,28 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     }
 
     @Override
-    public void disburseInr(String upiId, BigDecimal amountUsdc, String remittanceId) {
+    public DisbursementResult disburseInr(
+            String upiId,
+            BigDecimal amountUsdc,
+            BigDecimal amountInr,
+            String remittanceId) {
         requireNonNull(upiId, "upiId must not be null");
         requireNonNull(amountUsdc, "amountUsdc must not be null");
+        requireNonNull(amountInr, "amountInr must not be null");
         requireNonNull(remittanceId, "remittanceId must not be null");
-        log.info("Disbursing {} USDC as INR to UPI {} for remittance {}", amountUsdc, PiiMasking.maskUpi(upiId), remittanceId);
-        fiatDisbursementProvider.disburse(upiId, amountUsdc, remittanceId);
-        log.info("INR disbursement completed for remittance {}", remittanceId);
+        log.info(
+                "Disbursing {} USDC ({} INR) as INR to UPI {} for remittance {}",
+                amountUsdc,
+                amountInr,
+                PiiMasking.maskUpi(upiId),
+                remittanceId);
+        var result = fiatDisbursementProvider.disburse(upiId, amountUsdc, amountInr, remittanceId);
+        log.info(
+                "INR disbursement completed for remittance {} providerId={} providerStatus={}",
+                remittanceId,
+                result.providerId(),
+                result.providerStatus());
+        return result;
     }
 
     @Override

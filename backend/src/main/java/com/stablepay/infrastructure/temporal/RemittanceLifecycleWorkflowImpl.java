@@ -122,6 +122,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
             disbursementActivities.disburseInr(
                     pendingClaim.upiId(),
                     request.amountUsdc(),
+                    request.amountInr(),
                     remittanceId.toString());
         } catch (Exception e) {
             log.error("INR disbursement failed for remittanceId={}, escrow already released", remittanceId, e);

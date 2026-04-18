@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.temporal;
 
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DEPOSIT_TX_SIGNATURE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
@@ -27,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
+import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
@@ -36,6 +38,10 @@ class RemittanceLifecycleActivitiesImplTest {
 
     private static final String SOME_CLAIM_URL = "https://claim.stablepay.app/claim-token-abc-123";
     private static final BigDecimal SOME_DISBURSEMENT_AMOUNT = new BigDecimal("100.00");
+    private static final DisbursementResult SOME_DISBURSEMENT_RESULT = DisbursementResult.builder()
+            .providerId("log_11111111-1111-1111-1111-111111111111")
+            .providerStatus("SIMULATED")
+            .build();
 
     @Mock
     private SolanaTransactionService solanaTransactionService;
@@ -107,14 +113,20 @@ class RemittanceLifecycleActivitiesImplTest {
     }
 
     @Test
-    void shouldDelegateInrDisbursementToProvider() {
-        // given — provider is void, no stubbing needed
+    void shouldDelegateInrDisbursementToProviderAndReturnResult() {
+        // given
+        given(fiatDisbursementProvider.disburse(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .willReturn(SOME_DISBURSEMENT_RESULT);
 
         // when
-        activities.disburseInr(SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_REMITTANCE_ID.toString());
+        var result = activities.disburseInr(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString());
 
         // then
-        then(fiatDisbursementProvider).should().disburse(SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_REMITTANCE_ID.toString());
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(SOME_DISBURSEMENT_RESULT);
     }
 
     @Test

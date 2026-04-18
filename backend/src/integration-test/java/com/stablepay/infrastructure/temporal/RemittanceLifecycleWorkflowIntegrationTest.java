@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.temporal;
 
 import static com.stablepay.infrastructure.temporal.TaskQueue.Constants.TASK_QUEUE_REMITTANCE_LIFECYCLE;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_SENDER_ADDRESS;
@@ -100,7 +101,7 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                             remittanceId.toString(), RemittanceStatus.CLAIMED);
             then(activities)
                     .should()
-                    .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC, remittanceId.toString());
+                    .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, remittanceId.toString());
             then(activities)
                     .should()
                     .updateRemittanceStatus(
@@ -189,7 +190,7 @@ class RemittanceLifecycleWorkflowIntegrationTest {
             // given
             willThrow(new RuntimeException("Disbursement provider unavailable"))
                     .given(activities)
-                    .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC, remittanceId.toString());
+                    .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, remittanceId.toString());
 
             var workflow = startWorkflow();
 

@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,7 @@ class TemporalRemittanceWorkflowStarterTest {
                 .senderAddress(SOME_SENDER_ADDRESS)
                 .recipientPhone(SOME_RECIPIENT_PHONE)
                 .amountUsdc(SOME_AMOUNT_USDC)
+                .amountInr(BigDecimal.ZERO)
                 .claimToken(SOME_CLAIM_TOKEN)
                 .claimBaseUrl("https://claim.stablepay.app/")
                 .claimExpiryTimeout(Duration.ofHours(48))
