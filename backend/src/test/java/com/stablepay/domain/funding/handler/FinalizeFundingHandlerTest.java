@@ -106,6 +106,50 @@ class FinalizeFundingHandlerTest {
     }
 
     @Test
+    void shouldBeIdempotentAcrossDoubleInvocationSoBalanceIsCreditedOnlyOnce() {
+        // given
+        var initialWallet = walletBuilder()
+                .id(SOME_WALLET_ID)
+                .availableBalance(new BigDecimal("10.000000"))
+                .totalBalance(new BigDecimal("10.000000"))
+                .build();
+        var creditedWallet = initialWallet.toBuilder()
+                .availableBalance(new BigDecimal("35.000000"))
+                .totalBalance(new BigDecimal("35.000000"))
+                .build();
+        var pendingOrder = FundingOrderFixtures.fundingOrderBuilder()
+                .walletId(SOME_WALLET_ID)
+                .amountUsdc(SOME_AMOUNT_USDC)
+                .status(FundingStatus.PAYMENT_CONFIRMED)
+                .build();
+        var fundedOrder = pendingOrder.toBuilder().status(FundingStatus.FUNDED).build();
+
+        given(walletRepository.findById(SOME_WALLET_ID))
+                .willReturn(Optional.of(initialWallet))
+                .willReturn(Optional.of(creditedWallet));
+        given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID))
+                .willReturn(Optional.of(pendingOrder))
+                .willReturn(Optional.of(fundedOrder));
+
+        // when
+        handler.handle(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC);
+        handler.handle(SOME_FUNDING_ID, SOME_WALLET_ID, SOME_AMOUNT_USDC);
+
+        // then
+        then(walletRepository).should().save(walletCaptor.capture());
+        assertThat(walletCaptor.getAllValues()).hasSize(1);
+        assertThat(walletCaptor.getValue())
+                .usingRecursiveComparison()
+                .isEqualTo(creditedWallet);
+
+        then(fundingOrderRepository).should().save(orderCaptor.capture());
+        assertThat(orderCaptor.getAllValues()).hasSize(1);
+        assertThat(orderCaptor.getValue())
+                .usingRecursiveComparison()
+                .isEqualTo(fundedOrder);
+    }
+
+    @Test
     void shouldThrowWhenWalletNotFound() {
         // given
         given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.empty());
