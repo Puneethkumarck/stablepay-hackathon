@@ -18,6 +18,7 @@ import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.exception.FundingFailedException;
 import com.stablepay.domain.funding.exception.FundingOrderNotFoundException;
+import com.stablepay.domain.funding.exception.InvalidWebhookSignatureException;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
@@ -147,6 +148,14 @@ public class GlobalExceptionHandler {
             FundingAlreadyInProgressException ex, HttpServletRequest request) {
         log.warn("Funding already in progress: {}", ex.getMessage());
         return buildResponse("SP-0022", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidWebhookSignatureException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidWebhookSignature(
+            InvalidWebhookSignatureException ex, HttpServletRequest request) {
+        log.warn("Invalid webhook signature: {}", ex.getMessage());
+        return buildResponse("SP-0026", ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
