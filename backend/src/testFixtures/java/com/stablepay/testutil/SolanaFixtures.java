@@ -36,4 +36,13 @@ public final class SolanaFixtures {
 
     public static final String SOME_CLAIM_AUTHORITY_PUBLIC_KEY =
             "HKqwNCgGAtg4TXmQCeMURZNpMdbz6QbvJSBVQzwQ5TC";
+
+    public static final String SOME_TREASURY_PRIVATE_KEY =
+            "TuncLi5MKiNXH2BG3m2wnPsMLyXkx41zwouStjE8bRmJEZ6SxxsHN21sR8RFdTQXJMBif4pBkkfX17JSPtYVZmp";
+
+    public static final String SOME_TREASURY_ADDRESS =
+            "HKqwNCgGAtg4TXmQCeMURZNpMdbz6QbvJSBVQzwQ5TC";
+
+    public static final String SOME_DESTINATION_WALLET =
+            "DestWa11et111111111111111111111111111111111";
 }

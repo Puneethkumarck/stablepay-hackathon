@@ -34,4 +34,9 @@ public class SolanaTransactionException extends RuntimeException {
         return new SolanaTransactionException(
                 "SP-0014: Claim authority private key is not configured");
     }
+
+    public static SolanaTransactionException treasuryNotConfigured() {
+        return new SolanaTransactionException(
+                "SP-0015: Treasury private key is not configured");
+    }
 }
