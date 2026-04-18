@@ -2,7 +2,6 @@ package com.stablepay.infrastructure.temporal;
 
 import java.util.List;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -74,26 +73,24 @@ public class TemporalConfig {
     @Bean
     @Profile("!test")
     Worker remittanceLifecycleWorker(
-            WorkerFactory workerFactory,
-            ObjectProvider<RemittanceLifecycleActivities> activitiesProvider) {
+            WorkerFactory workerFactory, RemittanceLifecycleActivities activities) {
         var taskQueue = TaskQueue.REMITTANCE_LIFECYCLE.getName();
         log.info("Registering Temporal worker for task queue {}", taskQueue);
         var worker = workerFactory.newWorker(taskQueue);
         worker.registerWorkflowImplementationTypes(RemittanceLifecycleWorkflowImpl.class);
-        activitiesProvider.ifAvailable(worker::registerActivitiesImplementations);
+        worker.registerActivitiesImplementations(activities);
         return worker;
     }
 
     @Bean
     @Profile("!test")
     Worker walletFundingWorker(
-            WorkerFactory workerFactory,
-            ObjectProvider<WalletFundingActivities> activitiesProvider) {
+            WorkerFactory workerFactory, WalletFundingActivities activities) {
         var taskQueue = TaskQueue.WALLET_FUNDING.getName();
         log.info("Registering Temporal worker for task queue {}", taskQueue);
         var worker = workerFactory.newWorker(taskQueue);
         worker.registerWorkflowImplementationTypes(WalletFundingWorkflowImpl.class);
-        activitiesProvider.ifAvailable(worker::registerActivitiesImplementations);
+        worker.registerActivitiesImplementations(activities);
         return worker;
     }
 

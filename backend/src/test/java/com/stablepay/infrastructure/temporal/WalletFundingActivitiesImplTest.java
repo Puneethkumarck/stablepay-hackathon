@@ -67,6 +67,39 @@ class WalletFundingActivitiesImplTest {
     }
 
     @Test
+    void shouldRejectNonPositiveAmountOnCheckTreasuryBalance() {
+        // given
+        var zero = BigDecimal.ZERO;
+
+        // when / then
+        assertThatThrownBy(() -> activities.checkTreasuryBalance(zero))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("amountUsdc must be positive");
+    }
+
+    @Test
+    void shouldRejectNegativeAmountOnTransferUsdc() {
+        // given
+        var negative = new BigDecimal("-1.00");
+
+        // when / then
+        assertThatThrownBy(() -> activities.transferUsdc(SOME_SENDER_ADDRESS, negative))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("amountUsdc must be positive");
+    }
+
+    @Test
+    void shouldRejectZeroAmountOnFinalizeFunding() {
+        // given
+        var zero = BigDecimal.ZERO;
+
+        // when / then
+        assertThatThrownBy(() -> activities.finalizeFunding(SOME_FUNDING_ID, SOME_WALLET_ID, zero))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("amountUsdc must be positive");
+    }
+
+    @Test
     void shouldPropagateSolanaExceptionWhenBalanceQueryFails() {
         // given
         var rpcFailure = SolanaTransactionException.submissionFailed(

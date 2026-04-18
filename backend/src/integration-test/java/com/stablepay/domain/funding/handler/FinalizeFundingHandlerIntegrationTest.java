@@ -8,7 +8,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
@@ -17,8 +17,11 @@ import com.stablepay.domain.wallet.model.Wallet;
 import com.stablepay.domain.wallet.port.WalletRepository;
 import com.stablepay.test.PgTest;
 
+// No class-level @Transactional: each handler invocation must commit in its own
+// transaction so the retry in shouldBeIdempotentWhenRetriedAfterSuccessfulCommit
+// actually exercises the post-commit idempotency guard (status = FUNDED) rather
+// than reading dirty in-session state from the same outer transaction.
 @PgTest
-@Transactional
 class FinalizeFundingHandlerIntegrationTest {
 
     private static final BigDecimal INITIAL_BALANCE = new BigDecimal("0.000000");
@@ -33,28 +36,33 @@ class FinalizeFundingHandlerIntegrationTest {
     @Autowired
     private FundingOrderRepository fundingOrderRepository;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
     private Long walletId;
     private UUID fundingId;
 
     @BeforeEach
     void setUp() {
         var unique = String.valueOf(System.nanoTime());
-        var wallet = Wallet.builder()
-                .userId("finalize-user-" + unique)
-                .solanaAddress("finalize-addr-" + unique)
-                .availableBalance(INITIAL_BALANCE)
-                .totalBalance(INITIAL_BALANCE)
-                .build();
-        walletId = walletRepository.save(wallet).id();
+        transactionTemplate.executeWithoutResult(status -> {
+            var saved = walletRepository.save(Wallet.builder()
+                    .userId("finalize-user-" + unique)
+                    .solanaAddress("finalize-addr-" + unique)
+                    .availableBalance(INITIAL_BALANCE)
+                    .totalBalance(INITIAL_BALANCE)
+                    .build());
+            walletId = saved.id();
 
-        fundingId = UUID.randomUUID();
-        fundingOrderRepository.save(FundingOrder.builder()
-                .fundingId(fundingId)
-                .walletId(walletId)
-                .amountUsdc(FUNDING_AMOUNT)
-                .stripePaymentIntentId("pi_finalize_" + unique)
-                .status(FundingStatus.PAYMENT_CONFIRMED)
-                .build());
+            fundingId = UUID.randomUUID();
+            fundingOrderRepository.save(FundingOrder.builder()
+                    .fundingId(fundingId)
+                    .walletId(walletId)
+                    .amountUsdc(FUNDING_AMOUNT)
+                    .stripePaymentIntentId("pi_finalize_" + unique)
+                    .status(FundingStatus.PAYMENT_CONFIRMED)
+                    .build());
+        });
     }
 
     @Test
@@ -63,28 +71,34 @@ class FinalizeFundingHandlerIntegrationTest {
         handler.handle(fundingId, walletId, FUNDING_AMOUNT);
 
         // then
-        var reloadedWallet = walletRepository.findById(walletId).orElseThrow();
+        var reloadedWallet = reloadWallet();
         assertThat(reloadedWallet.availableBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
         assertThat(reloadedWallet.totalBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
-
-        var reloadedOrder = fundingOrderRepository.findByFundingId(fundingId).orElseThrow();
-        assertThat(reloadedOrder.status()).isEqualTo(FundingStatus.FUNDED);
+        assertThat(reloadOrder().status()).isEqualTo(FundingStatus.FUNDED);
     }
 
     @Test
     void shouldBeIdempotentWhenRetriedAfterSuccessfulCommit() {
-        // given — first successful invocation
+        // given — first call commits in its own transaction
         handler.handle(fundingId, walletId, FUNDING_AMOUNT);
 
-        // when — retry (e.g. Temporal ack lost after commit)
+        // when — second call (Temporal retry after ack lost) in a new transaction
         handler.handle(fundingId, walletId, FUNDING_AMOUNT);
 
-        // then — balance incremented exactly once, status remains FUNDED
-        var reloadedWallet = walletRepository.findById(walletId).orElseThrow();
+        // then — balance incremented exactly once, status stays FUNDED
+        var reloadedWallet = reloadWallet();
         assertThat(reloadedWallet.availableBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
         assertThat(reloadedWallet.totalBalance()).isEqualByComparingTo(FUNDING_AMOUNT);
+        assertThat(reloadOrder().status()).isEqualTo(FundingStatus.FUNDED);
+    }
 
-        var reloadedOrder = fundingOrderRepository.findByFundingId(fundingId).orElseThrow();
-        assertThat(reloadedOrder.status()).isEqualTo(FundingStatus.FUNDED);
+    private Wallet reloadWallet() {
+        return transactionTemplate.execute(
+                status -> walletRepository.findById(walletId).orElseThrow());
+    }
+
+    private FundingOrder reloadOrder() {
+        return transactionTemplate.execute(
+                status -> fundingOrderRepository.findByFundingId(fundingId).orElseThrow());
     }
 }
