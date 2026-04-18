@@ -30,8 +30,12 @@ import com.stablepay.application.dto.FundingOrderResponse;
 import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.exception.FundingFailedException;
 import com.stablepay.domain.funding.exception.FundingOrderNotFoundException;
+import com.stablepay.domain.funding.exception.InsufficientBalanceForRefundException;
+import com.stablepay.domain.funding.exception.RefundFailedException;
+import com.stablepay.domain.funding.exception.RefundNotAllowedException;
 import com.stablepay.domain.funding.handler.GetFundingOrderHandler;
 import com.stablepay.domain.funding.handler.InitiateFundingHandler;
+import com.stablepay.domain.funding.handler.RefundFundingHandler;
 import com.stablepay.domain.funding.model.FundingInitiationResult;
 import com.stablepay.domain.funding.model.FundingStatus;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
@@ -55,6 +59,9 @@ class FundingControllerTest {
 
     @MockitoBean
     private GetFundingOrderHandler getFundingOrderHandler;
+
+    @MockitoBean
+    private RefundFundingHandler refundFundingHandler;
 
     @MockitoBean
     private FundingApiMapper fundingApiMapper;
@@ -229,5 +236,84 @@ class FundingControllerTest {
         mockMvc.perform(get("/api/funding-orders/{fundingId}", missingId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("SP-0020"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldRefundFundedOrderAndReturnUpdatedStatus() {
+        // given
+        var order = fundingOrderBuilder().status(FundingStatus.REFUNDED).build();
+        var response = FundingOrderResponse.builder()
+                .fundingId(SOME_FUNDING_ID)
+                .walletId(SOME_WALLET_ID)
+                .amountUsdc(SOME_AMOUNT_USDC)
+                .status(FundingStatus.REFUNDED)
+                .stripePaymentIntentId(SOME_STRIPE_PAYMENT_INTENT_ID)
+                .createdAt(SOME_CREATED_AT)
+                .build();
+
+        given(refundFundingHandler.handle(SOME_FUNDING_ID)).willReturn(order);
+        given(fundingApiMapper.toResponse(order)).willReturn(response);
+
+        // when / then
+        mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fundingId").value(SOME_FUNDING_ID.toString()))
+                .andExpect(jsonPath("$.status").value("REFUNDED"))
+                .andExpect(jsonPath("$.stripeClientSecret").doesNotExist());
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn404WhenRefundingMissingOrder() {
+        // given
+        given(refundFundingHandler.handle(SOME_FUNDING_ID))
+                .willThrow(FundingOrderNotFoundException.byFundingId(SOME_FUNDING_ID));
+
+        // when / then
+        mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("SP-0020"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn409WhenRefundNotAllowed() {
+        // given
+        given(refundFundingHandler.handle(SOME_FUNDING_ID))
+                .willThrow(RefundNotAllowedException.forStatus(FundingStatus.PAYMENT_CONFIRMED));
+
+        // when / then
+        mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("SP-0023"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn409WhenRefundBalanceInsufficient() {
+        // given
+        given(refundFundingHandler.handle(SOME_FUNDING_ID))
+                .willThrow(InsufficientBalanceForRefundException.forAmount(
+                        SOME_AMOUNT_USDC, new BigDecimal("0.00")));
+
+        // when / then
+        mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("SP-0025"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn502WhenStripeRefundFails() {
+        // given
+        given(refundFundingHandler.handle(SOME_FUNDING_ID))
+                .willThrow(RefundFailedException.stripeRefundFailed(
+                        SOME_STRIPE_PAYMENT_INTENT_ID, new RuntimeException("boom")));
+
+        // when / then
+        mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.errorCode").value("SP-0024"));
     }
 }

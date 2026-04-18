@@ -18,7 +18,10 @@ import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.exception.FundingFailedException;
 import com.stablepay.domain.funding.exception.FundingOrderNotFoundException;
+import com.stablepay.domain.funding.exception.InsufficientBalanceForRefundException;
 import com.stablepay.domain.funding.exception.InvalidWebhookSignatureException;
+import com.stablepay.domain.funding.exception.RefundFailedException;
+import com.stablepay.domain.funding.exception.RefundNotAllowedException;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
@@ -156,6 +159,30 @@ public class GlobalExceptionHandler {
             InvalidWebhookSignatureException ex, HttpServletRequest request) {
         log.warn("Invalid webhook signature: {}", ex.getMessage());
         return buildResponse("SP-0026", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(RefundNotAllowedException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleRefundNotAllowed(
+            RefundNotAllowedException ex, HttpServletRequest request) {
+        log.warn("Refund not allowed: {}", ex.getMessage());
+        return buildResponse("SP-0023", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(RefundFailedException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ErrorResponse handleRefundFailed(
+            RefundFailedException ex, HttpServletRequest request) {
+        log.error("Refund failed: {}", ex.getMessage());
+        return buildResponse("SP-0024", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InsufficientBalanceForRefundException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleInsufficientBalanceForRefund(
+            InsufficientBalanceForRefundException ex, HttpServletRequest request) {
+        log.warn("Insufficient balance for refund: {}", ex.getMessage());
+        return buildResponse("SP-0025", ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
