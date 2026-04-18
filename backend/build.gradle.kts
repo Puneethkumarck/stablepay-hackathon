@@ -178,7 +178,7 @@ dependencies {
     implementation("com.github.f4b6a3:uuid-creator:6.1.1")
 
     // OpenAPI / Swagger UI
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // Solana SDK
     implementation("org.sol4k:sol4k:0.7.0")
