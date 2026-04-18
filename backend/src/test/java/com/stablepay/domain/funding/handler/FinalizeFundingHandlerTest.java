@@ -108,14 +108,15 @@ class FinalizeFundingHandlerTest {
     @Test
     void shouldBeIdempotentAcrossDoubleInvocationSoBalanceIsCreditedOnlyOnce() {
         // given
+        var initialBalance = new BigDecimal("10.000000");
         var initialWallet = walletBuilder()
                 .id(SOME_WALLET_ID)
-                .availableBalance(new BigDecimal("10.000000"))
-                .totalBalance(new BigDecimal("10.000000"))
+                .availableBalance(initialBalance)
+                .totalBalance(initialBalance)
                 .build();
         var creditedWallet = initialWallet.toBuilder()
-                .availableBalance(new BigDecimal("35.000000"))
-                .totalBalance(new BigDecimal("35.000000"))
+                .availableBalance(initialBalance.add(SOME_AMOUNT_USDC))
+                .totalBalance(initialBalance.add(SOME_AMOUNT_USDC))
                 .build();
         var pendingOrder = FundingOrderFixtures.fundingOrderBuilder()
                 .walletId(SOME_WALLET_ID)
@@ -137,13 +138,11 @@ class FinalizeFundingHandlerTest {
 
         // then
         then(walletRepository).should().save(walletCaptor.capture());
-        assertThat(walletCaptor.getAllValues()).hasSize(1);
         assertThat(walletCaptor.getValue())
                 .usingRecursiveComparison()
                 .isEqualTo(creditedWallet);
 
         then(fundingOrderRepository).should().save(orderCaptor.capture());
-        assertThat(orderCaptor.getAllValues()).hasSize(1);
         assertThat(orderCaptor.getValue())
                 .usingRecursiveComparison()
                 .isEqualTo(fundedOrder);
