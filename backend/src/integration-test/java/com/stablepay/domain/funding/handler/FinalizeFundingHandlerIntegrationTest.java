@@ -17,10 +17,6 @@ import com.stablepay.domain.wallet.model.Wallet;
 import com.stablepay.domain.wallet.port.WalletRepository;
 import com.stablepay.test.PgTest;
 
-// No class-level @Transactional: each handler invocation must commit in its own
-// transaction so the retry in shouldBeIdempotentWhenRetriedAfterSuccessfulCommit
-// actually exercises the post-commit idempotency guard (status = FUNDED) rather
-// than reading dirty in-session state from the same outer transaction.
 @PgTest
 class FinalizeFundingHandlerIntegrationTest {
 

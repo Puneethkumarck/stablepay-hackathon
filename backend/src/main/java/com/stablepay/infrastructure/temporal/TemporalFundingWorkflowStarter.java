@@ -73,11 +73,6 @@ public class TemporalFundingWorkflowStarter implements FundingWorkflowStarter {
                     fundingId,
                     e);
         } catch (RuntimeException e) {
-            // FundingOrder stays in PAYMENT_CONFIRMED (the FUNDED flip now happens inside
-            // the workflow's finalizeFunding activity, per spec appendix #25). A Stripe
-            // retry will re-enter CompleteFundingHandler and retry the start. Log loudly
-            // so operators can investigate if retries don't arrive.
-            // Follow-up: STA-84 adds an outbox + reconciler to recover automatically.
             log.error(
                     "wallet funding workflow start FAILED fundingId={} walletId={} — "
                             + "relying on Stripe webhook retry",
