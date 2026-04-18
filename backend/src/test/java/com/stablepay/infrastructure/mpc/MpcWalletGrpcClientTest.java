@@ -49,17 +49,16 @@ class MpcWalletGrpcClientTest {
     private static final GenerateKeyRequest EXPECTED_KEYGEN_REQUEST = GenerateKeyRequest.newBuilder()
             .setCeremonyId(SOME_CEREMONY_ID)
             .setPartyId(0)
-            .setThreshold(2)
-            .setTotalParties(2)
+            .setThreshold(1)
+            .setTotalParties(1)
             .putAllPeerAddresses(Map.of())
             .build();
 
     private static final SignRequest EXPECTED_SIGN_REQUEST = SignRequest.newBuilder()
             .setCeremonyId(SOME_CEREMONY_ID)
             .setPartyId(0)
-            .setThreshold(2)
+            .setThreshold(1)
             .addSigningPartyIds(0)
-            .addSigningPartyIds(1)
             .setKeyShareData(ByteString.copyFrom(SOME_KEY_SHARE_DATA))
             .setMessage(ByteString.copyFrom(SOME_TRANSACTION_BYTES))
             .putAllPeerAddresses(Map.of())
@@ -183,6 +182,74 @@ class MpcWalletGrpcClientTest {
             assertThatThrownBy(() -> client.generateKey())
                     .isInstanceOf(MpcKeyGenerationException.class)
                     .hasCauseInstanceOf(StatusRuntimeException.class);
+        }
+
+        @Test
+        void shouldThrowTransientWhenPeerKeyShareMissingIn2of2() {
+            // given — 2-of-2 client with no peer sidecar wired (simulating peer timeout)
+            var twoOfTwoClient = new MpcWalletGrpcClient(
+                    blockingStub, java.util.List.of(), SOME_DEADLINE_MS,
+                    () -> SOME_CEREMONY_ID, 0, 2, 2, Map.of());
+            var primaryResponse = GenerateKeyResponse.newBuilder()
+                    .setSolanaAddress(SOME_SOLANA_ADDRESS)
+                    .setPublicKey(ByteString.copyFrom(SOME_PUBLIC_KEY))
+                    .setKeyShareData(ByteString.copyFrom(SOME_KEY_SHARE_DATA))
+                    .setStatus(sidecar.v1.Sidecar.Status.STATUS_COMPLETED)
+                    .build();
+            var twoOfTwoRequest = GenerateKeyRequest.newBuilder()
+                    .setCeremonyId(SOME_CEREMONY_ID)
+                    .setPartyId(0)
+                    .setThreshold(2)
+                    .setTotalParties(2)
+                    .putAllPeerAddresses(Map.of())
+                    .build();
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(twoOfTwoRequest)).willReturn(primaryResponse);
+
+            // when / then
+            assertThatThrownBy(twoOfTwoClient::generateKey)
+                    .isInstanceOf(MpcKeyGenerationException.Transient.class)
+                    .hasMessageContaining("peer key share missing");
+        }
+
+        @Test
+        void shouldClassifyDeadlineExceededAsTransient() {
+            // given
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST))
+                    .willThrow(new StatusRuntimeException(Status.DEADLINE_EXCEEDED));
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.Transient.class);
+        }
+
+        @Test
+        void shouldClassifyUnavailableAsTransient() {
+            // given
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST))
+                    .willThrow(new StatusRuntimeException(Status.UNAVAILABLE));
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.Transient.class);
+        }
+
+        @Test
+        void shouldClassifyInvalidArgumentAsPermanent() {
+            // given
+            given(blockingStub.withDeadlineAfter(SOME_DEADLINE_MS, TimeUnit.MILLISECONDS))
+                    .willReturn(deadlineStub);
+            given(deadlineStub.generateKey(EXPECTED_KEYGEN_REQUEST))
+                    .willThrow(new StatusRuntimeException(Status.INVALID_ARGUMENT));
+
+            // when / then
+            assertThatThrownBy(() -> client.generateKey())
+                    .isInstanceOf(MpcKeyGenerationException.Permanent.class);
         }
     }
 

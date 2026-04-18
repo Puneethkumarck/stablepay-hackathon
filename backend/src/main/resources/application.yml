@@ -107,10 +107,23 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,retries,retryevents
   endpoint:
     health:
       show-details: always
   health:
     redis:
       enabled: true
+
+resilience4j:
+  retry:
+    instances:
+      mpcKeygen:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 1.5
+        retry-exceptions:
+          - com.stablepay.domain.wallet.exception.MpcKeyGenerationException$Transient
+        ignore-exceptions:
+          - com.stablepay.domain.wallet.exception.MpcKeyGenerationException$Permanent

@@ -1,6 +1,7 @@
 package com.stablepay.application.controller.wallet;
 
 import static com.stablepay.testutil.WalletFixtures.SOME_KEY_SHARE_DATA;
+import static com.stablepay.testutil.WalletFixtures.SOME_PEER_KEY_SHARE_DATA;
 import static com.stablepay.testutil.WalletFixtures.SOME_PUBLIC_KEY;
 import static com.stablepay.testutil.WalletFixtures.SOME_SOLANA_ADDRESS;
 import static org.mockito.BDDMockito.given;
@@ -48,6 +49,7 @@ class WalletApiIntegrationTest {
                     .solanaAddress(solanaAddress)
                     .publicKey(SOME_PUBLIC_KEY)
                     .keyShareData(SOME_KEY_SHARE_DATA)
+                    .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                     .build();
             given(mpcWalletClient.generateKey()).willReturn(generatedKey);
 
@@ -77,6 +79,7 @@ class WalletApiIntegrationTest {
                     .solanaAddress("addr-dup-" + System.nanoTime())
                     .publicKey(SOME_PUBLIC_KEY)
                     .keyShareData(SOME_KEY_SHARE_DATA)
+                    .peerKeyShareData(SOME_PEER_KEY_SHARE_DATA)
                     .build();
             given(mpcWalletClient.generateKey()).willReturn(generatedKey);
 

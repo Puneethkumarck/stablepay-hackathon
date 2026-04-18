@@ -49,6 +49,9 @@ class FinalizeFundingHandlerIntegrationTest {
             initialWallet = walletRepository.save(Wallet.builder()
                     .userId("finalize-user-" + unique)
                     .solanaAddress("finalize-addr-" + unique)
+                    .publicKey(new byte[]{1})
+                    .keyShareData(new byte[]{2})
+                    .peerKeyShareData(new byte[]{3})
                     .availableBalance(INITIAL_BALANCE)
                     .totalBalance(INITIAL_BALANCE)
                     .build());

@@ -17,6 +17,7 @@ import com.stablepay.domain.wallet.exception.MpcSigningException;
 import com.stablepay.domain.wallet.model.GeneratedKey;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 
+import io.github.resilience4j.retry.annotation.Retry;
 import io.grpc.StatusRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import sidecar.v1.Sidecar.GenerateKeyRequest;
@@ -56,7 +57,7 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
             TssSidecarGrpc.TssSidecarBlockingStub primaryStub,
             long deadlineMs,
             Supplier<String> ceremonyIdGenerator) {
-        this(primaryStub, List.of(), deadlineMs, ceremonyIdGenerator, 0, 2, 2, Map.of());
+        this(primaryStub, List.of(), deadlineMs, ceremonyIdGenerator, 0, 1, 1, Map.of());
     }
 
     MpcWalletGrpcClient(
@@ -79,6 +80,7 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
     }
 
     @Override
+    @Retry(name = "mpcKeygen")
     public GeneratedKey generateKey() {
         var ceremonyId = ceremonyIdGenerator.get();
         log.info("Starting MPC key generation ceremony: {} (parties: {})", ceremonyId, totalParties);
@@ -126,6 +128,12 @@ public class MpcWalletGrpcClient implements MpcWalletClient {
                     log.warn("Peer sidecar keygen error for ceremony {}: {}",
                             ceremonyId, ex.getMessage());
                 }
+            }
+
+            if (threshold >= 2 && peerKeyShareData == null) {
+                log.error("MPC DKG ceremony {} completed on primary but peer key share is missing",
+                        ceremonyId);
+                throw MpcKeyGenerationException.peerShareMissing(ceremonyId);
             }
 
             log.info("MPC key generation completed for ceremony {}: address={}",

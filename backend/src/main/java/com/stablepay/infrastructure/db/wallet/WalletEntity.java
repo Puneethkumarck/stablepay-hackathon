@@ -36,13 +36,13 @@ public class WalletEntity {
     @Column(name = "solana_address", nullable = false, unique = true)
     private String solanaAddress;
 
-    @Column(name = "public_key")
+    @Column(name = "public_key", nullable = false)
     private byte[] publicKey;
 
-    @Column(name = "key_share_data")
+    @Column(name = "key_share_data", nullable = false)
     private byte[] keyShareData;
 
-    @Column(name = "peer_key_share_data")
+    @Column(name = "peer_key_share_data", nullable = false)
     private byte[] peerKeyShareData;
 
     @Column(name = "available_balance", nullable = false, precision = 19, scale = 6)
