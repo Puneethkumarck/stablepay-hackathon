@@ -500,3 +500,69 @@ Claim Authority USDC:  3  (received from second escrow claim)
 | Claim #1 (bug) | `27N4KAjf1nt9hkcvQR2aJQVfFByuiEM8TiBGLnCjW7BW8UFhkxCExQGbZmvqnV33WyRcuMEaCZ3YTqm7YmenqZRj` | Failed (0xbbf) |
 | Deposit #2 (3 USDC) | `4wcFXRXQmsRqVgQAMvQARzdvj9es65AYjv85eNVF1Q22spbXt1SFDk3PGMWbuvnDYE6E4WXoZDHChm4cPd7L9noK` | Finalized |
 | Claim #2 (fixed) | `61uQZbjb6YPxXC5Gcp46dGTLQ7VwwE49YSRoDgg5HDKtM4wX4KwUui14aF16458G6DJtNBcGdJSUq2Zrr9Va1WDf` | **Finalized (Ok)** |
+
+---
+
+## Stripe On-Ramp E2E (STA-82)
+
+Validates the full Stripe on-ramp funding flow on devnet:
+Stripe test payment → webhook → Temporal `WalletFundingWorkflow` →
+real on-chain USDC + SOL transfers → DB balance credit.
+
+### Prerequisites
+
+- Stripe test-mode keys in `.env`: `STRIPE_API_KEY=sk_test_…`, `STRIPE_WEBHOOK_SECRET=whsec_…`
+- Treasury devnet wallet funded with USDC + SOL, `TREASURY_PRIVATE_KEY` in `.env`
+- Stripe CLI installed, authenticated against the test account
+- Docker stack running: `make up`
+- Webhook forwarder: `make stripe-listen` (keep this terminal open)
+
+### Happy Path — Fund → Workflow → On-chain credit
+
+1. Create MPC wallet: `POST /api/wallets` → capture `{walletId, solanaAddress}`
+2. Initiate funding: `POST /api/wallets/{walletId}/fund` body `{"amount": 25.00}`
+   → expect `201` + `FundingOrderResponse` with `status=PAYMENT_CONFIRMED`,
+   `stripePaymentIntentId`, `stripeClientSecret` — capture `fundingId`
+3. Confirm the PI via Stripe CLI in test mode (auto-confirm is already wired in
+   `StripePaymentAdapter` when `stripe.auto-confirm=true`) — `stripe listen`
+   forwards `payment_intent.succeeded` back to `/webhooks/stripe`
+4. Poll `GET /api/funding-orders/{fundingId}` — expect status transition
+   `PAYMENT_CONFIRMED → FUNDED` within ~15s (workflow executes 5 activities)
+5. Verify sender ATA on devnet holds 25.000000 USDC (Solana Explorer)
+6. Verify sender has enough SOL (auto top-up ≥ 0.01 SOL if below threshold)
+7. Verify DB: wallet `available_balance` = 25, `funding_orders.status = FUNDED`
+
+Expected workflow signature: `checkTreasuryBalance → ensureSolBalance →
+createAtaIfNeeded → transferUsdc → finalizeFunding`.
+
+### Refund Path (Stripe-only — SPL stays in sender ATA)
+
+1. Create a fresh wallet, fund it `10.00` and wait for FUNDED
+2. `POST /api/funding-orders/{fundingId}/refund` → expect `200` + status `REFUNDED`
+3. Verify Stripe dashboard: refund visible, original PI shows refunded amount
+4. Verify DB: wallet balance decremented by 10.00, order status `REFUNDED`
+5. **Invariant:** sender ATA still holds 10 USDC on-chain — this is by design
+   (rev-5 spec appendix #20). The refund returns fiat via Stripe; on-chain SPL
+   is not clawed back.
+
+### Refund Rejection Path (SP-0025 balance gate)
+
+1. Create a third wallet, fund it `10.00`, wait for FUNDED
+2. Create a remittance that consumes the USDC
+   (`POST /api/remittances` body `{amountUsdc: 10.00, ...}`) — this moves USDC
+   to escrow and decrements wallet balance
+3. `POST /api/funding-orders/{fundingId}/refund` → expect `409 SP-0025`
+   (`InsufficientBalanceForRefundException`)
+4. Verify DB: order status unchanged (still `FUNDED`), wallet balance unchanged,
+   no Stripe refund attempted
+
+### Completion Checklist
+
+| Scenario | API | Temporal | On-chain | Stripe | Status |
+|----------|-----|----------|----------|--------|--------|
+| Happy path fund | 201/200 | 5 activities | 25 USDC credited | PI succeeded | — |
+| Refund path | 200 REFUNDED | n/a | SPL retained in ATA | Refund created | — |
+| Refund reject (SP-0025) | 409 SP-0025 | n/a | No-op | No refund call | — |
+
+Fill in the Status column and append Stripe PI / refund IDs + devnet signatures
+once the run completes.
