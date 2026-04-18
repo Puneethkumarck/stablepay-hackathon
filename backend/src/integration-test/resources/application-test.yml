@@ -6,5 +6,7 @@ stablepay:
     claim-base-url: https://claim.stablepay.app/
   stripe:
     api-key: sk_test_stablepay
+    webhook-secret: whsec_test_stablepay
     test-mode: true
     auto-confirm: true
+    currency: usd
