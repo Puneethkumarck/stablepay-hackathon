@@ -20,11 +20,11 @@ public class DisbursementException extends RuntimeException {
         return new NonRetriable(buildMessage(upiId, reason));
     }
 
-    protected DisbursementException(String message) {
+    private DisbursementException(String message) {
         super(message);
     }
 
-    protected DisbursementException(String message, Throwable cause) {
+    private DisbursementException(String message, Throwable cause) {
         super(message, cause);
     }
 

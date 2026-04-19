@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 
+import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.infrastructure.temporal.TaskQueue.Constants;
 
@@ -26,7 +27,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     private static final int SMS_MAX_ATTEMPTS = 3;
     private static final int DISBURSEMENT_MAX_ATTEMPTS = 3;
     private static final String DISBURSEMENT_NON_RETRIABLE_TYPE =
-            "com.stablepay.domain.remittance.exception.DisbursementException$NonRetriable";
+            DisbursementException.NonRetriable.class.getName();
 
     private final RemittanceLifecycleActivities solanaActivities =
             Workflow.newActivityStub(RemittanceLifecycleActivities.class, solanaActivityOptions());
