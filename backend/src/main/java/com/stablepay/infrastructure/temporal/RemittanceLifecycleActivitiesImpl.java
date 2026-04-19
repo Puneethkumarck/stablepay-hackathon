@@ -94,7 +94,9 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
                 amountInr,
                 PiiMasking.maskUpi(upiId),
                 remittanceId);
-        var result = fiatDisbursementProvider.disburse(upiId, amountUsdc, amountInr, remittanceId);
+        var result = requireNonNull(
+                fiatDisbursementProvider.disburse(upiId, amountUsdc, amountInr, remittanceId),
+                "fiatDisbursementProvider returned null DisbursementResult");
         log.info(
                 "INR disbursement completed for remittance {} providerId={} providerStatus={}",
                 remittanceId,

@@ -24,6 +24,7 @@ class LoggingDisbursementAdapterTest {
 
         // then
         var expected = DisbursementResult.builder()
+                .providerId("ignored")
                 .providerStatus("SIMULATED")
                 .build();
         assertThat(result)
