@@ -14,6 +14,7 @@ import com.stablepay.domain.remittance.handler.RemittancePayoutWriter;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
 
@@ -30,6 +31,15 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     private final FiatDisbursementProvider fiatDisbursementProvider;
     private final UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
     private final RemittancePayoutWriter remittancePayoutWriter;
+
+    @Override
+    public TransactionConfirmationStatus checkTransactionStatus(String transactionSignature) {
+        requireNonNull(transactionSignature, "transactionSignature must not be null");
+        log.info("Checking transaction status for signature {}", transactionSignature);
+        var status = solanaTransactionService.getTransactionStatus(transactionSignature);
+        log.info("Transaction {} status: {}", transactionSignature, status);
+        return status;
+    }
 
     @Override
     public String depositEscrow(

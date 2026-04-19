@@ -16,6 +16,7 @@ import org.sol4k.instruction.Instruction;
 import org.springframework.stereotype.Component;
 
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 import com.stablepay.domain.wallet.port.WalletRepository;
@@ -175,14 +176,79 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
     }
 
     @Override
-    public String getTransactionStatus(String transactionSignature) {
+    public TransactionConfirmationStatus getTransactionStatus(String transactionSignature) {
         log.debug("Checking status for transaction {}", transactionSignature);
 
-        // sol4k does not expose getSignatureStatuses RPC.
-        // For now, return a stub status. Full confirmation polling
-        // will be implemented via raw JSON-RPC in a follow-up.
-        log.info("Transaction status check for {} (stub: returning CONFIRMED)", transactionSignature);
-        return "CONFIRMED";
+        java.net.HttpURLConnection conn = null;
+        try {
+            var url = new java.net.URI(solanaProperties.rpcUrl()).toURL();
+            conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(10_000);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getSignatureStatuses\","
+                    + "\"params\":[[\"" + transactionSignature
+                    + "\"],{\"searchTransactionHistory\":true}]}";
+
+            try (var os = conn.getOutputStream()) {
+                os.write(body.getBytes(StandardCharsets.UTF_8));
+            }
+
+            try (var is = conn.getInputStream()) {
+                var response = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                if (response.contains("\"error\"")) {
+                    log.warn("RPC error checking tx status for {}: {}", transactionSignature, response);
+                    throw new RuntimeException("RPC error: " + response);
+                }
+                var status = parseSignatureStatusResponse(response);
+                log.info("Transaction {} status: {}", transactionSignature, status);
+                return status;
+            }
+        } catch (SolanaTransactionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw SolanaTransactionException.submissionFailed(
+                    "getSignatureStatuses:" + transactionSignature, e);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    static TransactionConfirmationStatus parseSignatureStatusResponse(String json) {
+        var valueIndex = json.indexOf("\"value\"");
+        if (valueIndex < 0) {
+            return TransactionConfirmationStatus.NOT_FOUND;
+        }
+
+        var afterValue = json.substring(valueIndex);
+        if (afterValue.contains("[null]")) {
+            return TransactionConfirmationStatus.NOT_FOUND;
+        }
+
+        if (afterValue.contains("\"err\"") && !afterValue.contains("\"err\":null")) {
+            return TransactionConfirmationStatus.FAILED_ON_CHAIN;
+        }
+
+        var csIndex = afterValue.indexOf("\"confirmationStatus\"");
+        if (csIndex < 0) {
+            return TransactionConfirmationStatus.NOT_FOUND;
+        }
+
+        var csValue = afterValue.substring(csIndex);
+        if (csValue.contains("\"finalized\"")) {
+            return TransactionConfirmationStatus.FINALIZED;
+        } else if (csValue.contains("\"confirmed\"")) {
+            return TransactionConfirmationStatus.CONFIRMED;
+        } else if (csValue.contains("\"processed\"")) {
+            return TransactionConfirmationStatus.PROCESSED;
+        }
+
+        return TransactionConfirmationStatus.NOT_FOUND;
     }
 
     private String sendWithSkipPreflight(byte[] txBytes) {

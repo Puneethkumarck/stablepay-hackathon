@@ -34,6 +34,7 @@ import com.stablepay.domain.remittance.handler.RemittancePayoutWriter;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
 
@@ -68,6 +69,19 @@ class RemittanceLifecycleActivitiesImplTest {
 
     @InjectMocks
     private RemittanceLifecycleActivitiesImpl activities;
+
+    @Test
+    void shouldCheckTransactionStatusViaSolanaService() {
+        // given
+        given(solanaTransactionService.getTransactionStatus(SOME_DEPOSIT_TX_SIGNATURE))
+                .willReturn(TransactionConfirmationStatus.FINALIZED);
+
+        // when
+        var result = activities.checkTransactionStatus(SOME_DEPOSIT_TX_SIGNATURE);
+
+        // then
+        assertThat(result).isEqualTo(TransactionConfirmationStatus.FINALIZED);
+    }
 
     @Test
     void shouldDepositEscrowViaSolanaService() {

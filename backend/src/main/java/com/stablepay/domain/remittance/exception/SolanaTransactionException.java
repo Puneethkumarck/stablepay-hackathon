@@ -39,4 +39,9 @@ public class SolanaTransactionException extends RuntimeException {
         return new SolanaTransactionException(
                 "SP-0015: Treasury private key is not configured");
     }
+
+    public static SolanaTransactionException transactionFailed(String signature) {
+        return new SolanaTransactionException(
+                "SP-0031: Solana transaction failed on-chain for signature: " + signature);
+    }
 }

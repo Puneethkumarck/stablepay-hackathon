@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.test.TemporalTest;
 
 import io.temporal.client.WorkflowClient;
@@ -49,6 +50,9 @@ class RemittanceLifecycleWorkflowIntegrationTest {
     void setUp() {
         remittanceId = UUID.randomUUID();
         Mockito.reset(activities);
+        Mockito.lenient()
+                .when(activities.checkTransactionStatus(Mockito.anyString()))
+                .thenReturn(TransactionConfirmationStatus.FINALIZED);
     }
 
     private RemittanceLifecycleWorkflow startWorkflow() {
