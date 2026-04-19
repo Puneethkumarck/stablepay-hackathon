@@ -110,7 +110,7 @@ class RazorpayUpiDisbursementAdapterTest {
 
     @Test
     void shouldSendIdempotencyHeaderAsBareRemittanceUuidThirtySixCharsLong() {
-        // given — REMITTANCE_ID is a UUID.toString() (36 chars); any prefix would push past Razorpay's 36-char limit.
+        // given
         assertThat(REMITTANCE_ID).hasSize(36);
         stubContactAndFundAccount();
         mockServer.expect(requestTo(BASE_URL + "/payouts"))
@@ -128,7 +128,7 @@ class RazorpayUpiDisbursementAdapterTest {
 
     @Test
     void shouldThrowNonRetriableWhenAmountBelowMinimumWithoutHttpCall() {
-        // given — no HTTP expectations; any outbound call would fail MockRestServiceServer.verify()
+        // given
         var belowMinimum = new BigDecimal("0.99");
 
         // when / then
@@ -228,7 +228,7 @@ class RazorpayUpiDisbursementAdapterTest {
 
     @Test
     void shouldSendAmountInPaiseEqualToInrTimesOneHundred() {
-        // given — 8500.00 INR → 850000 paise, enforced via JSON matcher on the amount field
+        // given
         stubContactAndFundAccount();
         mockServer.expect(requestTo(BASE_URL + "/payouts"))
                 .andExpect(content().json("""
@@ -257,8 +257,124 @@ class RazorpayUpiDisbursementAdapterTest {
         // when / then
         assertThatThrownBy(() ->
                 adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
-                .isInstanceOf(DisbursementException.class)
+                .isInstanceOf(DisbursementException.NonRetriable.class)
                 .hasMessageContaining("no id");
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldThrowRetriableWhenPayoutReturnsFourTwentyNineRateLimited() {
+        // given
+        stubContactAndFundAccount();
+        mockServer.expect(requestTo(BASE_URL + "/payouts"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"error":{"code":"RATE_LIMIT_EXCEEDED","description":"Too many requests"}}
+                                """));
+
+        // when / then
+        assertThatThrownBy(() ->
+                adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
+                .isInstanceOf(DisbursementException.class)
+                .isNotInstanceOf(DisbursementException.NonRetriable.class);
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldThrowRetriableWhenPayoutReturnsFourOhEightRequestTimeout() {
+        // given
+        stubContactAndFundAccount();
+        mockServer.expect(requestTo(BASE_URL + "/payouts"))
+                .andRespond(withStatus(HttpStatus.REQUEST_TIMEOUT));
+
+        // when / then
+        assertThatThrownBy(() ->
+                adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
+                .isInstanceOf(DisbursementException.class)
+                .isNotInstanceOf(DisbursementException.NonRetriable.class);
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldMaskUpiInExceptionMessageWhenRazorpayEchoesVpaInErrorDescription() {
+        // given
+        stubContactAndFundAccount();
+        mockServer.expect(requestTo(BASE_URL + "/payouts"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"error":{"code":"BAD_REQUEST_ERROR","description":"vpa.address alice@hdfcbank is invalid"}}
+                                """));
+
+        // when / then
+        assertThatThrownBy(() ->
+                adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
+                .isInstanceOf(DisbursementException.NonRetriable.class)
+                .hasMessageContaining("BAD_REQUEST_ERROR")
+                .hasMessageNotContaining("alice@hdfcbank");
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldNotLeakRawBodyWhenErrorResponseIsNotJson() {
+        // given
+        stubContactAndFundAccount();
+        mockServer.expect(requestTo(BASE_URL + "/payouts"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.TEXT_HTML)
+                        .body("<html><body>Bad request from sensitive@host</body></html>"));
+
+        // when / then
+        assertThatThrownBy(() ->
+                adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
+                .isInstanceOf(DisbursementException.NonRetriable.class)
+                .hasMessageContaining("HTTP 400")
+                .hasMessageNotContaining("<html>")
+                .hasMessageNotContaining("sensitive@host");
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldTolerateRazorpayErrorBodyWithNullCodeAndDescription() {
+        // given
+        stubContactAndFundAccount();
+        mockServer.expect(requestTo(BASE_URL + "/payouts"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"error":{"code":null,"description":null}}
+                                """));
+
+        // when / then
+        assertThatThrownBy(() ->
+                adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
+                .isInstanceOf(DisbursementException.NonRetriable.class)
+                .hasMessageContaining("UNKNOWN")
+                .hasMessageContaining("no description");
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldThrowNonRetriableWhenFundAccountCreationFails() {
+        // given
+        mockServer.expect(requestTo(BASE_URL + "/contacts"))
+                .andRespond(withSuccess("""
+                        {"id":"%s"}
+                        """.formatted(CONTACT_ID), MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(BASE_URL + "/fund_accounts"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"error":{"code":"BAD_REQUEST_ERROR","description":"Invalid VPA handle"}}
+                                """));
+
+        // when / then
+        assertThatThrownBy(() ->
+                adapter.disburse(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
+                .isInstanceOf(DisbursementException.NonRetriable.class)
+                .hasMessageContaining("createFundAccount")
+                .hasMessageContaining("BAD_REQUEST_ERROR");
         mockServer.verify();
     }
 

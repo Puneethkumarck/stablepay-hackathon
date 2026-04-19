@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -29,7 +30,8 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
 
     private static final long MIN_PAISE = 100L;
     private static final String IDEMPOTENCY_HEADER = "X-Payout-Idempotency";
-    private static final int ERROR_REASON_MAX = 500;
+    private static final int RATE_LIMIT = 429;
+    private static final int REQUEST_TIMEOUT = 408;
 
     private final RestClient razorpayRestClient;
     private final RazorpayDisbursementProperties properties;
@@ -70,7 +72,7 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
         return Optional.ofNullable(response)
                 .map(RazorpayContactResponse::id)
                 .filter(id -> !id.isBlank())
-                .orElseThrow(() -> DisbursementException.forRecipient(
+                .orElseThrow(() -> DisbursementException.nonRetriable(
                         upiId, "Razorpay createContact returned no id"));
     }
 
@@ -88,7 +90,7 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
         return Optional.ofNullable(response)
                 .map(RazorpayFundAccountResponse::id)
                 .filter(id -> !id.isBlank())
-                .orElseThrow(() -> DisbursementException.forRecipient(
+                .orElseThrow(() -> DisbursementException.nonRetriable(
                         upiId, "Razorpay createFundAccount returned no id"));
     }
 
@@ -107,10 +109,10 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
                         .retrieve()
                         .body(RazorpayPayoutResponse.class));
         var payout = Optional.ofNullable(response)
-                .orElseThrow(() -> DisbursementException.forRecipient(
+                .orElseThrow(() -> DisbursementException.nonRetriable(
                         upiId, "Razorpay createPayout returned empty body"));
         if (payout.id() == null || payout.id().isBlank()) {
-            throw DisbursementException.forRecipient(upiId, "Razorpay createPayout returned no id");
+            throw DisbursementException.nonRetriable(upiId, "Razorpay createPayout returned no id");
         }
         log.info("Razorpay payout created remittanceId={} payoutId={} status={} upi={}",
                 remittanceId, payout.id(), payout.status(), PiiMasking.maskUpi(upiId));
@@ -124,12 +126,9 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
         try {
             return call.get();
         } catch (HttpClientErrorException e) {
-            var reason = describeError(e);
-            log.warn("Razorpay {} rejected upi={} status={} reason={}",
-                    operation, PiiMasking.maskUpi(upiId), e.getStatusCode().value(), reason);
-            throw DisbursementException.nonRetriable(upiId, operation + " " + reason);
+            return handleClientError(operation, upiId, e);
         } catch (HttpServerErrorException e) {
-            var reason = describeError(e);
+            var reason = sanitize(describeError(e));
             log.warn("Razorpay {} server error upi={} status={} reason={}",
                     operation, PiiMasking.maskUpi(upiId), e.getStatusCode().value(), reason);
             throw DisbursementException.retriable(upiId, e);
@@ -137,11 +136,32 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
             log.warn("Razorpay {} I/O failure upi={} cause={}",
                     operation, PiiMasking.maskUpi(upiId), e.getMessage());
             throw DisbursementException.retriable(upiId, e);
+        } catch (RestClientResponseException e) {
+            log.warn("Razorpay {} unexpected status upi={} status={} — treating as retriable",
+                    operation, PiiMasking.maskUpi(upiId), e.getStatusCode().value());
+            throw DisbursementException.retriable(upiId, e);
         }
     }
 
+    private <T> T handleClientError(String operation, String upiId, HttpClientErrorException e) {
+        var status = e.getStatusCode();
+        var reason = sanitize(describeError(e));
+        if (isTransientClientStatus(status)) {
+            log.warn("Razorpay {} transient client error upi={} status={} reason={}",
+                    operation, PiiMasking.maskUpi(upiId), status.value(), reason);
+            throw DisbursementException.retriable(upiId, e);
+        }
+        log.warn("Razorpay {} rejected upi={} status={} reason={}",
+                operation, PiiMasking.maskUpi(upiId), status.value(), reason);
+        throw DisbursementException.nonRetriable(upiId, operation + " " + reason);
+    }
+
+    private boolean isTransientClientStatus(HttpStatusCode status) {
+        return status.value() == RATE_LIMIT || status.value() == REQUEST_TIMEOUT;
+    }
+
     private String describeError(HttpClientErrorException e) {
-        return extractErrorCode(e).orElseGet(() -> truncate(e.getResponseBodyAsString()));
+        return extractErrorCode(e).orElseGet(() -> "HTTP " + e.getStatusCode().value());
     }
 
     private String describeError(HttpServerErrorException e) {
@@ -153,18 +173,15 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
             var body = e.getResponseBodyAs(RazorpayErrorResponse.class);
             return Optional.ofNullable(body)
                     .map(RazorpayErrorResponse::error)
-                    .map(err -> err.code() + ": " + err.description());
+                    .map(err -> Optional.ofNullable(err.code()).orElse("UNKNOWN")
+                            + ": "
+                            + Optional.ofNullable(err.description()).orElse("no description"));
         } catch (RuntimeException parseEx) {
             return Optional.empty();
         }
     }
 
-    private String truncate(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.length() <= ERROR_REASON_MAX
-                ? value
-                : value.substring(0, ERROR_REASON_MAX);
+    private String sanitize(String input) {
+        return PiiMasking.maskUpiSubstrings(input);
     }
 }

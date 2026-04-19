@@ -56,4 +56,49 @@ class PiiMaskingTest {
         // then
         assertThat(masked).isEqualTo("ab@****");
     }
+
+    @Test
+    void shouldMaskSingleUpiHandleEmbeddedInMessage() {
+        // given
+        var input = "vpa.address alice@hdfcbank is invalid";
+
+        // when
+        var result = PiiMasking.maskUpiSubstrings(input);
+
+        // then
+        assertThat(result).isEqualTo("vpa.address ali**** is invalid");
+    }
+
+    @Test
+    void shouldMaskMultipleUpiHandlesEmbeddedInMessage() {
+        // given
+        var input = "contact alice@hdfcbank and bob@icici both rejected";
+
+        // when
+        var result = PiiMasking.maskUpiSubstrings(input);
+
+        // then
+        assertThat(result).isEqualTo("contact ali**** and bob**** both rejected");
+    }
+
+    @Test
+    void shouldReturnInputUnchangedWhenNoUpiHandlePresent() {
+        // given
+        var input = "HTTP 500";
+
+        // when
+        var result = PiiMasking.maskUpiSubstrings(input);
+
+        // then
+        assertThat(result).isEqualTo("HTTP 500");
+    }
+
+    @Test
+    void shouldReturnNullWhenMaskUpiSubstringsInputIsNull() {
+        // when
+        var result = PiiMasking.maskUpiSubstrings(null);
+
+        // then
+        assertThat(result).isNull();
+    }
 }
