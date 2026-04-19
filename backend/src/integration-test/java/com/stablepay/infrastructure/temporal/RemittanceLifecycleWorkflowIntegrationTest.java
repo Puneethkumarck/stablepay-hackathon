@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.test.TemporalTest;
 
@@ -188,7 +189,7 @@ class RemittanceLifecycleWorkflowIntegrationTest {
         @Test
         void shouldTransitionToDisbursementFailedWhenDisbursementThrows() {
             // given
-            willThrow(new RuntimeException("Disbursement provider unavailable"))
+            willThrow(DisbursementException.nonRetriable(SOME_UPI_ID, "invalid UPI"))
                     .given(activities)
                     .disburseInr(SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, remittanceId.toString());
 
