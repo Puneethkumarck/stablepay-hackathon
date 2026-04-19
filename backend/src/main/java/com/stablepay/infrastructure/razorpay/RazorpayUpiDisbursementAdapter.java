@@ -12,6 +12,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import com.stablepay.domain.common.PiiMasking;
@@ -139,6 +140,10 @@ public class RazorpayUpiDisbursementAdapter implements FiatDisbursementProvider 
         } catch (RestClientResponseException e) {
             log.warn("Razorpay {} unexpected status upi={} status={} — treating as retriable",
                     operation, PiiMasking.maskUpi(upiId), e.getStatusCode().value());
+            throw DisbursementException.retriable(upiId, e);
+        } catch (RestClientException e) {
+            log.warn("Razorpay {} client failure upi={} cause={} — treating as retriable",
+                    operation, PiiMasking.maskUpi(upiId), e.getMessage());
             throw DisbursementException.retriable(upiId, e);
         }
     }

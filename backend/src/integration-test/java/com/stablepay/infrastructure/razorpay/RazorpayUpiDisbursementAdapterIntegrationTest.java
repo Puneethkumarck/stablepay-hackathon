@@ -57,6 +57,9 @@ class RazorpayUpiDisbursementAdapterIntegrationTest {
     }
 
     private static final String REMITTANCE_ID = SOME_REMITTANCE_ID.toString();
+    private static final String CONTACT_ID = "cont_wm_1";
+    private static final String FUND_ACCOUNT_ID = "fa_wm_1";
+    private static final String PAYOUT_ID = "pout_wm_1";
 
     @RegisterExtension
     static WireMockExtension wireMock = WireMockExtension.newInstance()
@@ -85,27 +88,14 @@ class RazorpayUpiDisbursementAdapterIntegrationTest {
     @Test
     void shouldIssueContactFundAccountAndPayoutRequestsWithIdempotencyHeader() {
         // given
-        wireMock.stubFor(post(urlEqualTo("/contacts"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {"id":"cont_wm_1"}
-                                """)));
-        wireMock.stubFor(post(urlEqualTo("/fund_accounts"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {"id":"fa_wm_1"}
-                                """)));
+        stubContactAndFundAccountSuccess();
         wireMock.stubFor(post(urlEqualTo("/payouts"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody("""
-                                {"id":"pout_wm_1","status":"processing"}
-                                """)));
+                                {"id":"%s","status":"processing"}
+                                """.formatted(PAYOUT_ID))));
 
         // when
         var result = fiatDisbursementProvider.disburse(
@@ -113,7 +103,7 @@ class RazorpayUpiDisbursementAdapterIntegrationTest {
 
         // then
         var expected = DisbursementResult.builder()
-                .providerId("pout_wm_1")
+                .providerId(PAYOUT_ID)
                 .providerStatus("processing")
                 .build();
         assertThat(result).usingRecursiveComparison().isEqualTo(expected);
@@ -128,20 +118,7 @@ class RazorpayUpiDisbursementAdapterIntegrationTest {
     @Test
     void shouldThrowNonRetriableWhenRazorpayReturnsFourHundred() {
         // given
-        wireMock.stubFor(post(urlEqualTo("/contacts"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {"id":"cont_wm_1"}
-                                """)));
-        wireMock.stubFor(post(urlEqualTo("/fund_accounts"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {"id":"fa_wm_1"}
-                                """)));
+        stubContactAndFundAccountSuccess();
         wireMock.stubFor(post(urlEqualTo("/payouts"))
                 .withRequestBody(equalToJson("""
                         {"amount":850000,"currency":"INR"}
@@ -163,20 +140,7 @@ class RazorpayUpiDisbursementAdapterIntegrationTest {
     @Test
     void shouldThrowRetriableWhenRazorpayReturnsFiveOhThree() {
         // given
-        wireMock.stubFor(post(urlEqualTo("/contacts"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {"id":"cont_wm_1"}
-                                """)));
-        wireMock.stubFor(post(urlEqualTo("/fund_accounts"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {"id":"fa_wm_1"}
-                                """)));
+        stubContactAndFundAccountSuccess();
         wireMock.stubFor(post(urlEqualTo("/payouts"))
                 .willReturn(aResponse().withStatus(503)));
 
@@ -185,5 +149,22 @@ class RazorpayUpiDisbursementAdapterIntegrationTest {
                 SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, REMITTANCE_ID))
                 .isInstanceOf(DisbursementException.class)
                 .isNotInstanceOf(DisbursementException.NonRetriable.class);
+    }
+
+    private static void stubContactAndFundAccountSuccess() {
+        wireMock.stubFor(post(urlEqualTo("/contacts"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"id":"%s"}
+                                """.formatted(CONTACT_ID))));
+        wireMock.stubFor(post(urlEqualTo("/fund_accounts"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"id":"%s"}
+                                """.formatted(FUND_ACCOUNT_ID))));
     }
 }
