@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.stablepay.domain.remittance.exception.DisbursementException;
@@ -705,8 +706,11 @@ class RemittanceLifecycleWorkflowImplTest {
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.DELIVERED);
     }
 
-    @Test
-    void shouldTransitionToDepositFailedWhenConfirmationTimesOut() {
+    @Nested
+    class TransactionConfirmation {
+
+        @Test
+        void shouldTransitionToDepositFailedWhenConfirmationTimesOut() {
         // given
         var request = workflowRequestBuilder()
                 .claimExpiryTimeout(Duration.ofHours(48))
@@ -947,10 +951,20 @@ class RemittanceLifecycleWorkflowImplTest {
         var result = workflow.execute(request);
 
         // then
-        assertThat(result.finalStatus()).isEqualTo(RemittanceStatus.REFUNDED.name());
+        var expected = RemittanceWorkflowResult.builder()
+                .remittanceId(SOME_REMITTANCE_ID)
+                .finalStatus(RemittanceStatus.REFUNDED.name())
+                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .txSignature(SOME_REFUND_TX_SIGNATURE)
+                .build();
+
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
         assertThat(attempts.get()).isGreaterThanOrEqualTo(3);
 
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED);
+    }
     }
 }

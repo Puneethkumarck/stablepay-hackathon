@@ -1,6 +1,8 @@
 package com.stablepay.infrastructure.solana;
 
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -179,10 +181,10 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
     public TransactionConfirmationStatus getTransactionStatus(String transactionSignature) {
         log.debug("Checking status for transaction {}", transactionSignature);
 
-        java.net.HttpURLConnection conn = null;
+        HttpURLConnection conn = null;
         try {
-            var url = new java.net.URI(solanaProperties.rpcUrl()).toURL();
-            conn = (java.net.HttpURLConnection) url.openConnection();
+            var url = new URI(solanaProperties.rpcUrl()).toURL();
+            conn = (HttpURLConnection) url.openConnection();
             conn.setConnectTimeout(10_000);
             conn.setReadTimeout(10_000);
             conn.setRequestMethod("POST");
