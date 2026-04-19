@@ -46,6 +46,20 @@ services:
       timeout: 5s
       retries: 5
 
+  wiremock:
+    image: wiremock/wiremock:3.9.2
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings:ro
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   mpc-sidecar-0:
     build:
       context: ./mpc-sidecar
@@ -112,6 +126,12 @@ services:
       STRIPE_AUTO_CONFIRM: ${STRIPE_AUTO_CONFIRM:-false}
       STRIPE_TEST_PAYMENT_METHOD: ${STRIPE_TEST_PAYMENT_METHOD:-pm_card_visa}
       TREASURY_PRIVATE_KEY: ${TREASURY_PRIVATE_KEY}
+      STABLEPAY_DISBURSEMENT_PROVIDER: ${STABLEPAY_DISBURSEMENT_PROVIDER:-logging}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_ACCOUNT_NUMBER: ${RAZORPAY_ACCOUNT_NUMBER:-}
+      RAZORPAY_BASE_URL: ${RAZORPAY_BASE_URL:-http://wiremock:8080}
+      RAZORPAY_REQUEST_TIMEOUT: ${RAZORPAY_REQUEST_TIMEOUT:-PT10S}
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,6 +142,8 @@ services:
       mpc-sidecar-0:
         condition: service_healthy
       mpc-sidecar-1:
+        condition: service_healthy
+      wiremock:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]

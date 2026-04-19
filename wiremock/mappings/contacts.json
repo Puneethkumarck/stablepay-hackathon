@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/contacts"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"cont_wm_{{randomValue length=12 type='ALPHANUMERIC'}}\",\"entity\":\"contact\",\"type\":\"customer\"}",
+    "transformers": ["response-template"]
+  }
+}
