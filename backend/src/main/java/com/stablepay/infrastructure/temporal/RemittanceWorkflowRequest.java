@@ -1,5 +1,7 @@
 package com.stablepay.infrastructure.temporal;
 
+import static java.util.Objects.requireNonNull;
+
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
@@ -19,8 +21,6 @@ public record RemittanceWorkflowRequest(
     long escrowExpiryTimestamp
 ) {
     public RemittanceWorkflowRequest {
-        if (amountInr == null) {
-            amountInr = BigDecimal.ZERO;
-        }
+        requireNonNull(amountInr, "amountInr must not be null");
     }
 }

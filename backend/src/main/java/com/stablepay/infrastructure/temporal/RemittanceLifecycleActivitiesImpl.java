@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.common.port.SmsProvider;
+import com.stablepay.domain.remittance.exception.DisbursementException;
+import com.stablepay.domain.remittance.handler.RemittancePayoutWriter;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
@@ -27,6 +29,7 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     private final SmsProvider smsProvider;
     private final FiatDisbursementProvider fiatDisbursementProvider;
     private final UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
+    private final RemittancePayoutWriter remittancePayoutWriter;
 
     @Override
     public String depositEscrow(
@@ -88,21 +91,54 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
         requireNonNull(amountUsdc, "amountUsdc must not be null");
         requireNonNull(amountInr, "amountInr must not be null");
         requireNonNull(remittanceId, "remittanceId must not be null");
+        var remittanceUuid = UUID.fromString(remittanceId);
+
+        var existing = remittancePayoutWriter.findExistingPayout(remittanceUuid);
+        if (existing.isPresent()) {
+            log.info("Payout already persisted for remittance {}, returning cached result", remittanceId);
+            return existing.get();
+        }
+
         log.info(
                 "Disbursing {} USDC ({} INR) as INR to UPI {} for remittance {}",
                 amountUsdc,
                 amountInr,
                 PiiMasking.maskUpi(upiId),
                 remittanceId);
-        var result = requireNonNull(
-                fiatDisbursementProvider.disburse(upiId, amountUsdc, amountInr, remittanceId),
-                "fiatDisbursementProvider returned null DisbursementResult");
-        log.info(
-                "INR disbursement completed for remittance {} providerId={} providerStatus={}",
-                remittanceId,
-                result.providerId(),
-                result.providerStatus());
-        return result;
+        try {
+            var result = fiatDisbursementProvider.disburse(upiId, amountUsdc, amountInr, remittanceId);
+            if (result == null) {
+                throw DisbursementException.nonRetriable(
+                        upiId, "fiatDisbursementProvider returned null DisbursementResult");
+            }
+            try {
+                remittancePayoutWriter.writePayoutId(
+                        remittanceUuid, result.providerId(), result.providerStatus());
+            } catch (RuntimeException writeFailure) {
+                log.error(
+                        "SP-0030: CRITICAL — manual reconciliation required for remittance={} providerId={} — payout succeeded but payout_id persistence failed",
+                        remittanceId,
+                        result.providerId(),
+                        writeFailure);
+                throw writeFailure;
+            }
+            log.info(
+                    "INR disbursement completed for remittance {} providerId={} providerStatus={}",
+                    remittanceId,
+                    result.providerId(),
+                    result.providerStatus());
+            return result;
+        } catch (DisbursementException e) {
+            try {
+                remittancePayoutWriter.writeFailureReason(remittanceUuid, e.getMessage());
+            } catch (RuntimeException writeFailure) {
+                log.error(
+                        "SP-0029: failed to persist payout_failure_reason for remittance {} — original disbursement exception preserved",
+                        remittanceId,
+                        writeFailure);
+            }
+            throw e;
+        }
     }
 
     @Override

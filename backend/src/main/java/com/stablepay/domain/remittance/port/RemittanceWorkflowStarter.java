@@ -5,5 +5,5 @@ import java.util.UUID;
 
 public interface RemittanceWorkflowStarter {
     void startWorkflow(UUID remittanceId, String senderAddress, String recipientPhone,
-            BigDecimal amountUsdc, String claimToken);
+            BigDecimal amountUsdc, BigDecimal amountInr, String claimToken);
 }
