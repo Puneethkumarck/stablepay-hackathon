@@ -2,6 +2,7 @@ package com.stablepay.infrastructure.temporal;
 
 import java.math.BigDecimal;
 
+import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 
 import io.temporal.activity.ActivityInterface;
@@ -21,7 +22,11 @@ public interface RemittanceLifecycleActivities {
 
     void sendClaimSms(String recipientPhone, String claimUrl);
 
-    void disburseInr(String upiId, BigDecimal amountUsdc, String remittanceId);
+    DisbursementResult disburseInr(
+            String upiId,
+            BigDecimal amountUsdc,
+            BigDecimal amountInr,
+            String remittanceId);
 
     void updateRemittanceStatus(String remittanceId, RemittanceStatus status);
 }

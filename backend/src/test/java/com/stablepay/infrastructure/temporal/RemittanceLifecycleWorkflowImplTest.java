@@ -1,5 +1,6 @@
 package com.stablepay.infrastructure.temporal;
 
+import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_CLAIM_BASE_URL;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_CLAIM_TOKEN;
@@ -139,7 +140,7 @@ class RemittanceLifecycleWorkflowImplTest {
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.CLAIMED);
 
         then(activities).should().disburseInr(
-                SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_REMITTANCE_ID.toString());
+                SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString());
 
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.DELIVERED);
@@ -406,6 +407,7 @@ class RemittanceLifecycleWorkflowImplTest {
                 .given(activities).disburseInr(
                         SOME_UPI_ID,
                         SOME_AMOUNT_USDC,
+                        SOME_AMOUNT_INR,
                         SOME_REMITTANCE_ID.toString());
 
         testEnv.start();

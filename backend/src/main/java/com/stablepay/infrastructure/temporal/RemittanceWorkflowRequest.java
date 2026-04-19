@@ -12,8 +12,15 @@ public record RemittanceWorkflowRequest(
     String senderAddress,
     String recipientPhone,
     BigDecimal amountUsdc,
+    BigDecimal amountInr,
     String claimToken,
     String claimBaseUrl,
     Duration claimExpiryTimeout,
     long escrowExpiryTimestamp
-) {}
+) {
+    public RemittanceWorkflowRequest {
+        if (amountInr == null) {
+            amountInr = BigDecimal.ZERO;
+        }
+    }
+}

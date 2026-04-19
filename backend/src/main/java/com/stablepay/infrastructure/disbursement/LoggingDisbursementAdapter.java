@@ -1,8 +1,10 @@
 package com.stablepay.infrastructure.disbursement;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import com.stablepay.domain.common.PiiMasking;
+import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 
 import lombok.extern.slf4j.Slf4j;
@@ -10,10 +12,28 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LoggingDisbursementAdapter implements FiatDisbursementProvider {
 
+    private static final String SIMULATED_STATUS = "SIMULATED";
+
     @Override
-    public void disburse(String upiId, BigDecimal amountUsdc, String remittanceId) {
-        log.info("Simulating INR disbursement: {} USDC to UPI {} for remittance {}",
-                amountUsdc, PiiMasking.maskUpi(upiId), remittanceId);
-        log.info("INR disbursement simulated successfully for remittance {}", remittanceId);
+    public DisbursementResult disburse(
+            String upiId,
+            BigDecimal amountUsdc,
+            BigDecimal amountInr,
+            String remittanceId) {
+        log.info(
+                "Simulating INR disbursement: {} USDC ({} INR) to UPI {} for remittance {}",
+                amountUsdc,
+                amountInr,
+                PiiMasking.maskUpi(upiId),
+                remittanceId);
+        var result = DisbursementResult.builder()
+                .providerId("log_" + UUID.randomUUID())
+                .providerStatus(SIMULATED_STATUS)
+                .build();
+        log.info(
+                "INR disbursement simulated successfully for remittance {} providerId={}",
+                remittanceId,
+                result.providerId());
+        return result;
     }
 }

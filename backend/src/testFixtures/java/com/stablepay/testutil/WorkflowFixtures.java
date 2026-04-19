@@ -17,6 +17,7 @@ public final class WorkflowFixtures {
     public static final String SOME_SENDER_ADDRESS = "SoLaNa1234567890AbCdEfGhIjKlMnOpQrStUvWx";
     public static final String SOME_RECIPIENT_PHONE = "+919876543210";
     public static final BigDecimal SOME_AMOUNT_USDC = BigDecimal.valueOf(100);
+    public static final BigDecimal SOME_AMOUNT_INR = new BigDecimal("8500.00");
     public static final String SOME_CLAIM_TOKEN = "claim-token-abc-123";
     public static final String SOME_ESCROW_PDA = "EsCrOwPdA1234567890AbCdEfGhIjKlMnOpQrStUv";
     public static final String SOME_TX_SIGNATURE = "5wHu1qwD7xQFhkP3L3jE9YmN9mQfTkRzHcGzYqNz";
@@ -35,6 +36,7 @@ public final class WorkflowFixtures {
                 .senderAddress(SOME_SENDER_ADDRESS)
                 .recipientPhone(SOME_RECIPIENT_PHONE)
                 .amountUsdc(SOME_AMOUNT_USDC)
+                .amountInr(SOME_AMOUNT_INR)
                 .claimToken(SOME_CLAIM_TOKEN)
                 .claimBaseUrl(SOME_CLAIM_BASE_URL)
                 .claimExpiryTimeout(SOME_CLAIM_EXPIRY_TIMEOUT)

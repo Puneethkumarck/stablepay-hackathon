@@ -43,6 +43,7 @@ public class TemporalRemittanceWorkflowStarter implements RemittanceWorkflowStar
                 .senderAddress(senderAddress)
                 .recipientPhone(recipientPhone)
                 .amountUsdc(amountUsdc)
+                .amountInr(BigDecimal.ZERO)
                 .claimToken(claimToken)
                 .claimBaseUrl(temporal.claimBaseUrl())
                 .claimExpiryTimeout(temporal.claimExpiryTimeout())
