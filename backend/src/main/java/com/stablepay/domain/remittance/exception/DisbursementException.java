@@ -4,14 +4,6 @@ import com.stablepay.domain.common.PiiMasking;
 
 public class DisbursementException extends RuntimeException {
 
-    public static DisbursementException forRecipient(String upiId, Throwable cause) {
-        return new DisbursementException(buildMessage(upiId, null), cause);
-    }
-
-    public static DisbursementException forRecipient(String upiId, String reason) {
-        return new DisbursementException(buildMessage(upiId, reason));
-    }
-
     public static DisbursementException retriable(String upiId, Throwable cause) {
         return new DisbursementException(buildMessage(upiId, null), cause);
     }
