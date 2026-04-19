@@ -23,15 +23,18 @@ import static org.mockito.Mockito.never;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 
@@ -403,7 +406,7 @@ class RemittanceLifecycleWorkflowImplTest {
                 SOME_SENDER_ADDRESS))
                 .willReturn(SOME_RELEASE_TX_SIGNATURE);
 
-        willThrow(new RuntimeException("Disbursement provider unavailable"))
+        willThrow(DisbursementException.nonRetriable(SOME_UPI_ID, "invalid UPI"))
                 .given(activities).disburseInr(
                         SOME_UPI_ID,
                         SOME_AMOUNT_USDC,
@@ -522,5 +525,176 @@ class RemittanceLifecycleWorkflowImplTest {
         then(activities).should(never()).refundEscrow(
                 SOME_REMITTANCE_ID.toString(),
                 SOME_SENDER_ADDRESS);
+    }
+
+    @Test
+    void shouldConfigureDisbursementActivityWithRetryOptionsExcludingNonRetriable() {
+        // given
+        var expected = RetryOptions.newBuilder()
+                .setMaximumAttempts(3)
+                .setInitialInterval(Duration.ofSeconds(2))
+                .setBackoffCoefficient(2.0)
+                .setDoNotRetry(
+                        "com.stablepay.domain.remittance.exception.DisbursementException$NonRetriable")
+                .build();
+
+        // when
+        var retryOptions = RemittanceLifecycleWorkflowImpl.disbursementActivityOptions().getRetryOptions();
+
+        // then
+        assertThat(retryOptions)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+    }
+
+    @Test
+    void shouldRetryTransientDisbursementFailureAndReachDelivered() {
+        // given
+        var request = workflowRequestBuilder()
+                .claimExpiryTimeout(Duration.ofHours(48))
+                .build();
+
+        given(activities.depositEscrow(
+                SOME_REMITTANCE_ID.toString(),
+                SOME_SENDER_ADDRESS,
+                SOME_AMOUNT_USDC,
+                SOME_ESCROW_EXPIRY_TIMESTAMP))
+                .willReturn(SOME_DEPOSIT_TX_SIGNATURE);
+
+        given(activities.releaseEscrow(
+                SOME_REMITTANCE_ID.toString(),
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
+                .willReturn(SOME_RELEASE_TX_SIGNATURE);
+
+        var attempts = new AtomicInteger(0);
+        given(activities.disburseInr(
+                SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .willAnswer(invocation -> {
+                    if (attempts.incrementAndGet() < 3) {
+                        throw DisbursementException.retriable(
+                                SOME_UPI_ID, new RuntimeException("Razorpay 5xx"));
+                    }
+                    return null;
+                });
+
+        testEnv.start();
+
+        var workflowId = "disbursement-retry-" + SOME_REMITTANCE_ID;
+        var workflow = client.newWorkflowStub(
+                RemittanceLifecycleWorkflow.class,
+                WorkflowOptions.newBuilder()
+                        .setTaskQueue(TASK_QUEUE)
+                        .setWorkflowId(workflowId)
+                        .build());
+
+        var claimSignal = ClaimSignal.builder()
+                .claimToken(SOME_CLAIM_TOKEN)
+                .upiId(SOME_UPI_ID)
+                .destinationAddress(SOME_DESTINATION_ADDRESS)
+                .build();
+
+        testEnv.registerDelayedCallback(Duration.ofMinutes(1), () -> {
+            var signalStub = client.newWorkflowStub(
+                    RemittanceLifecycleWorkflow.class, workflowId);
+            signalStub.claimSubmitted(claimSignal);
+        });
+
+        // when
+        var result = workflow.execute(request);
+
+        // then
+        var expected = RemittanceWorkflowResult.builder()
+                .remittanceId(SOME_REMITTANCE_ID)
+                .finalStatus(RemittanceStatus.DELIVERED.name())
+                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .txSignature(SOME_RELEASE_TX_SIGNATURE)
+                .build();
+
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+
+        assertThat(attempts.get()).isEqualTo(3);
+
+        then(activities).should().updateRemittanceStatus(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.DELIVERED);
+
+        then(activities).should(never()).updateRemittanceStatus(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.DISBURSEMENT_FAILED);
+    }
+
+    @Test
+    void shouldNotRetryWhenDisbursementExceptionIsNonRetriable() {
+        // given
+        var request = workflowRequestBuilder()
+                .claimExpiryTimeout(Duration.ofHours(48))
+                .build();
+
+        given(activities.depositEscrow(
+                SOME_REMITTANCE_ID.toString(),
+                SOME_SENDER_ADDRESS,
+                SOME_AMOUNT_USDC,
+                SOME_ESCROW_EXPIRY_TIMESTAMP))
+                .willReturn(SOME_DEPOSIT_TX_SIGNATURE);
+
+        given(activities.releaseEscrow(
+                SOME_REMITTANCE_ID.toString(),
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
+                .willReturn(SOME_RELEASE_TX_SIGNATURE);
+
+        var attempts = new AtomicInteger(0);
+        given(activities.disburseInr(
+                SOME_UPI_ID, SOME_AMOUNT_USDC, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .willAnswer(invocation -> {
+                    attempts.incrementAndGet();
+                    throw DisbursementException.nonRetriable(SOME_UPI_ID, "invalid UPI");
+                });
+
+        testEnv.start();
+
+        var workflowId = "disbursement-non-retriable-" + SOME_REMITTANCE_ID;
+        var workflow = client.newWorkflowStub(
+                RemittanceLifecycleWorkflow.class,
+                WorkflowOptions.newBuilder()
+                        .setTaskQueue(TASK_QUEUE)
+                        .setWorkflowId(workflowId)
+                        .build());
+
+        var claimSignal = ClaimSignal.builder()
+                .claimToken(SOME_CLAIM_TOKEN)
+                .upiId(SOME_UPI_ID)
+                .destinationAddress(SOME_DESTINATION_ADDRESS)
+                .build();
+
+        testEnv.registerDelayedCallback(Duration.ofMinutes(1), () -> {
+            var signalStub = client.newWorkflowStub(
+                    RemittanceLifecycleWorkflow.class, workflowId);
+            signalStub.claimSubmitted(claimSignal);
+        });
+
+        // when
+        var result = workflow.execute(request);
+
+        // then
+        var expected = RemittanceWorkflowResult.builder()
+                .remittanceId(SOME_REMITTANCE_ID)
+                .finalStatus(RemittanceStatus.DISBURSEMENT_FAILED.name())
+                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .txSignature(SOME_RELEASE_TX_SIGNATURE)
+                .build();
+
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+
+        assertThat(attempts.get()).isEqualTo(1);
+
+        then(activities).should().updateRemittanceStatus(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.DISBURSEMENT_FAILED);
+
+        then(activities).should(never()).updateRemittanceStatus(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.DELIVERED);
     }
 }

@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 
+import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.infrastructure.temporal.TaskQueue.Constants;
 
@@ -24,6 +25,9 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     private static final Duration STATUS_UPDATE_TIMEOUT = Duration.ofSeconds(10);
     private static final int SOLANA_MAX_ATTEMPTS = 3;
     private static final int SMS_MAX_ATTEMPTS = 3;
+    private static final int DISBURSEMENT_MAX_ATTEMPTS = 3;
+    private static final String DISBURSEMENT_NON_RETRIABLE_TYPE =
+            DisbursementException.NonRetriable.class.getName();
 
     private final RemittanceLifecycleActivities solanaActivities =
             Workflow.newActivityStub(RemittanceLifecycleActivities.class, solanaActivityOptions());
@@ -187,13 +191,14 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
                 .build();
     }
 
-    private static ActivityOptions disbursementActivityOptions() {
+    static ActivityOptions disbursementActivityOptions() {
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(DISBURSEMENT_ACTIVITY_TIMEOUT)
                 .setRetryOptions(RetryOptions.newBuilder()
-                        .setMaximumAttempts(1)
-                        .setDoNotRetry(
-                                "com.stablepay.domain.remittance.exception.DisbursementException")
+                        .setMaximumAttempts(DISBURSEMENT_MAX_ATTEMPTS)
+                        .setInitialInterval(Duration.ofSeconds(2))
+                        .setBackoffCoefficient(2.0)
+                        .setDoNotRetry(DISBURSEMENT_NON_RETRIABLE_TYPE)
                         .build())
                 .build();
     }
