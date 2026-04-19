@@ -8,10 +8,12 @@ import org.slf4j.Logger;
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.infrastructure.temporal.TaskQueue.Constants;
 
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 
@@ -66,7 +68,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
         try {
             awaitTransactionConfirmation(depositSignature);
-        } catch (Exception e) {
+        } catch (SolanaTransactionException e) {
             log.error("Deposit confirmation failed for remittance {}", remittanceId, e);
             statusActivities.updateRemittanceStatus(
                     remittanceId.toString(), RemittanceStatus.DEPOSIT_FAILED);
@@ -137,7 +139,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
         try {
             awaitTransactionConfirmation(releaseSignature);
-        } catch (Exception e) {
+        } catch (SolanaTransactionException e) {
             log.error("SP-0031: CRITICAL — release confirmation failed for remittance {},"
                     + " escrow may be released on-chain", remittanceId, e);
             statusActivities.updateRemittanceStatus(
@@ -198,7 +200,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
         try {
             awaitTransactionConfirmation(refundSignature);
-        } catch (Exception e) {
+        } catch (SolanaTransactionException e) {
             log.error("Refund confirmation failed for remittance {}", remittanceId, e);
             statusActivities.updateRemittanceStatus(
                     remittanceId.toString(), RemittanceStatus.REFUND_FAILED);
@@ -267,16 +269,27 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         return ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(TX_CONFIRMATION_ACTIVITY_TIMEOUT)
                 .setRetryOptions(RetryOptions.newBuilder()
-                        .setMaximumAttempts(2)
+                        .setMaximumAttempts(SOLANA_MAX_ATTEMPTS)
                         .setInitialInterval(Duration.ofSeconds(1))
                         .setBackoffCoefficient(1.5)
+                        .setDoNotRetry(IllegalArgumentException.class.getName())
                         .build())
                 .build();
     }
 
     private void awaitTransactionConfirmation(String signature) {
         for (var attempt = 1; attempt <= TX_CONFIRMATION_MAX_ATTEMPTS; attempt++) {
-            var status = confirmationActivities.checkTransactionStatus(signature);
+            TransactionConfirmationStatus status;
+            try {
+                status = confirmationActivities.checkTransactionStatus(signature);
+            } catch (ActivityFailure e) {
+                log.warn("Activity failure polling tx {} (attempt={}/{}), retrying",
+                        signature, attempt, TX_CONFIRMATION_MAX_ATTEMPTS, e);
+                if (attempt < TX_CONFIRMATION_MAX_ATTEMPTS) {
+                    Workflow.sleep(TX_CONFIRMATION_POLL_INTERVAL);
+                }
+                continue;
+            }
 
             if (status.hasError()) {
                 throw SolanaTransactionException.transactionFailed(signature);
@@ -289,7 +302,9 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
             log.info("Transaction {} not yet confirmed (status={}, attempt={}/{})",
                     signature, status, attempt, TX_CONFIRMATION_MAX_ATTEMPTS);
-            Workflow.sleep(TX_CONFIRMATION_POLL_INTERVAL);
+            if (attempt < TX_CONFIRMATION_MAX_ATTEMPTS) {
+                Workflow.sleep(TX_CONFIRMATION_POLL_INTERVAL);
+            }
         }
 
         throw SolanaTransactionException.confirmationTimeout(signature);

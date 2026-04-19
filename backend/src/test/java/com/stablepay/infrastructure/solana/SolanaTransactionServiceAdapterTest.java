@@ -87,9 +87,21 @@ class SolanaTransactionServiceAdapterTest {
         @Test
         void shouldReturnFinalizedForFinalizedResponse() {
             // given
-            var json = "{\"jsonrpc\":\"2.0\",\"result\":{\"context\":{\"slot\":123},"
-                    + "\"value\":[{\"slot\":123,\"confirmations\":null,"
-                    + "\"err\":null,\"confirmationStatus\":\"finalized\"}]},\"id\":1}";
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": null,
+                          "err": null,
+                          "confirmationStatus": "finalized"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
 
             // when
             var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
@@ -101,9 +113,21 @@ class SolanaTransactionServiceAdapterTest {
         @Test
         void shouldReturnConfirmedForConfirmedResponse() {
             // given
-            var json = "{\"jsonrpc\":\"2.0\",\"result\":{\"context\":{\"slot\":123},"
-                    + "\"value\":[{\"slot\":123,\"confirmations\":5,"
-                    + "\"err\":null,\"confirmationStatus\":\"confirmed\"}]},\"id\":1}";
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": 5,
+                          "err": null,
+                          "confirmationStatus": "confirmed"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
 
             // when
             var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
@@ -115,9 +139,21 @@ class SolanaTransactionServiceAdapterTest {
         @Test
         void shouldReturnProcessedForProcessedResponse() {
             // given
-            var json = "{\"jsonrpc\":\"2.0\",\"result\":{\"context\":{\"slot\":123},"
-                    + "\"value\":[{\"slot\":123,\"confirmations\":0,"
-                    + "\"err\":null,\"confirmationStatus\":\"processed\"}]},\"id\":1}";
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": 0,
+                          "err": null,
+                          "confirmationStatus": "processed"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
 
             // when
             var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
@@ -129,8 +165,16 @@ class SolanaTransactionServiceAdapterTest {
         @Test
         void shouldReturnNotFoundWhenValueIsNull() {
             // given
-            var json = "{\"jsonrpc\":\"2.0\",\"result\":{\"context\":{\"slot\":123},"
-                    + "\"value\":[null]},\"id\":1}";
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [null]
+                      },
+                      "id": 1
+                    }
+                    """;
 
             // when
             var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
@@ -142,10 +186,21 @@ class SolanaTransactionServiceAdapterTest {
         @Test
         void shouldReturnFailedOnChainWhenErrIsPresent() {
             // given
-            var json = "{\"jsonrpc\":\"2.0\",\"result\":{\"context\":{\"slot\":123},"
-                    + "\"value\":[{\"slot\":123,\"confirmations\":null,"
-                    + "\"err\":{\"InstructionError\":[0,\"Custom\"]},"
-                    + "\"confirmationStatus\":\"finalized\"}]},\"id\":1}";
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": null,
+                          "err": {"InstructionError": [0, "Custom"]},
+                          "confirmationStatus": "finalized"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
 
             // when
             var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
@@ -155,9 +210,43 @@ class SolanaTransactionServiceAdapterTest {
         }
 
         @Test
+        void shouldReturnFinalizedWhenErrIsNullWithWhitespace() {
+            // given
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": null,
+                          "err":   null,
+                          "confirmationStatus": "finalized"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
+
+            // when
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
+
+            // then
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.FINALIZED);
+        }
+
+        @Test
         void shouldReturnNotFoundWhenResponseHasNoValueField() {
             // given
-            var json = "{\"jsonrpc\":\"2.0\",\"result\":{\"context\":{\"slot\":123}},\"id\":1}";
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123}
+                      },
+                      "id": 1
+                    }
+                    """;
 
             // when
             var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);

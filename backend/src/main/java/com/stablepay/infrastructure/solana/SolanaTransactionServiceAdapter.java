@@ -17,6 +17,8 @@ import org.sol4k.instruction.CreateAssociatedTokenAccountInstruction;
 import org.sol4k.instruction.Instruction;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
 import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
@@ -30,6 +32,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 public class SolanaTransactionServiceAdapter implements SolanaTransactionService {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Connection solanaConnection;
     private final EscrowInstructionBuilder escrowInstructionBuilder;
@@ -213,7 +217,7 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
             throw e;
         } catch (Exception e) {
             throw SolanaTransactionException.submissionFailed(
-                    "getSignatureStatuses:" + transactionSignature, e);
+                    "getSignatureStatuses:" + transactionSignature, readRpcErrorDetails(conn, e));
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -222,35 +226,29 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
     }
 
     static TransactionConfirmationStatus parseSignatureStatusResponse(String json) {
-        var valueIndex = json.indexOf("\"value\"");
-        if (valueIndex < 0) {
-            return TransactionConfirmationStatus.NOT_FOUND;
-        }
+        try {
+            var root = MAPPER.readTree(json);
+            var value = root.path("result").path("value");
+            if (!value.isArray() || value.isEmpty() || value.get(0).isNull()) {
+                return TransactionConfirmationStatus.NOT_FOUND;
+            }
 
-        var afterValue = json.substring(valueIndex);
-        if (afterValue.contains("[null]")) {
-            return TransactionConfirmationStatus.NOT_FOUND;
-        }
+            var entry = value.get(0);
+            var err = entry.get("err");
+            if (err != null && !err.isNull()) {
+                return TransactionConfirmationStatus.FAILED_ON_CHAIN;
+            }
 
-        if (afterValue.contains("\"err\"") && !afterValue.contains("\"err\":null")) {
-            return TransactionConfirmationStatus.FAILED_ON_CHAIN;
+            var confirmationStatus = entry.path("confirmationStatus").asText("");
+            return switch (confirmationStatus) {
+                case "finalized" -> TransactionConfirmationStatus.FINALIZED;
+                case "confirmed" -> TransactionConfirmationStatus.CONFIRMED;
+                case "processed" -> TransactionConfirmationStatus.PROCESSED;
+                default -> TransactionConfirmationStatus.NOT_FOUND;
+            };
+        } catch (JsonProcessingException e) {
+            throw SolanaTransactionException.submissionFailed("getSignatureStatuses:parse", e);
         }
-
-        var csIndex = afterValue.indexOf("\"confirmationStatus\"");
-        if (csIndex < 0) {
-            return TransactionConfirmationStatus.NOT_FOUND;
-        }
-
-        var csValue = afterValue.substring(csIndex);
-        if (csValue.contains("\"finalized\"")) {
-            return TransactionConfirmationStatus.FINALIZED;
-        } else if (csValue.contains("\"confirmed\"")) {
-            return TransactionConfirmationStatus.CONFIRMED;
-        } else if (csValue.contains("\"processed\"")) {
-            return TransactionConfirmationStatus.PROCESSED;
-        }
-
-        return TransactionConfirmationStatus.NOT_FOUND;
     }
 
     private String sendWithSkipPreflight(byte[] txBytes) {
