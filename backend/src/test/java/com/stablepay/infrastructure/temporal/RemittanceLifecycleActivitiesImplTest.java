@@ -16,7 +16,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
-import static org.mockito.Mockito.never;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -27,6 +26,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.common.port.SmsProvider;
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
@@ -140,10 +140,12 @@ class RemittanceLifecycleActivitiesImplTest {
         assertThat(result)
                 .usingRecursiveComparison()
                 .isEqualTo(SOME_DISBURSEMENT_RESULT);
+        then(remittancePayoutWriter).should().findExistingPayout(SOME_REMITTANCE_ID);
         then(remittancePayoutWriter).should().writePayoutId(
                 SOME_REMITTANCE_ID,
                 SOME_DISBURSEMENT_RESULT.providerId(),
                 SOME_DISBURSEMENT_RESULT.providerStatus());
+        then(remittancePayoutWriter).shouldHaveNoMoreInteractions();
     }
 
     @Test
@@ -161,10 +163,8 @@ class RemittanceLifecycleActivitiesImplTest {
                 .usingRecursiveComparison()
                 .isEqualTo(SOME_CACHED_RESULT);
         then(fiatDisbursementProvider).shouldHaveNoInteractions();
-        then(remittancePayoutWriter).should(never()).writePayoutId(
-                SOME_REMITTANCE_ID,
-                SOME_CACHED_RESULT.providerId(),
-                SOME_CACHED_RESULT.providerStatus());
+        then(remittancePayoutWriter).should().findExistingPayout(SOME_REMITTANCE_ID);
+        then(remittancePayoutWriter).shouldHaveNoMoreInteractions();
     }
 
     @Test
@@ -181,11 +181,51 @@ class RemittanceLifecycleActivitiesImplTest {
         assertThatThrownBy(() -> activities.disburseInr(
                 SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
                 .isSameAs(failure);
+        then(remittancePayoutWriter).should().findExistingPayout(SOME_REMITTANCE_ID);
         then(remittancePayoutWriter).should().writeFailureReason(SOME_REMITTANCE_ID, failure.getMessage());
-        then(remittancePayoutWriter).should(never()).writePayoutId(
-                SOME_REMITTANCE_ID,
-                SOME_DISBURSEMENT_RESULT.providerId(),
-                SOME_DISBURSEMENT_RESULT.providerStatus());
+        then(remittancePayoutWriter).shouldHaveNoMoreInteractions();
+    }
+
+    @Test
+    void shouldRethrowAndPersistReasonWhenProviderReturnsNullResult() {
+        // given
+        given(remittancePayoutWriter.findExistingPayout(SOME_REMITTANCE_ID))
+                .willReturn(Optional.empty());
+        given(fiatDisbursementProvider.disburse(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .willReturn(null);
+
+        // when / then
+        assertThatThrownBy(() -> activities.disburseInr(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .isInstanceOf(DisbursementException.NonRetriable.class)
+                .hasMessageContaining("SP-0018")
+                .hasMessageContaining("returned null");
+        var expectedReason = "SP-0018: INR disbursement failed for UPI: "
+                + PiiMasking.maskUpi(SOME_UPI_ID)
+                + " - fiatDisbursementProvider returned null DisbursementResult";
+        then(remittancePayoutWriter).should().writeFailureReason(SOME_REMITTANCE_ID, expectedReason);
+    }
+
+    @Test
+    void shouldRethrowWhenWritePayoutIdFailsAfterSuccessfulDisbursement() {
+        // given
+        var dbFailure = new RuntimeException("DB unavailable");
+        given(remittancePayoutWriter.findExistingPayout(SOME_REMITTANCE_ID))
+                .willReturn(Optional.empty());
+        given(fiatDisbursementProvider.disburse(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .willReturn(SOME_DISBURSEMENT_RESULT);
+        willThrow(dbFailure)
+                .given(remittancePayoutWriter).writePayoutId(
+                        SOME_REMITTANCE_ID,
+                        SOME_DISBURSEMENT_RESULT.providerId(),
+                        SOME_DISBURSEMENT_RESULT.providerStatus());
+
+        // when / then
+        assertThatThrownBy(() -> activities.disburseInr(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .isSameAs(dbFailure);
     }
 
     @Test
@@ -204,6 +244,7 @@ class RemittanceLifecycleActivitiesImplTest {
         assertThatThrownBy(() -> activities.disburseInr(
                 SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
                 .isSameAs(failure);
+        then(remittancePayoutWriter).should().writeFailureReason(SOME_REMITTANCE_ID, failure.getMessage());
     }
 
     @Test

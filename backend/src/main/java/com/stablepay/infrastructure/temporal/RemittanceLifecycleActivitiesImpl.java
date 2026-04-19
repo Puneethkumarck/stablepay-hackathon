@@ -106,10 +106,22 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
                 PiiMasking.maskUpi(upiId),
                 remittanceId);
         try {
-            var result = requireNonNull(
-                    fiatDisbursementProvider.disburse(upiId, amountUsdc, amountInr, remittanceId),
-                    "fiatDisbursementProvider returned null DisbursementResult");
-            remittancePayoutWriter.writePayoutId(remittanceUuid, result.providerId(), result.providerStatus());
+            var result = fiatDisbursementProvider.disburse(upiId, amountUsdc, amountInr, remittanceId);
+            if (result == null) {
+                throw DisbursementException.nonRetriable(
+                        upiId, "fiatDisbursementProvider returned null DisbursementResult");
+            }
+            try {
+                remittancePayoutWriter.writePayoutId(
+                        remittanceUuid, result.providerId(), result.providerStatus());
+            } catch (RuntimeException writeFailure) {
+                log.error(
+                        "SP-0030: CRITICAL — manual reconciliation required for remittance={} providerId={} — payout succeeded but payout_id persistence failed",
+                        remittanceId,
+                        result.providerId(),
+                        writeFailure);
+                throw writeFailure;
+            }
             log.info(
                     "INR disbursement completed for remittance {} providerId={} providerStatus={}",
                     remittanceId,
