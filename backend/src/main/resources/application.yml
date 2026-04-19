@@ -38,6 +38,14 @@ server:
   port: 8080
 
 stablepay:
+  disbursement:
+    provider: ${STABLEPAY_DISBURSEMENT_PROVIDER:logging}
+  razorpay:
+    api-key-id: ${RAZORPAY_KEY_ID:}
+    api-key-secret: ${RAZORPAY_KEY_SECRET:}
+    account-number: ${RAZORPAY_ACCOUNT_NUMBER:}
+    base-url: ${RAZORPAY_BASE_URL:https://api.razorpay.com/v1}
+    request-timeout: ${RAZORPAY_REQUEST_TIMEOUT:PT10S}
   fx:
     api:
       base-url: https://open.er-api.com
