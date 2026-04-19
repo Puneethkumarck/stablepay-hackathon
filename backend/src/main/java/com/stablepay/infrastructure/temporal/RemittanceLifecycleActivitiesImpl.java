@@ -117,7 +117,14 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
                     result.providerStatus());
             return result;
         } catch (DisbursementException e) {
-            remittancePayoutWriter.writeFailureReason(remittanceUuid, e.getMessage());
+            try {
+                remittancePayoutWriter.writeFailureReason(remittanceUuid, e.getMessage());
+            } catch (RuntimeException writeFailure) {
+                log.error(
+                        "SP-0029: failed to persist payout_failure_reason for remittance {} — original disbursement exception preserved",
+                        remittanceId,
+                        writeFailure);
+            }
             throw e;
         }
     }

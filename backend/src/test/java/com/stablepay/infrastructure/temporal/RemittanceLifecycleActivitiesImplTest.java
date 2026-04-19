@@ -189,6 +189,24 @@ class RemittanceLifecycleActivitiesImplTest {
     }
 
     @Test
+    void shouldPreserveOriginalDisbursementExceptionWhenWriteFailureReasonThrows() {
+        // given
+        var failure = DisbursementException.nonRetriable(SOME_UPI_ID, "invalid UPI");
+        given(remittancePayoutWriter.findExistingPayout(SOME_REMITTANCE_ID))
+                .willReturn(Optional.empty());
+        given(fiatDisbursementProvider.disburse(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .willThrow(failure);
+        willThrow(new RuntimeException("DB unavailable"))
+                .given(remittancePayoutWriter).writeFailureReason(SOME_REMITTANCE_ID, failure.getMessage());
+
+        // when / then
+        assertThatThrownBy(() -> activities.disburseInr(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .isSameAs(failure);
+    }
+
+    @Test
     void shouldUpdateRemittanceStatusViaDomainHandler() {
         // given
 
