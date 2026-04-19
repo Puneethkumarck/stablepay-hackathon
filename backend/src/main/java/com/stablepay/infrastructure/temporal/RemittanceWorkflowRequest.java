@@ -17,4 +17,10 @@ public record RemittanceWorkflowRequest(
     String claimBaseUrl,
     Duration claimExpiryTimeout,
     long escrowExpiryTimestamp
-) {}
+) {
+    public RemittanceWorkflowRequest {
+        if (amountInr == null) {
+            amountInr = BigDecimal.ZERO;
+        }
+    }
+}
