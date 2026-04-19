@@ -121,6 +121,11 @@ class RemittancePayoutWriterIntegrationTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("SP-0027")
                 .hasMessageContaining(secondRemittanceId.toString());
+
+        var secondAfterRollback = transactionTemplate.execute(status ->
+                remittanceRepository.findByRemittanceId(secondRemittanceId).orElseThrow());
+        assertThat(secondAfterRollback.payoutId()).isNull();
+        assertThat(secondAfterRollback.payoutProviderStatus()).isNull();
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.stablepay.domain.remittance.handler;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RemittancePayoutWriter {
 
     private static final int FAILURE_REASON_MAX = 500;
+    private static final int SANITIZE_INPUT_MAX = FAILURE_REASON_MAX * 4;
     private static final Pattern UPI_HANDLE = Pattern.compile("\\S+@\\S+");
 
     private final RemittanceRepository remittanceRepository;
@@ -39,6 +42,9 @@ public class RemittancePayoutWriter {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void writePayoutId(UUID remittanceId, String providerId, String providerStatus) {
+        requireNonNull(remittanceId, "remittanceId cannot be null");
+        requireNonNull(providerId, "providerId cannot be null");
+        requireNonNull(providerStatus, "providerStatus cannot be null");
         var remittance = remittanceRepository.findByRemittanceId(remittanceId)
                 .orElseThrow(() -> RemittanceNotFoundException.byId(remittanceId));
         try {
@@ -66,7 +72,10 @@ public class RemittancePayoutWriter {
         if (input == null) {
             return null;
         }
-        var masked = UPI_HANDLE.matcher(input)
+        var bounded = input.length() <= SANITIZE_INPUT_MAX
+                ? input
+                : input.substring(0, SANITIZE_INPUT_MAX);
+        var masked = UPI_HANDLE.matcher(bounded)
                 .replaceAll(match -> PiiMasking.maskUpi(match.group()));
         return masked.length() <= FAILURE_REASON_MAX
                 ? masked

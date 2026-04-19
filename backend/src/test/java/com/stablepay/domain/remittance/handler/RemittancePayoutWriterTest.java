@@ -113,6 +113,24 @@ class RemittancePayoutWriterTest {
     }
 
     @Test
+    void shouldRejectNullProviderIdOnWritePayoutId() {
+        // when / then
+        assertThatThrownBy(() -> remittancePayoutWriter.writePayoutId(
+                SOME_REMITTANCE_ID, null, SOME_PROVIDER_STATUS))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("providerId");
+    }
+
+    @Test
+    void shouldRejectNullProviderStatusOnWritePayoutId() {
+        // when / then
+        assertThatThrownBy(() -> remittancePayoutWriter.writePayoutId(
+                SOME_REMITTANCE_ID, SOME_PAYOUT_ID, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("providerStatus");
+    }
+
+    @Test
     void shouldThrowWhenRemittanceMissingOnWritePayoutId() {
         // given
         given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID))
@@ -202,7 +220,6 @@ class RemittancePayoutWriterTest {
         // then
         then(remittanceRepository).should().save(remittanceCaptor.capture());
         var saved = remittanceCaptor.getValue();
-        assertThat(saved.payoutFailureReason()).hasSize(500);
         assertThat(saved.payoutFailureReason()).isEqualTo("x".repeat(500));
     }
 
@@ -223,10 +240,26 @@ class RemittancePayoutWriterTest {
         // then
         then(remittanceRepository).should().save(remittanceCaptor.capture());
         var saved = remittanceCaptor.getValue();
-        assertThat(saved.payoutFailureReason()).hasSize(500);
-        assertThat(saved.payoutFailureReason()).doesNotContain("alice");
-        assertThat(saved.payoutFailureReason()).doesNotContain("@");
         assertThat(saved.payoutFailureReason()).isEqualTo("x".repeat(494) + " ali**");
+    }
+
+    @Test
+    void shouldBoundSanitizeInputSizeBeforeRegexProcessing() {
+        // given — a 10KB attacker-controlled blob must not exhaust regex CPU/heap.
+        var remittance = remittanceBuilder().build();
+        var rawReason = "a".repeat(10_000);
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID))
+                .willReturn(Optional.of(remittance));
+        given(remittanceRepository.save(argThat(r -> r != null && r.payoutFailureReason() != null)))
+                .willAnswer(invocation -> invocation.<Remittance>getArgument(0));
+
+        // when
+        remittancePayoutWriter.writeFailureReason(SOME_REMITTANCE_ID, rawReason);
+
+        // then
+        then(remittanceRepository).should().save(remittanceCaptor.capture());
+        var saved = remittanceCaptor.getValue();
+        assertThat(saved.payoutFailureReason()).isEqualTo("a".repeat(500));
     }
 
     @Test
