@@ -23,7 +23,10 @@ public record Remittance(
     boolean smsNotificationFailed,
     Instant createdAt,
     Instant updatedAt,
-    Instant expiresAt
+    Instant expiresAt,
+    String payoutId,
+    String payoutProviderStatus,
+    String payoutFailureReason
 ) {
     public Remittance {
         requireNonNull(remittanceId, "remittanceId cannot be null");

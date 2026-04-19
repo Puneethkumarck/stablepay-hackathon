@@ -74,4 +74,13 @@ public class RemittanceEntity {
 
     @Column(name = "expires_at")
     private Instant expiresAt;
+
+    @Column(name = "payout_id")
+    private String payoutId;
+
+    @Column(name = "payout_provider_status", length = 50)
+    private String payoutProviderStatus;
+
+    @Column(name = "payout_failure_reason", length = 500)
+    private String payoutFailureReason;
 }

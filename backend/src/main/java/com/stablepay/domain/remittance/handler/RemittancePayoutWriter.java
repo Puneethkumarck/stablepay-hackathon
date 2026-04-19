@@ -1,0 +1,84 @@
+package com.stablepay.domain.remittance.handler;
+
+import static java.util.Objects.requireNonNull;
+
+import java.util.Optional;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.stablepay.domain.common.PiiMasking;
+import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
+import com.stablepay.domain.remittance.model.DisbursementResult;
+import com.stablepay.domain.remittance.port.RemittanceRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class RemittancePayoutWriter {
+
+    private static final int FAILURE_REASON_MAX = 500;
+    private static final int SANITIZE_INPUT_MAX = FAILURE_REASON_MAX * 4;
+    private static final Pattern UPI_HANDLE = Pattern.compile("\\S+@\\S+");
+
+    private final RemittanceRepository remittanceRepository;
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public Optional<DisbursementResult> findExistingPayout(UUID remittanceId) {
+        return remittanceRepository.findByRemittanceId(remittanceId)
+                .filter(r -> r.payoutId() != null && r.payoutProviderStatus() != null)
+                .map(r -> DisbursementResult.builder()
+                        .providerId(r.payoutId())
+                        .providerStatus(r.payoutProviderStatus())
+                        .build());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void writePayoutId(UUID remittanceId, String providerId, String providerStatus) {
+        requireNonNull(remittanceId, "remittanceId cannot be null");
+        requireNonNull(providerId, "providerId cannot be null");
+        requireNonNull(providerStatus, "providerStatus cannot be null");
+        var remittance = remittanceRepository.findByRemittanceId(remittanceId)
+                .orElseThrow(() -> RemittanceNotFoundException.byId(remittanceId));
+        try {
+            remittanceRepository.saveAndFlush(remittance.toBuilder()
+                    .payoutId(providerId)
+                    .payoutProviderStatus(providerStatus)
+                    .build());
+        } catch (DataIntegrityViolationException e) {
+            log.error("SP-0027: duplicate payout_id for remittance {}", remittanceId, e);
+            throw new IllegalStateException(
+                    "SP-0027: Duplicate payout_id write for remittance " + remittanceId, e);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void writeFailureReason(UUID remittanceId, String rawReason) {
+        var remittance = remittanceRepository.findByRemittanceId(remittanceId)
+                .orElseThrow(() -> RemittanceNotFoundException.byId(remittanceId));
+        remittanceRepository.save(remittance.toBuilder()
+                .payoutFailureReason(sanitize(rawReason))
+                .build());
+    }
+
+    private static String sanitize(String input) {
+        if (input == null) {
+            return null;
+        }
+        var bounded = input.length() <= SANITIZE_INPUT_MAX
+                ? input
+                : input.substring(0, SANITIZE_INPUT_MAX);
+        var masked = UPI_HANDLE.matcher(bounded)
+                .replaceAll(match -> PiiMasking.maskUpi(match.group()));
+        return masked.length() <= FAILURE_REASON_MAX
+                ? masked
+                : masked.substring(0, FAILURE_REASON_MAX);
+    }
+}
