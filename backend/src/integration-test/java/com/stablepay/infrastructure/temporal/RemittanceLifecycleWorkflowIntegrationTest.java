@@ -283,6 +283,8 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                     .usingRecursiveComparison()
                     .ignoringFields("escrowPda")
                     .isEqualTo(expected);
+
+            WorkflowStub.fromTyped(workflow).cancel();
         }
     }
 }
