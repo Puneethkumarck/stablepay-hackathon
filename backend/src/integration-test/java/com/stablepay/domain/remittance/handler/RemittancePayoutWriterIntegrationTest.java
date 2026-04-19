@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
+import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
@@ -60,15 +61,24 @@ class RemittancePayoutWriterIntegrationTest {
 
     @Test
     void shouldCommitPayoutIdImmediatelySoOtherTransactionsCanReadIt() {
-        // when — writePayoutId runs in REQUIRES_NEW; the row must be visible to a
+        // given — writePayoutId runs in REQUIRES_NEW; the row must be visible to a
         // brand-new read transaction started AFTER writePayoutId returns.
+        var existing = transactionTemplate.execute(status ->
+                remittanceRepository.findByRemittanceId(remittanceId).orElseThrow());
+
+        // when
         remittancePayoutWriter.writePayoutId(remittanceId, "pout_ABC123", "processing");
 
         // then
         var reloaded = transactionTemplate.execute(status ->
                 remittanceRepository.findByRemittanceId(remittanceId).orElseThrow());
-        assertThat(reloaded.payoutId()).isEqualTo("pout_ABC123");
-        assertThat(reloaded.payoutProviderStatus()).isEqualTo("processing");
+        var expected = existing.toBuilder()
+                .payoutId("pout_ABC123")
+                .payoutProviderStatus("processing")
+                .build();
+        assertThat(reloaded).usingRecursiveComparison()
+                .ignoringFields("updatedAt")
+                .isEqualTo(expected);
     }
 
     @Test
@@ -80,9 +90,12 @@ class RemittancePayoutWriterIntegrationTest {
         var result = remittancePayoutWriter.findExistingPayout(remittanceId);
 
         // then
+        var expected = DisbursementResult.builder()
+                .providerId("pout_XYZ789")
+                .providerStatus("processed")
+                .build();
         assertThat(result).isPresent();
-        assertThat(result.get().providerId()).isEqualTo("pout_XYZ789");
-        assertThat(result.get().providerStatus()).isEqualTo("processed");
+        assertThat(result.get()).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -106,7 +119,7 @@ class RemittancePayoutWriterIntegrationTest {
         assertThatThrownBy(() -> remittancePayoutWriter.writePayoutId(
                 secondRemittanceId, "pout_DUP001", "processing"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Duplicate payout_id write")
+                .hasMessageContaining("SP-0027")
                 .hasMessageContaining(secondRemittanceId.toString());
     }
 

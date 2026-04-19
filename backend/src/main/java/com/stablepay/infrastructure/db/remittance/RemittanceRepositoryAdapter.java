@@ -28,6 +28,8 @@ class RemittanceRepositoryAdapter implements RemittanceRepository {
             entity.setCreatedAt(now);
         }
         entity.setUpdatedAt(now);
+        // saveAndFlush so constraint violations surface synchronously to REQUIRES_NEW writers
+        // that catch DataIntegrityViolationException (RemittancePayoutWriter).
         var saved = jpaRepository.saveAndFlush(entity);
         return mapper.toDomain(saved);
     }

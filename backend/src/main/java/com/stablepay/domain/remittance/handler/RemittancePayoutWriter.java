@@ -28,7 +28,7 @@ public class RemittancePayoutWriter {
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public Optional<DisbursementResult> findExistingPayout(UUID remittanceId) {
         return remittanceRepository.findByRemittanceId(remittanceId)
-                .filter(r -> r.payoutId() != null)
+                .filter(r -> r.payoutId() != null && r.payoutProviderStatus() != null)
                 .map(r -> DisbursementResult.builder()
                         .providerId(r.payoutId())
                         .providerStatus(r.payoutProviderStatus())
@@ -46,7 +46,7 @@ public class RemittancePayoutWriter {
                     .build());
         } catch (DataIntegrityViolationException e) {
             throw new IllegalStateException(
-                    "Duplicate payout_id write for remittance " + remittanceId, e);
+                    "SP-0027: Duplicate payout_id write for remittance " + remittanceId, e);
         }
     }
 

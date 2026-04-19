@@ -140,8 +140,27 @@ class RemittancePayoutWriterTest {
         assertThatThrownBy(() -> remittancePayoutWriter.writePayoutId(
                 SOME_REMITTANCE_ID, SOME_PAYOUT_ID, SOME_PROVIDER_STATUS))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Duplicate payout_id write")
+                .hasMessageContaining("SP-0027")
                 .hasMessageContaining(SOME_REMITTANCE_ID.toString());
+    }
+
+    @Test
+    void shouldReturnEmptyWhenPayoutIdSetButProviderStatusMissing() {
+        // given — defensive guard: a partial write (or out-of-band SQL) could leave
+        // payout_id set while payout_provider_status is null. findExistingPayout
+        // must not NPE on DisbursementResult construction.
+        var remittance = remittanceBuilder()
+                .payoutId(SOME_PAYOUT_ID)
+                .payoutProviderStatus(null)
+                .build();
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID))
+                .willReturn(Optional.of(remittance));
+
+        // when
+        var result = remittancePayoutWriter.findExistingPayout(SOME_REMITTANCE_ID);
+
+        // then
+        assertThat(result).isEmpty();
     }
 
     @Test
