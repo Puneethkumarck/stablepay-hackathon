@@ -16,8 +16,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +28,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.stablepay.domain.common.port.SmsProvider;
+import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
+import com.stablepay.domain.remittance.handler.RemittancePayoutWriter;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
@@ -42,6 +46,10 @@ class RemittanceLifecycleActivitiesImplTest {
             .providerId("log_11111111-1111-1111-1111-111111111111")
             .providerStatus("SIMULATED")
             .build();
+    private static final DisbursementResult SOME_CACHED_RESULT = DisbursementResult.builder()
+            .providerId("pout_cached_999")
+            .providerStatus("processing")
+            .build();
 
     @Mock
     private SolanaTransactionService solanaTransactionService;
@@ -54,6 +62,9 @@ class RemittanceLifecycleActivitiesImplTest {
 
     @Mock
     private UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
+
+    @Mock
+    private RemittancePayoutWriter remittancePayoutWriter;
 
     @InjectMocks
     private RemittanceLifecycleActivitiesImpl activities;
@@ -102,7 +113,7 @@ class RemittanceLifecycleActivitiesImplTest {
 
     @Test
     void shouldSendClaimSmsViaProvider() {
-        // given — no stubbing needed, sendSms returns void
+        // given
 
         // when
         activities.sendClaimSms(SOME_RECIPIENT_PHONE, SOME_CLAIM_URL);
@@ -113,8 +124,10 @@ class RemittanceLifecycleActivitiesImplTest {
     }
 
     @Test
-    void shouldDelegateInrDisbursementToProviderAndReturnResult() {
+    void shouldDelegateInrDisbursementToProviderAndPersistPayout() {
         // given
+        given(remittancePayoutWriter.findExistingPayout(SOME_REMITTANCE_ID))
+                .willReturn(Optional.empty());
         given(fiatDisbursementProvider.disburse(
                 SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
                 .willReturn(SOME_DISBURSEMENT_RESULT);
@@ -127,11 +140,57 @@ class RemittanceLifecycleActivitiesImplTest {
         assertThat(result)
                 .usingRecursiveComparison()
                 .isEqualTo(SOME_DISBURSEMENT_RESULT);
+        then(remittancePayoutWriter).should().writePayoutId(
+                SOME_REMITTANCE_ID,
+                SOME_DISBURSEMENT_RESULT.providerId(),
+                SOME_DISBURSEMENT_RESULT.providerStatus());
+    }
+
+    @Test
+    void shouldShortCircuitDisbursementWhenPayoutAlreadyPersisted() {
+        // given
+        given(remittancePayoutWriter.findExistingPayout(SOME_REMITTANCE_ID))
+                .willReturn(Optional.of(SOME_CACHED_RESULT));
+
+        // when
+        var result = activities.disburseInr(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString());
+
+        // then
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(SOME_CACHED_RESULT);
+        then(fiatDisbursementProvider).shouldHaveNoInteractions();
+        then(remittancePayoutWriter).should(never()).writePayoutId(
+                SOME_REMITTANCE_ID,
+                SOME_CACHED_RESULT.providerId(),
+                SOME_CACHED_RESULT.providerStatus());
+    }
+
+    @Test
+    void shouldPersistFailureReasonAndRethrowWhenDisbursementFails() {
+        // given
+        var failure = DisbursementException.nonRetriable(SOME_UPI_ID, "invalid UPI");
+        given(remittancePayoutWriter.findExistingPayout(SOME_REMITTANCE_ID))
+                .willReturn(Optional.empty());
+        given(fiatDisbursementProvider.disburse(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .willThrow(failure);
+
+        // when / then
+        assertThatThrownBy(() -> activities.disburseInr(
+                SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
+                .isSameAs(failure);
+        then(remittancePayoutWriter).should().writeFailureReason(SOME_REMITTANCE_ID, failure.getMessage());
+        then(remittancePayoutWriter).should(never()).writePayoutId(
+                SOME_REMITTANCE_ID,
+                SOME_DISBURSEMENT_RESULT.providerId(),
+                SOME_DISBURSEMENT_RESULT.providerStatus());
     }
 
     @Test
     void shouldUpdateRemittanceStatusViaDomainHandler() {
-        // given — handler is void, no stubbing needed
+        // given
 
         // when
         activities.updateRemittanceStatus(SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED);

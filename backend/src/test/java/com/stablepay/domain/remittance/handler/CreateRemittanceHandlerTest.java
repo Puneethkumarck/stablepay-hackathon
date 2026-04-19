@@ -129,6 +129,14 @@ class CreateRemittanceHandlerTest {
                 .ignoringFields("id", "createdAt")
                 .isEqualTo(expectedClaimToken);
         assertThat(savedClaimToken.expiresAt()).isNotNull();
+
+        then(workflowStarter).should().startWorkflow(
+                result.remittanceId(),
+                wallet.solanaAddress(),
+                SOME_RECIPIENT_PHONE,
+                SOME_AMOUNT_USDC,
+                SOME_AMOUNT_INR,
+                savedClaimToken.token());
     }
 
     @Test
@@ -160,6 +168,7 @@ class CreateRemittanceHandlerTest {
                         argThat(addr -> addr != null),
                         argThat(phone -> phone != null),
                         argThat(amt -> amt != null),
+                        argThat(inr -> inr != null),
                         argThat(tok -> tok != null));
 
         // when / then

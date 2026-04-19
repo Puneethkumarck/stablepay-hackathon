@@ -30,6 +30,7 @@ public class TemporalRemittanceWorkflowStarter implements RemittanceWorkflowStar
             String senderAddress,
             String recipientPhone,
             BigDecimal amountUsdc,
+            BigDecimal amountInr,
             String claimToken) {
         var temporal = properties.temporal();
         var workflow = workflowFactory.createRemittanceWorkflow(remittanceId);
@@ -43,7 +44,7 @@ public class TemporalRemittanceWorkflowStarter implements RemittanceWorkflowStar
                 .senderAddress(senderAddress)
                 .recipientPhone(recipientPhone)
                 .amountUsdc(amountUsdc)
-                .amountInr(BigDecimal.ZERO)
+                .amountInr(amountInr)
                 .claimToken(claimToken)
                 .claimBaseUrl(temporal.claimBaseUrl())
                 .claimExpiryTimeout(temporal.claimExpiryTimeout())

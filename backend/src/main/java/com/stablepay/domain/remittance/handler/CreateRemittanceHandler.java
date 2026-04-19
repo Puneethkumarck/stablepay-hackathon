@@ -80,6 +80,7 @@ public class CreateRemittanceHandler {
                 wallet.solanaAddress(),
                 recipientPhone,
                 amountUsdc,
+                amountInr,
                 savedClaim.token()));
 
         return finalRemittance;
