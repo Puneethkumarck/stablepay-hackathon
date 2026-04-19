@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/payouts"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"pout_wm_{{randomValue length=12 type='ALPHANUMERIC'}}\",\"entity\":\"payout\",\"mode\":\"UPI\",\"status\":\"processing\",\"amount\":{{jsonPath request.body '$.amount'}},\"currency\":\"INR\",\"reference_id\":\"{{jsonPath request.body '$.reference_id'}}\"}",
+    "transformers": ["response-template"]
+  }
+}

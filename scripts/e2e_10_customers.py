@@ -56,6 +56,28 @@ def spl_balance(owner: str) -> str:
     return r.stdout.strip() if r.returncode == 0 else r.stderr.strip()
 
 
+def fetch_payout_row(remittance_id: str) -> tuple[str | None, str | None, str | None]:
+    """Read payout_id, payout_provider_status, payout_failure_reason from the
+    remittances row. STA-91 wires RemittancePayoutWriter into the disburse
+    activity; the API response deliberately does NOT expose these (STA-92),
+    so the e2e harness goes straight to the DB. Returns (payout_id,
+    provider_status, failure_reason); any of them may be None."""
+    r = subprocess.run(
+        ["docker", "exec", "stablepay-hackathon-postgres-1",
+         "psql", "-U", "stablepay", "-d", "stablepay", "-tAc",
+         "SELECT COALESCE(payout_id,''), COALESCE(payout_provider_status,''), "
+         "COALESCE(payout_failure_reason,'') FROM remittances "
+         f"WHERE remittance_id='{remittance_id}';"],
+        capture_output=True, text=True)
+    if r.returncode != 0:
+        return None, None, None
+    parts = r.stdout.strip().split("|")
+    if len(parts) != 3:
+        return None, None, None
+    pid, status, reason = parts
+    return pid or None, status or None, reason or None
+
+
 SENSITIVE_KEYS = {"stripeClientSecret", "clientSecret"}
 
 
@@ -94,6 +116,8 @@ class RunResult:
     final_status: str | None = None
     on_chain_usdc_after_fund: str | None = None
     on_chain_usdc_after_claim: str | None = None
+    payout_id: str | None = None
+    payout_provider_status: str | None = None
     elapsed_secs: float = 0.0
     passed: bool = False
     error: str | None = None
@@ -209,6 +233,21 @@ def run_one(idx: int) -> RunResult:
             )
             return r
 
+        # 11. STA-91 — verify RemittancePayoutWriter persisted payout_id +
+        # provider_status during disburseInr. Logging adapter returns
+        # "log_<uuid>" + "SIMULATED"; Razorpay (real or WireMock-stubbed)
+        # returns "pout_..." + "processing". Either shape proves the writer
+        # path ran; any other combination is a regression.
+        payout_id, provider_status, _ = fetch_payout_row(r.remittance_id)
+        r.payout_id = payout_id
+        r.payout_provider_status = provider_status
+        if not payout_id or not (payout_id.startswith("log_") or payout_id.startswith("pout_")):
+            r.error = f"payout_id not persisted or wrong format: {payout_id!r}"
+            return r
+        if provider_status not in ("SIMULATED", "processing"):
+            r.error = f"payout_provider_status = {provider_status!r}, expected 'SIMULATED' or 'processing'"
+            return r
+
         r.passed = True
     finally:
         r.elapsed_secs = round(time.time() - t0, 1)
@@ -228,14 +267,15 @@ def write_report(results: list[RunResult], out_path: str):
         f"- Failed: {sum(1 for r in results if not r.passed)}",
         f"- Per-customer amount: ${AMOUNT_USDC} USDC",
         "",
-        "| # | userId | walletId | address | fundingId | remittanceId | final | USDC after fund | elapsed (s) | PASS |",
-        "|---|--------|----------|---------|-----------|--------------|-------|-----------------|-------------|------|",
+        "| # | userId | walletId | address | fundingId | remittanceId | final | USDC after fund | payout_id | elapsed (s) | PASS |",
+        "|---|--------|----------|---------|-----------|--------------|-------|-----------------|-----------|-------------|------|",
     ]
     for r in results:
         lines.append(
             f"| {r.index} | `{r.user_id}` | {r.wallet_id} | `{r.solana_address}` | "
             f"`{r.funding_id}` | `{r.remittance_id}` | {r.final_status or '-'} | "
-            f"{r.on_chain_usdc_after_fund or '-'} | {r.elapsed_secs} | "
+            f"{r.on_chain_usdc_after_fund or '-'} | `{r.payout_id or '-'}` | "
+            f"{r.elapsed_secs} | "
             f"{'✅' if r.passed else '❌ ' + (r.error or '')} |"
         )
     lines += ["", "## Per-customer request / response log", ""]
@@ -250,6 +290,7 @@ def write_report(results: list[RunResult], out_path: str):
             f"{'**PASS**' if r.passed else '**FAIL: ' + (r.error or '') + '**'}",
             f"- On-chain USDC after fund: {r.on_chain_usdc_after_fund}",
             f"- Claim authority USDC after claim: {r.on_chain_usdc_after_claim}",
+            f"- Payout: id=`{r.payout_id or '-'}` status=`{r.payout_provider_status or '-'}`",
             "",
         ]
         for d in r.detail:
@@ -330,6 +371,15 @@ def run_salvage(idx: int, wallet_id: int, user_id: str, amount_usdc: str) -> Run
             r.error = f"final status = {r.final_status}"
             return r
         r.on_chain_usdc_after_claim = spl_balance(CLAIM_AUTHORITY)
+        payout_id, provider_status, _ = fetch_payout_row(r.remittance_id)
+        r.payout_id = payout_id
+        r.payout_provider_status = provider_status
+        if not payout_id or not (payout_id.startswith("log_") or payout_id.startswith("pout_")):
+            r.error = f"payout_id not persisted or wrong format: {payout_id!r}"
+            return r
+        if provider_status not in ("SIMULATED", "processing"):
+            r.error = f"payout_provider_status = {provider_status!r}, expected 'SIMULATED' or 'processing'"
+            return r
         r.passed = True
     finally:
         r.elapsed_secs = round(time.time() - t0, 1)

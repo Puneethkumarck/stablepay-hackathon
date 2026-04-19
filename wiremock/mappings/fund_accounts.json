@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/fund_accounts"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"fa_wm_{{randomValue length=12 type='ALPHANUMERIC'}}\",\"entity\":\"fund_account\",\"account_type\":\"vpa\",\"active\":true}",
+    "transformers": ["response-template"]
+  }
+}
