@@ -10,6 +10,7 @@ import com.stablepay.domain.remittance.model.Remittance;
 
 public interface RemittanceRepository {
     Remittance save(Remittance remittance);
+    Remittance saveAndFlush(Remittance remittance);
     Optional<Remittance> findByRemittanceId(UUID remittanceId);
     Page<Remittance> findBySenderId(String senderId, Pageable pageable);
 }

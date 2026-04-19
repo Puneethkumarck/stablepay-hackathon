@@ -15,7 +15,9 @@ import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RemittancePayoutWriter {
@@ -40,11 +42,12 @@ public class RemittancePayoutWriter {
         var remittance = remittanceRepository.findByRemittanceId(remittanceId)
                 .orElseThrow(() -> RemittanceNotFoundException.byId(remittanceId));
         try {
-            remittanceRepository.save(remittance.toBuilder()
+            remittanceRepository.saveAndFlush(remittance.toBuilder()
                     .payoutId(providerId)
                     .payoutProviderStatus(providerStatus)
                     .build());
         } catch (DataIntegrityViolationException e) {
+            log.error("SP-0027: duplicate payout_id for remittance {}", remittanceId, e);
             throw new IllegalStateException(
                     "SP-0027: Duplicate payout_id write for remittance " + remittanceId, e);
         }
@@ -63,9 +66,10 @@ public class RemittancePayoutWriter {
         if (input == null) {
             return null;
         }
-        var truncated = input.length() <= FAILURE_REASON_MAX
-                ? input
-                : input.substring(0, FAILURE_REASON_MAX);
-        return UPI_HANDLE.matcher(truncated).replaceAll(match -> PiiMasking.maskUpi(match.group()));
+        var masked = UPI_HANDLE.matcher(input)
+                .replaceAll(match -> PiiMasking.maskUpi(match.group()));
+        return masked.length() <= FAILURE_REASON_MAX
+                ? masked
+                : masked.substring(0, FAILURE_REASON_MAX);
     }
 }

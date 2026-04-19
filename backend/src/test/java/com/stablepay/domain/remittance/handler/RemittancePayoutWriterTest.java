@@ -95,14 +95,14 @@ class RemittancePayoutWriterTest {
         var remittance = remittanceBuilder().build();
         given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID))
                 .willReturn(Optional.of(remittance));
-        given(remittanceRepository.save(argThat(r -> r != null && SOME_PAYOUT_ID.equals(r.payoutId()))))
+        given(remittanceRepository.saveAndFlush(argThat(r -> r != null && SOME_PAYOUT_ID.equals(r.payoutId()))))
                 .willAnswer(invocation -> invocation.<Remittance>getArgument(0));
 
         // when
         remittancePayoutWriter.writePayoutId(SOME_REMITTANCE_ID, SOME_PAYOUT_ID, SOME_PROVIDER_STATUS);
 
         // then
-        then(remittanceRepository).should().save(remittanceCaptor.capture());
+        then(remittanceRepository).should().saveAndFlush(remittanceCaptor.capture());
         var saved = remittanceCaptor.getValue();
 
         var expected = remittance.toBuilder()
@@ -133,7 +133,7 @@ class RemittancePayoutWriterTest {
         given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID))
                 .willReturn(Optional.of(remittance));
         willThrow(new DataIntegrityViolationException("duplicate key"))
-                .given(remittanceRepository).save(argThat(r -> r != null
+                .given(remittanceRepository).saveAndFlush(argThat(r -> r != null
                         && SOME_PAYOUT_ID.equals(r.payoutId())));
 
         // when / then
@@ -204,6 +204,29 @@ class RemittancePayoutWriterTest {
         var saved = remittanceCaptor.getValue();
         assertThat(saved.payoutFailureReason()).hasSize(500);
         assertThat(saved.payoutFailureReason()).isEqualTo("x".repeat(500));
+    }
+
+    @Test
+    void shouldMaskUpiHandleBeforeTruncationSoStraddlingHandleDoesNotLeak() {
+        // given — a handle straddles the 500-char boundary; old truncate-then-mask
+        // would have left "alice" unmasked because the `@` fell past the cut.
+        var remittance = remittanceBuilder().build();
+        var rawReason = "x".repeat(494) + " alice@upi.bank extra";
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID))
+                .willReturn(Optional.of(remittance));
+        given(remittanceRepository.save(argThat(r -> r != null && r.payoutFailureReason() != null)))
+                .willAnswer(invocation -> invocation.<Remittance>getArgument(0));
+
+        // when
+        remittancePayoutWriter.writeFailureReason(SOME_REMITTANCE_ID, rawReason);
+
+        // then
+        then(remittanceRepository).should().save(remittanceCaptor.capture());
+        var saved = remittanceCaptor.getValue();
+        assertThat(saved.payoutFailureReason()).hasSize(500);
+        assertThat(saved.payoutFailureReason()).doesNotContain("alice");
+        assertThat(saved.payoutFailureReason()).doesNotContain("@");
+        assertThat(saved.payoutFailureReason()).isEqualTo("x".repeat(494) + " ali**");
     }
 
     @Test

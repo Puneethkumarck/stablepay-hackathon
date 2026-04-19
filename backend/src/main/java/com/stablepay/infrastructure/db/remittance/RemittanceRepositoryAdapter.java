@@ -22,16 +22,24 @@ class RemittanceRepositoryAdapter implements RemittanceRepository {
 
     @Override
     public Remittance save(Remittance remittance) {
+        var saved = jpaRepository.save(prepareForPersist(remittance));
+        return mapper.toDomain(saved);
+    }
+
+    @Override
+    public Remittance saveAndFlush(Remittance remittance) {
+        var saved = jpaRepository.saveAndFlush(prepareForPersist(remittance));
+        return mapper.toDomain(saved);
+    }
+
+    private RemittanceEntity prepareForPersist(Remittance remittance) {
         var entity = mapper.toEntity(remittance);
         var now = Instant.now();
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(now);
         }
         entity.setUpdatedAt(now);
-        // saveAndFlush so constraint violations surface synchronously to REQUIRES_NEW writers
-        // that catch DataIntegrityViolationException (RemittancePayoutWriter).
-        var saved = jpaRepository.saveAndFlush(entity);
-        return mapper.toDomain(saved);
+        return entity;
     }
 
     @Override
