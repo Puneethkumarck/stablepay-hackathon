@@ -28,7 +28,7 @@ class RemittanceRepositoryAdapter implements RemittanceRepository {
             entity.setCreatedAt(now);
         }
         entity.setUpdatedAt(now);
-        var saved = jpaRepository.save(entity);
+        var saved = jpaRepository.saveAndFlush(entity);
         return mapper.toDomain(saved);
     }
 
