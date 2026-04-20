@@ -4,6 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 
@@ -12,7 +13,7 @@ import lombok.Builder;
 @Builder(toBuilder = true)
 public record Wallet(
     Long id,
-    String userId,
+    UUID userId,
     String solanaAddress,
     byte[] publicKey,
     byte[] keyShareData,

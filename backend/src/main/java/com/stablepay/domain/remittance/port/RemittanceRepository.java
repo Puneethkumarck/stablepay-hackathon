@@ -12,5 +12,5 @@ public interface RemittanceRepository {
     Remittance save(Remittance remittance);
     Remittance saveAndFlush(Remittance remittance);
     Optional<Remittance> findByRemittanceId(UUID remittanceId);
-    Page<Remittance> findBySenderId(String senderId, Pageable pageable);
+    Page<Remittance> findBySenderId(UUID senderId, Pageable pageable);
 }

@@ -2,6 +2,7 @@ package com.stablepay.infrastructure.db.wallet;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -31,7 +32,7 @@ public class WalletEntity {
     private Long id;
 
     @Column(name = "user_id", nullable = false, unique = true)
-    private String userId;
+    private UUID userId;
 
     @Column(name = "solana_address", nullable = false, unique = true)
     private String solanaAddress;

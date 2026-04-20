@@ -2,6 +2,7 @@ package com.stablepay.testutil;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 import com.stablepay.domain.wallet.model.Wallet;
 
@@ -10,7 +11,7 @@ public final class WalletFixtures {
     private WalletFixtures() {}
 
     public static final Long SOME_WALLET_ID = 1L;
-    public static final String SOME_USER_ID = "user-42";
+    public static final UUID SOME_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000042");
     public static final String SOME_SOLANA_ADDRESS = "SoLaNa1234567890AbCdEfGhIjKlMnOpQrStUvWx";
     public static final byte[] SOME_PUBLIC_KEY = new byte[]{1, 2, 3, 4, 5, 6, 7, 8};
     public static final byte[] SOME_KEY_SHARE_DATA = new byte[]{10, 20, 30, 40, 50};

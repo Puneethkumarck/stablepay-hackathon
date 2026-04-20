@@ -1,5 +1,7 @@
 package com.stablepay.domain.remittance.handler;
 
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,7 +19,7 @@ public class ListRemittancesQueryHandler {
 
     private final RemittanceRepository remittanceRepository;
 
-    public Page<Remittance> handle(String senderId, Pageable pageable) {
+    public Page<Remittance> handle(UUID senderId, Pageable pageable) {
         return remittanceRepository.findBySenderId(senderId, pageable);
     }
 }

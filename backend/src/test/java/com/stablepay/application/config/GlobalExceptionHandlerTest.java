@@ -87,7 +87,7 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/test/wallet-already-exists")
         public void walletAlreadyExists() {
-            throw WalletAlreadyExistsException.forUserId("user-123");
+            throw WalletAlreadyExistsException.forUserId(UUID.fromString("00000000-0000-0000-0000-000000000123"));
         }
 
         @GetMapping("/test/unsupported-corridor")
@@ -199,7 +199,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("SP-0008"))
                 .andExpect(jsonPath("$.message").value(
-                        "SP-0008: Wallet already exists for userId: user-123"))
+                        "SP-0008: Wallet already exists for userId: 00000000-0000-0000-0000-000000000123"))
                 .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
                 .andExpect(jsonPath("$.path").value("/test/wallet-already-exists"));
     }

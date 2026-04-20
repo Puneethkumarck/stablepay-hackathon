@@ -48,7 +48,7 @@ class RemittanceRepositoryAdapter implements RemittanceRepository {
     }
 
     @Override
-    public Page<Remittance> findBySenderId(String senderId, Pageable pageable) {
+    public Page<Remittance> findBySenderId(UUID senderId, Pageable pageable) {
         return jpaRepository.findBySenderId(senderId, pageable).map(mapper::toDomain);
     }
 }

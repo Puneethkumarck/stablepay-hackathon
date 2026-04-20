@@ -112,6 +112,6 @@ class CreateWalletHandlerTest {
         assertThatThrownBy(() -> createWalletHandler.handle(SOME_USER_ID))
                 .isInstanceOf(WalletAlreadyExistsException.class)
                 .hasMessageContaining("SP-0008")
-                .hasMessageContaining(SOME_USER_ID);
+                .hasMessageContaining(SOME_USER_ID.toString());
     }
 }

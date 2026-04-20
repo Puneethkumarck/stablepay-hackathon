@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.jayway.jsonpath.JsonPath;
+import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.remittance.handler.UpdateRemittanceStatusHandler;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.wallet.model.GeneratedKey;
@@ -31,7 +33,7 @@ import lombok.SneakyThrows;
 @AutoConfigureMockMvc
 class RemittanceLifecycleE2EIntegrationTest {
 
-    private static final String E2E_USER_ID = "e2e-user-" + UUID.randomUUID().toString().substring(0, 8);
+    private static final UUID E2E_USER_ID = UUID.randomUUID();
     private static final String E2E_SOLANA_ADDRESS = "E2eSoLaNa1234567890AbCdEfGhIjKlMnOpQrStUv";
     private static final byte[] E2E_PUBLIC_KEY = new byte[]{1, 2, 3, 4, 5, 6, 7, 8};
     private static final byte[] E2E_KEY_SHARE_DATA = new byte[]{10, 20, 30, 40, 50};
@@ -49,8 +51,12 @@ class RemittanceLifecycleE2EIntegrationTest {
     @Autowired
     private WalletRepository walletRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @BeforeEach
     void setUp() {
+        userRepository.save(AppUser.builder().id(E2E_USER_ID).email("e2e@test.com").build());
         given(mpcWalletClient.generateKey()).willReturn(
                 GeneratedKey.builder()
                         .solanaAddress(E2E_SOLANA_ADDRESS)
@@ -108,7 +114,7 @@ class RemittanceLifecycleE2EIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.userId").value(E2E_USER_ID))
+                .andExpect(jsonPath("$.userId").value(E2E_USER_ID.toString()))
                 .andExpect(jsonPath("$.solanaAddress").value(E2E_SOLANA_ADDRESS))
                 .andExpect(jsonPath("$.availableBalance").value(0))
                 .andReturn();
@@ -157,7 +163,7 @@ class RemittanceLifecycleE2EIntegrationTest {
                         .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.remittanceId").isString())
-                .andExpect(jsonPath("$.senderId").value(E2E_USER_ID))
+                .andExpect(jsonPath("$.senderId").value(E2E_USER_ID.toString()))
                 .andExpect(jsonPath("$.recipientPhone").value("+919876543210"))
                 .andExpect(jsonPath("$.amountUsdc").value(25.00))
                 .andExpect(jsonPath("$.amountInr").isNumber())
@@ -215,13 +221,13 @@ class RemittanceLifecycleE2EIntegrationTest {
     private void listRemittances() {
         // when / then
         mockMvc.perform(get("/api/remittances")
-                        .param("senderId", E2E_USER_ID)
+                        .param("senderId", E2E_USER_ID.toString())
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].senderId").value(E2E_USER_ID))
+                .andExpect(jsonPath("$.content[0].senderId").value(E2E_USER_ID.toString()))
                 .andExpect(jsonPath("$.content[0].amountUsdc").value(25.00))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }

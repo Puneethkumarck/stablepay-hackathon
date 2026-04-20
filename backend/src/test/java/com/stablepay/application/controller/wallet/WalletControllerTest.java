@@ -78,7 +78,7 @@ class WalletControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
-                .andExpect(jsonPath("$.userId").value(SOME_USER_ID))
+                .andExpect(jsonPath("$.userId").value(SOME_USER_ID.toString()))
                 .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS));
     }
 
@@ -86,7 +86,7 @@ class WalletControllerTest {
     @SneakyThrows
     void shouldReturn400WhenValidationFails() {
         // given
-        var request = CreateWalletRequest.builder().userId("").build();
+        var request = CreateWalletRequest.builder().userId(null).build();
 
         // when / then
         mockMvc.perform(post("/api/wallets")

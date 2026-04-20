@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.Remittance;
@@ -31,6 +33,9 @@ class RemittancePayoutWriterIntegrationTest {
     private RemittanceRepository remittanceRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private TransactionTemplate transactionTemplate;
 
     private UUID remittanceId;
@@ -38,9 +43,12 @@ class RemittancePayoutWriterIntegrationTest {
     @BeforeEach
     void setUp() {
         remittanceId = UUID.randomUUID();
+        var senderId = UUID.randomUUID();
+        transactionTemplate.executeWithoutResult(status ->
+                userRepository.save(AppUser.builder().id(senderId).email(senderId + "@test.com").build()));
         transactionTemplate.execute(status -> remittanceRepository.save(Remittance.builder()
                 .remittanceId(remittanceId)
-                .senderId("writer-sender-" + System.nanoTime())
+                .senderId(senderId)
                 .recipientPhone(SOME_RECIPIENT_PHONE)
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .amountInr(SOME_AMOUNT_INR)
@@ -104,9 +112,12 @@ class RemittancePayoutWriterIntegrationTest {
         remittancePayoutWriter.writePayoutId(remittanceId, "pout_DUP001", "processing");
 
         var secondRemittanceId = UUID.randomUUID();
+        var secondSenderId = UUID.randomUUID();
+        transactionTemplate.executeWithoutResult(status ->
+                userRepository.save(AppUser.builder().id(secondSenderId).email(secondSenderId + "@test.com").build()));
         transactionTemplate.execute(status -> remittanceRepository.save(Remittance.builder()
                 .remittanceId(secondRemittanceId)
-                .senderId("writer-sender-second-" + System.nanoTime())
+                .senderId(secondSenderId)
                 .recipientPhone(SOME_RECIPIENT_PHONE)
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .amountInr(SOME_AMOUNT_INR)

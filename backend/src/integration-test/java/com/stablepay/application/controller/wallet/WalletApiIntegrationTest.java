@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.UUID;
+
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablepay.application.dto.CreateWalletRequest;
+import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.wallet.model.GeneratedKey;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 import com.stablepay.test.PgTest;
@@ -36,6 +40,15 @@ class WalletApiIntegrationTest {
     @Autowired
     private MpcWalletClient mpcWalletClient;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private UUID createUser() {
+        var userId = UUID.randomUUID();
+        userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
+        return userId;
+    }
+
     @Nested
     class CreateWallet {
 
@@ -43,7 +56,7 @@ class WalletApiIntegrationTest {
         @SneakyThrows
         void shouldCreateWalletAndReturnCreatedResponse() {
             // given
-            var userId = "api-user-" + System.nanoTime();
+            var userId = createUser();
             var solanaAddress = SOME_SOLANA_ADDRESS + System.nanoTime();
             var generatedKey = GeneratedKey.builder()
                     .solanaAddress(solanaAddress)
@@ -63,7 +76,7 @@ class WalletApiIntegrationTest {
             // then
             result.andExpect(status().isCreated())
                     .andExpect(jsonPath("$.id").isNumber())
-                    .andExpect(jsonPath("$.userId").value(userId))
+                    .andExpect(jsonPath("$.userId").value(userId.toString()))
                     .andExpect(jsonPath("$.solanaAddress").value(solanaAddress))
                     .andExpect(jsonPath("$.availableBalance").value(0))
                     .andExpect(jsonPath("$.totalBalance").value(0))
@@ -74,7 +87,7 @@ class WalletApiIntegrationTest {
         @SneakyThrows
         void shouldReturn409WhenWalletAlreadyExistsForUser() {
             // given
-            var userId = "dup-user-" + System.nanoTime();
+            var userId = createUser();
             var generatedKey = GeneratedKey.builder()
                     .solanaAddress("addr-dup-" + System.nanoTime())
                     .publicKey(SOME_PUBLIC_KEY)
@@ -103,9 +116,9 @@ class WalletApiIntegrationTest {
 
         @Test
         @SneakyThrows
-        void shouldReturn400WhenUserIdIsBlank() {
+        void shouldReturn400WhenUserIdIsNull() {
             // given
-            var request = CreateWalletRequest.builder().userId("").build();
+            var request = CreateWalletRequest.builder().userId(null).build();
 
             // when
             var result = mockMvc.perform(post("/api/wallets")

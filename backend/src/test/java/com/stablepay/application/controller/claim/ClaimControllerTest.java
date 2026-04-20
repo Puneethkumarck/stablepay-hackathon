@@ -85,7 +85,7 @@ class ClaimControllerTest {
         mockMvc.perform(get("/api/claims/{token}", SOME_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remittanceId").value(SOME_REMITTANCE_ID.toString()))
-                .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID))
+                .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID.toString()))
                 .andExpect(jsonPath("$.claimed").value(false));
     }
 

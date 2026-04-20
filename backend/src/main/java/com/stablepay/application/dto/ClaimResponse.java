@@ -11,7 +11,7 @@ import lombok.Builder;
 @Builder(toBuilder = true)
 public record ClaimResponse(
     UUID remittanceId,
-    String senderId,
+    UUID senderId,
     BigDecimal amountUsdc,
     BigDecimal amountInr,
     BigDecimal fxRate,

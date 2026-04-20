@@ -101,7 +101,7 @@ class RemittanceControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(SOME_REMITTANCE_DB_ID))
                 .andExpect(jsonPath("$.remittanceId").value(SOME_REMITTANCE_ID.toString()))
-                .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID))
+                .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID.toString()))
                 .andExpect(jsonPath("$.recipientPhone").value(SOME_RECIPIENT_PHONE))
                 .andExpect(jsonPath("$.status").value("INITIATED"));
     }
@@ -131,7 +131,7 @@ class RemittanceControllerTest {
         mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remittanceId").value(SOME_REMITTANCE_ID.toString()))
-                .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID));
+                .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID.toString()));
     }
 
     @Test
@@ -154,12 +154,12 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(get("/api/remittances")
-                        .param("senderId", SOME_SENDER_ID)
+                        .param("senderId", SOME_SENDER_ID.toString())
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].remittanceId").value(SOME_REMITTANCE_ID.toString()))
-                .andExpect(jsonPath("$.content[0].senderId").value(SOME_SENDER_ID))
+                .andExpect(jsonPath("$.content[0].senderId").value(SOME_SENDER_ID.toString()))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
 
@@ -203,7 +203,7 @@ class RemittanceControllerTest {
     void shouldReturn400WhenValidationFails() {
         // given
         var request = CreateRemittanceRequest.builder()
-                .senderId("")
+                .senderId(null)
                 .recipientPhone("")
                 .amountUsdc(null)
                 .build();
