@@ -7,7 +7,9 @@ import static com.stablepay.testutil.AuthFixtures.SOME_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
+import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,13 +41,13 @@ class SocialIdentityRepositoryAdapterTest {
     void shouldFindByProviderAndSubjectAndMapToDomain() {
         // given
         var entity = SocialIdentityEntity.builder()
-                .id(java.util.UUID.randomUUID())
+                .id(UUID.randomUUID())
                 .userId(SOME_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
                 .emailVerified(true)
-                .createdAt(java.time.Instant.now())
+                .createdAt(Instant.now())
                 .build();
         given(jpaRepository.findByProviderAndSubject(SOME_PROVIDER, SOME_SUBJECT))
                 .willReturn(Optional.of(entity));
@@ -89,13 +91,13 @@ class SocialIdentityRepositoryAdapterTest {
                 .emailVerified(true)
                 .build();
         var savedEntity = SocialIdentityEntity.builder()
-                .id(java.util.UUID.randomUUID())
+                .id(UUID.randomUUID())
                 .userId(SOME_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
                 .emailVerified(true)
-                .createdAt(java.time.Instant.now())
+                .createdAt(Instant.now())
                 .build();
         given(jpaRepository.save(entityCaptor.capture())).willReturn(savedEntity);
 
@@ -104,8 +106,18 @@ class SocialIdentityRepositoryAdapterTest {
 
         // then
         var captured = entityCaptor.getValue();
+        var expectedEntity = SocialIdentityEntity.builder()
+                .userId(SOME_USER_ID)
+                .provider(SOME_PROVIDER)
+                .subject(SOME_SUBJECT)
+                .email(SOME_SOCIAL_EMAIL)
+                .emailVerified(true)
+                .build();
+        assertThat(captured)
+                .usingRecursiveComparison()
+                .ignoringFields("id", "createdAt")
+                .isEqualTo(expectedEntity);
         assertThat(captured.getId()).isNotNull();
-        assertThat(captured.getUserId()).isEqualTo(SOME_USER_ID);
         assertThat(captured.getCreatedAt()).isNotNull();
 
         var expected = SocialIdentity.builder()

@@ -119,14 +119,15 @@ class UserMapperTest {
             var entity = mapper.toEntity(domain);
 
             // then
-            assertThat(entity.getId()).isNull();
-            assertThat(entity.getUserId()).isNull();
-            assertThat(entity.getCreatedAt()).isNull();
-
-            var backToDomain = mapper.toDomain(entity);
-            assertThat(backToDomain)
+            var expectedEntity = SocialIdentityEntity.builder()
+                    .provider(SOME_PROVIDER)
+                    .subject(SOME_SUBJECT)
+                    .email(SOME_SOCIAL_EMAIL)
+                    .emailVerified(true)
+                    .build();
+            assertThat(entity)
                     .usingRecursiveComparison()
-                    .isEqualTo(domain);
+                    .isEqualTo(expectedEntity);
         }
     }
 
@@ -176,9 +177,15 @@ class UserMapperTest {
             var entity = mapper.toEntity(domain);
 
             // then
-            assertThat(entity.getIssuedAt()).isNull();
-            assertThat(entity.getId()).isEqualTo(SOME_REFRESH_TOKEN_ID);
-            assertThat(entity.getUserId()).isEqualTo(SOME_USER_ID);
+            var expectedEntity = RefreshTokenEntity.builder()
+                    .id(SOME_REFRESH_TOKEN_ID)
+                    .userId(SOME_USER_ID)
+                    .tokenHash(SOME_TOKEN_HASH)
+                    .expiresAt(SOME_EXPIRES_AT)
+                    .build();
+            assertThat(entity)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expectedEntity);
         }
     }
 }

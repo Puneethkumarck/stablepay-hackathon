@@ -93,6 +93,14 @@ class UserRepositoryAdapterTest {
 
         // then
         var captured = entityCaptor.getValue();
+        var expectedEntity = UserEntity.builder()
+                .id(SOME_USER_ID)
+                .email(SOME_EMAIL)
+                .build();
+        assertThat(captured)
+                .usingRecursiveComparison()
+                .ignoringFields("createdAt", "updatedAt")
+                .isEqualTo(expectedEntity);
         assertThat(captured.getCreatedAt()).isNotNull();
         assertThat(captured.getUpdatedAt()).isNotNull();
 

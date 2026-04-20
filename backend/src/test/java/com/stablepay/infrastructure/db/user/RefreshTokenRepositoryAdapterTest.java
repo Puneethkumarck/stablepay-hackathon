@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class RefreshTokenRepositoryAdapterTest {
                 .id(SOME_REFRESH_TOKEN_ID)
                 .userId(SOME_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
-                .issuedAt(java.time.Instant.now())
+                .issuedAt(Instant.now())
                 .expiresAt(SOME_EXPIRES_AT)
                 .revokedAt(null)
                 .build();
@@ -91,7 +92,7 @@ class RefreshTokenRepositoryAdapterTest {
                 .id(SOME_REFRESH_TOKEN_ID)
                 .userId(SOME_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
-                .issuedAt(java.time.Instant.now())
+                .issuedAt(Instant.now())
                 .expiresAt(SOME_EXPIRES_AT)
                 .build();
         given(jpaRepository.save(entityCaptor.capture())).willReturn(savedEntity);
@@ -101,6 +102,16 @@ class RefreshTokenRepositoryAdapterTest {
 
         // then
         var captured = entityCaptor.getValue();
+        var expectedEntity = RefreshTokenEntity.builder()
+                .id(SOME_REFRESH_TOKEN_ID)
+                .userId(SOME_USER_ID)
+                .tokenHash(SOME_TOKEN_HASH)
+                .expiresAt(SOME_EXPIRES_AT)
+                .build();
+        assertThat(captured)
+                .usingRecursiveComparison()
+                .ignoringFields("issuedAt")
+                .isEqualTo(expectedEntity);
         assertThat(captured.getIssuedAt()).isNotNull();
 
         var expected = RefreshToken.builder()
