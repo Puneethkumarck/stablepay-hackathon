@@ -13,7 +13,6 @@ import com.stablepay.infrastructure.temporal.TaskQueue.Constants;
 
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
-import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 
@@ -28,10 +27,10 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     private static final Duration STATUS_UPDATE_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration TX_CONFIRMATION_ACTIVITY_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration TX_CONFIRMATION_POLL_INTERVAL = Duration.ofSeconds(3);
+    private static final Duration TX_CONFIRMATION_TIMEOUT = Duration.ofMinutes(2);
     private static final int SOLANA_MAX_ATTEMPTS = 3;
     private static final int SMS_MAX_ATTEMPTS = 3;
     private static final int DISBURSEMENT_MAX_ATTEMPTS = 3;
-    private static final int TX_CONFIRMATION_MAX_ATTEMPTS = 40;
     private static final String DISBURSEMENT_NON_RETRIABLE_TYPE =
             DisbursementException.NonRetriable.class.getName();
 
@@ -278,36 +277,27 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     }
 
     private void awaitTransactionConfirmation(String signature) {
-        for (var attempt = 1; attempt <= TX_CONFIRMATION_MAX_ATTEMPTS; attempt++) {
-            TransactionConfirmationStatus status;
-            try {
-                status = confirmationActivities.checkTransactionStatus(signature);
-            } catch (ActivityFailure e) {
-                log.warn("Activity failure polling tx {} (attempt={}/{}), retrying",
-                        signature, attempt, TX_CONFIRMATION_MAX_ATTEMPTS, e);
-                if (attempt < TX_CONFIRMATION_MAX_ATTEMPTS) {
+        var deadline = Workflow.currentTimeMillis() + TX_CONFIRMATION_TIMEOUT.toMillis();
+        var status = TransactionConfirmationStatus.NOT_FOUND;
+
+        while (!status.isTerminal()) {
+            if (Workflow.currentTimeMillis() >= deadline) {
+                throw SolanaTransactionException.confirmationTimeout(signature);
+            }
+
+            status = confirmationActivities.checkTransactionStatus(signature);
+
+            switch (status) {
+                case CONFIRMED, FINALIZED ->
+                    log.info("Transaction {} confirmed (status={})", signature, status);
+                case FAILED_ON_CHAIN ->
+                    throw SolanaTransactionException.transactionFailed(signature);
+                default -> {
+                    log.info("Transaction {} pending (status={})", signature, status);
                     Workflow.sleep(TX_CONFIRMATION_POLL_INTERVAL);
                 }
-                continue;
-            }
-
-            if (status.hasError()) {
-                throw SolanaTransactionException.transactionFailed(signature);
-            }
-            if (status.isConfirmedOrFinalized()) {
-                log.info("Transaction {} confirmed (status={}, attempt={})",
-                        signature, status, attempt);
-                return;
-            }
-
-            log.info("Transaction {} not yet confirmed (status={}, attempt={}/{})",
-                    signature, status, attempt, TX_CONFIRMATION_MAX_ATTEMPTS);
-            if (attempt < TX_CONFIRMATION_MAX_ATTEMPTS) {
-                Workflow.sleep(TX_CONFIRMATION_POLL_INTERVAL);
             }
         }
-
-        throw SolanaTransactionException.confirmationTimeout(signature);
     }
 
     private RemittanceWorkflowResult failedResult(RemittanceStatus status, String txSignature) {
