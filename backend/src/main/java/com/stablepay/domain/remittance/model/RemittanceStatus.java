@@ -9,12 +9,15 @@ public enum RemittanceStatus {
     CLAIMED,
     DELIVERED,
     DISBURSEMENT_FAILED,
+    DEPOSIT_FAILED,
+    CLAIM_FAILED,
+    REFUND_FAILED,
     REFUNDED,
     CANCELLED;
 
     private static final Map<RemittanceStatus, Set<RemittanceStatus>> VALID_TRANSITIONS = Map.of(
-            INITIATED, Set.of(ESCROWED, CANCELLED),
-            ESCROWED, Set.of(CLAIMED, REFUNDED, CANCELLED),
+            INITIATED, Set.of(ESCROWED, CANCELLED, DEPOSIT_FAILED),
+            ESCROWED, Set.of(CLAIMED, REFUNDED, CANCELLED, CLAIM_FAILED, REFUND_FAILED),
             CLAIMED, Set.of(DELIVERED, DISBURSEMENT_FAILED)
     );
 

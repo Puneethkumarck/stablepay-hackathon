@@ -1,6 +1,8 @@
 package com.stablepay.infrastructure.solana;
 
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -15,7 +17,10 @@ import org.sol4k.instruction.CreateAssociatedTokenAccountInstruction;
 import org.sol4k.instruction.Instruction;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 import com.stablepay.domain.wallet.port.WalletRepository;
@@ -27,6 +32,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 public class SolanaTransactionServiceAdapter implements SolanaTransactionService {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Connection solanaConnection;
     private final EscrowInstructionBuilder escrowInstructionBuilder;
@@ -175,14 +182,73 @@ public class SolanaTransactionServiceAdapter implements SolanaTransactionService
     }
 
     @Override
-    public String getTransactionStatus(String transactionSignature) {
+    public TransactionConfirmationStatus getTransactionStatus(String transactionSignature) {
         log.debug("Checking status for transaction {}", transactionSignature);
 
-        // sol4k does not expose getSignatureStatuses RPC.
-        // For now, return a stub status. Full confirmation polling
-        // will be implemented via raw JSON-RPC in a follow-up.
-        log.info("Transaction status check for {} (stub: returning CONFIRMED)", transactionSignature);
-        return "CONFIRMED";
+        HttpURLConnection conn = null;
+        try {
+            var url = new URI(solanaProperties.rpcUrl()).toURL();
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(10_000);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getSignatureStatuses\","
+                    + "\"params\":[[\"" + transactionSignature
+                    + "\"],{\"searchTransactionHistory\":true}]}";
+
+            try (var os = conn.getOutputStream()) {
+                os.write(body.getBytes(StandardCharsets.UTF_8));
+            }
+
+            try (var is = conn.getInputStream()) {
+                var response = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                if (response.contains("\"error\"")) {
+                    log.warn("RPC error checking tx status for {}: {}", transactionSignature, response);
+                    throw new RuntimeException("RPC error: " + response);
+                }
+                var status = parseSignatureStatusResponse(response);
+                log.info("Transaction {} status: {}", transactionSignature, status);
+                return status;
+            }
+        } catch (SolanaTransactionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw SolanaTransactionException.submissionFailed(
+                    "getSignatureStatuses:" + transactionSignature, readRpcErrorDetails(conn, e));
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    static TransactionConfirmationStatus parseSignatureStatusResponse(String json) {
+        try {
+            var root = MAPPER.readTree(json);
+            var value = root.path("result").path("value");
+            if (!value.isArray() || value.isEmpty() || value.get(0).isNull()) {
+                return TransactionConfirmationStatus.NOT_FOUND;
+            }
+
+            var entry = value.get(0);
+            var err = entry.get("err");
+            if (err != null && !err.isNull()) {
+                return TransactionConfirmationStatus.FAILED_ON_CHAIN;
+            }
+
+            var confirmationStatus = entry.path("confirmationStatus").asText("");
+            return switch (confirmationStatus) {
+                case "finalized" -> TransactionConfirmationStatus.FINALIZED;
+                case "confirmed" -> TransactionConfirmationStatus.CONFIRMED;
+                case "processed" -> TransactionConfirmationStatus.PROCESSED;
+                default -> TransactionConfirmationStatus.NOT_FOUND;
+            };
+        } catch (JsonProcessingException e) {
+            throw SolanaTransactionException.submissionFailed("getSignatureStatuses:parse", e);
+        }
     }
 
     private String sendWithSkipPreflight(byte[] txBytes) {

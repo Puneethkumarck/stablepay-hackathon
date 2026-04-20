@@ -3,12 +3,17 @@ package com.stablepay.infrastructure.temporal;
 import static com.stablepay.infrastructure.temporal.TaskQueue.Constants.TASK_QUEUE_REMITTANCE_LIFECYCLE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_DEPOSIT_TX_SIGNATURE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_ESCROW_EXPIRY_TIMESTAMP;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_REFUND_TX_SIGNATURE;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_RELEASE_TX_SIGNATURE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_SENDER_ADDRESS;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_UPI_ID;
 import static com.stablepay.testutil.WorkflowFixtures.claimSignalBuilder;
 import static com.stablepay.testutil.WorkflowFixtures.workflowRequestBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
@@ -24,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.test.TemporalTest;
 
 import io.temporal.client.WorkflowClient;
@@ -49,6 +55,27 @@ class RemittanceLifecycleWorkflowIntegrationTest {
     void setUp() {
         remittanceId = UUID.randomUUID();
         Mockito.reset(activities);
+        given(activities.depositEscrow(
+                remittanceId.toString(),
+                SOME_SENDER_ADDRESS,
+                SOME_AMOUNT_USDC,
+                SOME_ESCROW_EXPIRY_TIMESTAMP))
+                .willReturn(SOME_DEPOSIT_TX_SIGNATURE);
+        given(activities.releaseEscrow(
+                remittanceId.toString(),
+                SOME_DESTINATION_ADDRESS,
+                SOME_SENDER_ADDRESS))
+                .willReturn(SOME_RELEASE_TX_SIGNATURE);
+        given(activities.refundEscrow(
+                remittanceId.toString(),
+                SOME_SENDER_ADDRESS))
+                .willReturn(SOME_REFUND_TX_SIGNATURE);
+        given(activities.checkTransactionStatus(SOME_DEPOSIT_TX_SIGNATURE))
+                .willReturn(TransactionConfirmationStatus.FINALIZED);
+        given(activities.checkTransactionStatus(SOME_RELEASE_TX_SIGNATURE))
+                .willReturn(TransactionConfirmationStatus.FINALIZED);
+        given(activities.checkTransactionStatus(SOME_REFUND_TX_SIGNATURE))
+                .willReturn(TransactionConfirmationStatus.FINALIZED);
     }
 
     private RemittanceLifecycleWorkflow startWorkflow() {
@@ -256,6 +283,8 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                     .usingRecursiveComparison()
                     .ignoringFields("escrowPda")
                     .isEqualTo(expected);
+
+            WorkflowStub.fromTyped(workflow).cancel();
         }
     }
 }

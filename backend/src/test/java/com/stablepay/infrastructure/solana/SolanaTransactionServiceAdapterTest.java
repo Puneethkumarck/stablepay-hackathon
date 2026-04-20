@@ -33,6 +33,7 @@ import org.sol4k.PublicKey;
 import org.sol4k.instruction.BaseInstruction;
 
 import com.stablepay.domain.remittance.exception.SolanaTransactionException;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 import com.stablepay.domain.wallet.port.WalletRepository;
 
@@ -81,20 +82,177 @@ class SolanaTransactionServiceAdapterTest {
     }
 
     @Nested
-    class GetTransactionStatus {
+    class ParseSignatureStatusResponse {
 
         @Test
-        void shouldReturnConfirmedForTransactionStatusStub() {
+        void shouldReturnFinalizedForFinalizedResponse() {
             // given
-            var adapter = new SolanaTransactionServiceAdapter(
-                    solanaConnection, escrowInstructionBuilder, propertiesWithKey,
-                    mpcWalletClient, walletRepository);
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": null,
+                          "err": null,
+                          "confirmationStatus": "finalized"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
 
             // when
-            var result = adapter.getTransactionStatus(SOME_TRANSACTION_SIGNATURE);
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
 
             // then
-            assertThat(result).isEqualTo("CONFIRMED");
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.FINALIZED);
+        }
+
+        @Test
+        void shouldReturnConfirmedForConfirmedResponse() {
+            // given
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": 5,
+                          "err": null,
+                          "confirmationStatus": "confirmed"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
+
+            // when
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
+
+            // then
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.CONFIRMED);
+        }
+
+        @Test
+        void shouldReturnProcessedForProcessedResponse() {
+            // given
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": 0,
+                          "err": null,
+                          "confirmationStatus": "processed"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
+
+            // when
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
+
+            // then
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.PROCESSED);
+        }
+
+        @Test
+        void shouldReturnNotFoundWhenValueIsNull() {
+            // given
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [null]
+                      },
+                      "id": 1
+                    }
+                    """;
+
+            // when
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
+
+            // then
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.NOT_FOUND);
+        }
+
+        @Test
+        void shouldReturnFailedOnChainWhenErrIsPresent() {
+            // given
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": null,
+                          "err": {"InstructionError": [0, "Custom"]},
+                          "confirmationStatus": "finalized"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
+
+            // when
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
+
+            // then
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.FAILED_ON_CHAIN);
+        }
+
+        @Test
+        void shouldReturnFinalizedWhenErrIsNullWithWhitespace() {
+            // given
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123},
+                        "value": [{
+                          "slot": 123,
+                          "confirmations": null,
+                          "err":   null,
+                          "confirmationStatus": "finalized"
+                        }]
+                      },
+                      "id": 1
+                    }
+                    """;
+
+            // when
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
+
+            // then
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.FINALIZED);
+        }
+
+        @Test
+        void shouldReturnNotFoundWhenResponseHasNoValueField() {
+            // given
+            var json = """
+                    {
+                      "jsonrpc": "2.0",
+                      "result": {
+                        "context": {"slot": 123}
+                      },
+                      "id": 1
+                    }
+                    """;
+
+            // when
+            var result = SolanaTransactionServiceAdapter.parseSignatureStatusResponse(json);
+
+            // then
+            assertThat(result).isEqualTo(TransactionConfirmationStatus.NOT_FOUND);
         }
     }
 

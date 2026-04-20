@@ -3,6 +3,8 @@ package com.stablepay.domain.remittance.port;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
+
 public interface SolanaTransactionService {
 
     String depositEscrow(
@@ -15,5 +17,5 @@ public interface SolanaTransactionService {
 
     String refundEscrow(UUID remittanceId, String senderWalletAddress);
 
-    String getTransactionStatus(String transactionSignature);
+    TransactionConfirmationStatus getTransactionStatus(String transactionSignature);
 }

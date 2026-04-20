@@ -1,38 +1,37 @@
 # 10-Customer Full E2E Run — $1.00 USDC per customer
 
-Generated: 2026-04-19 11:30:09 UTC
+Generated: 2026-04-19 19:08:26 UTC
 
 ## Summary
 
 - Customers attempted: 10
-- Passed: 10
-- Failed: 0
+- Passed: 6
+- Failed: 4
 - Per-customer amount: $1.00 USDC
 
-| # | userId | walletId | address | fundingId | remittanceId | final | USDC after fund | payout_id | elapsed (s) | PASS |
-|---|--------|----------|---------|-----------|--------------|-------|-----------------|-----------|-------------|------|
-| 1 | `e2e-10x-1776597783066-1` | 8 | `38LhK36pBiBY6PvaG1PUB4tZemCxMFWxPF4HbnGLmJAj` | `c9cd5fa8-7c67-403f-8a8b-df8c16cb3b28` | `24eb9ede-3bd3-40c2-9630-951ada545130` | DELIVERED | 1 | `pout_wm_1afbxunzb5mb` | 16.9 | ✅ |
-| 2 | `e2e-10x-1776597799939-2` | 9 | `HjHG4A5H8cLsac9WPpAB3B6aqJpbWfGrqkDvpX4Zfsht` | `51d94938-615d-4587-ba12-851cea5710af` | `c7f52cb1-9965-40d8-9e1a-927008dd9da6` | DELIVERED | 1 | `pout_wm_4fgovobnrnkj` | 49.1 | ✅ |
-| 3 | `e2e-10x-1776597849019-3` | 10 | `GvqrmXdXV6Eak8NRP3F24FAQ2EzP3JkXbzkXarbyeXfZ` | `6f108599-3f3a-4e1c-bf41-d3e5b5c9d488` | `53c43ad7-6fda-4b0d-8c6f-310d6218cecc` | DELIVERED | 1 | `pout_wm_gyf0zd8q7idy` | 46.4 | ✅ |
-| 4 | `e2e-10x-1776597895402-4` | 11 | `UqtBgvFcJkagupTZn14Wwe1NkhNj6iD8rgQZ2omyTUR` | `f0b2e2f6-b26e-4ac1-93d8-d7b50d85fa5f` | `3b296846-fe40-41a3-ade8-eda73f5e8af2` | DELIVERED | 1 | `pout_wm_kvrbr3peaes8` | 16.7 | ✅ |
-| 5 | `e2e-10x-1776597912110-5` | 12 | `9RsH8fyUypCxnz4xD1KF6MhxaU6cfU4jGSkbGcRKwS5g` | `4d43b24a-0f9b-4f01-8b98-3c8342e80f53` | `721ffdb1-9f30-426b-97ee-565f197549d2` | DELIVERED | 1 | `pout_wm_tg980vmggklj` | 113.0 | ✅ |
-| 6 | `e2e-10x-1776598025160-6` | 13 | `51GMAD8xXDEN9jr8virrMkMBXVrG2RAV49etrsMbs6gV` | `108dfcb4-9e95-47ee-a7c1-7b5c60c0e437` | `b9d7812a-aae2-448e-8b40-368810451de6` | DELIVERED | 1 | `pout_wm_pqbbwa8babew` | 50.8 | ✅ |
-| 7 | `e2e-10x-1776598075964-7` | 14 | `Fwex4a76GAFvsYEA8XDWYfFu4xBPTNdgmgBa8tzNCdCY` | `8ee040a8-a3a6-459d-a90f-71138b3d65bd` | `1dee3072-adc6-4872-8fbb-593675866249` | DELIVERED | 1 | `pout_wm_6jarhbmk9wio` | 22.9 | ✅ |
-| 8 | `e2e-10x-1776598098872-8` | 15 | `CogKwMA8W5oVBhE8fMUKVQKdVBbB6y6uQ5ggCgiytdF3` | `99f047f0-ab7f-415c-9960-66de2917cb54` | `9c6d725f-32dc-42df-bc00-3eaff10f8c9d` | DELIVERED | 1 | `pout_wm_u5hmkb1zwkd0` | 16.3 | ✅ |
-| 9 | `e2e-10x-1776598115130-9` | 16 | `74GboL5qRGncSJJYXCrFgabNNpfweqUuC5gfF8YQmfA4` | `32466a08-4bcc-4b60-9e98-4919e12ad5a0` | `af3b0178-7931-4d19-9721-bb3e96727a1c` | DELIVERED | 1 | `pout_wm_pfi0ubnabdur` | 46.8 | ✅ |
-| 10 | `e2e-10x-1776598161943-10` | 17 | `G37Th6CcvAVRtjUw5acdDCdJmn3y7H8JTKB9W2ViKze9` | `7a7a7dc6-fd38-4e2a-8572-21cf8b0110ca` | `5138141b-9a20-461f-b7df-e4dbf27d6d46` | DELIVERED | 1 | `pout_wm_mmxjbzzuhsnk` | 47.4 | ✅ |
+| # | userId | walletId | address | fundingId | remittanceId | final | USDC after fund | elapsed (s) | PASS |
+|---|--------|----------|---------|-----------|--------------|-------|-----------------|-------------|------|
+| 1 | `e2e-10x-1776625135759-1` | 19 | `Gvw75z4HiSAuuysi5kLXUfpDCNptBv4f9pSYqwSAqsgv` | `b2c8a29a-fcca-487f-979b-bf355c82faeb` | `None` | - | - | 95.0 | ❌ fund not FUNDED: status=PAYMENT_CONFIRMED |
+| 2 | `e2e-10x-1776625230787-2` | 20 | `EJ5nmbwLXZtVZqcRriH4ZzZHnvPt8p31BFxNYdjonfrs` | `e10e7206-4523-4156-ab1b-20a6bb92dbed` | `None` | - | - | 92.9 | ❌ fund not FUNDED: status=PAYMENT_CONFIRMED |
+| 3 | `e2e-10x-1776625323684-3` | 21 | `7ZWifM27D53pukKjEDkqNHZiZUuUjVXEJcqcfiaEaseN` | `a5f32227-179e-4181-9f81-25cdcbbd367e` | `None` | - | - | 125.3 | ❌ fund not FUNDED: status=PAYMENT_CONFIRMED |
+| 4 | `e2e-10x-1776625448980-4` | 22 | `26u5KveR5nty1h4oyXsEqvJ5arBfox9Zp8k1Eop9tgyi` | `a8f04346-bba5-4bf3-905a-f8746a959921` | `None` | - | - | 93.0 | ❌ fund not FUNDED: status=PAYMENT_CONFIRMED |
+| 5 | `e2e-10x-1776625541994-5` | 23 | `BHBm4cN3ZveqboS2i93nNvsgGkYU8tfKDpj1nTcMEJth` | `bfc25787-1cfd-41d9-906c-b18493afa79d` | `b26db8dd-8330-4071-8b30-dde2051dcb9c` | DELIVERED | 1 | 23.4 | ✅ |
+| 6 | `e2e-10x-1776625565425-6` | 24 | `Hp3jRdvzsQkC9icQmZJSTqQ2Jty516XsLd6TEF3D2YK1` | `edf93bd6-8407-46a0-a995-f9d2705e2cbe` | `5c3ef5af-8e44-42f3-97d0-0d64adb728d2` | DELIVERED | 1 | 22.1 | ✅ |
+| 7 | `e2e-10x-1776625587534-7` | 25 | `2EJTtS636CELwrdh6oBzF37LGMgYsNe9vu3BCxjxgvLP` | `8d16860c-ae69-499a-aad3-74a5b6cea6a3` | `29e02376-179f-43eb-905c-0b2272bc029f` | DELIVERED | 1 | 22.3 | ✅ |
+| 8 | `e2e-10x-1776625609866-8` | 26 | `EvuvHjCFj6bNpeM9e3q6o6T6GE4KzvHaDgiS5tB4WjQ6` | `12aa01d4-9eba-4e87-9a0d-f69290de94fb` | `8925ec59-c663-4298-a627-a6736cabc5e5` | DELIVERED | 1 | 22.3 | ✅ |
+| 9 | `e2e-10x-1776625632190-9` | 27 | `F2muFfMgmKXfqkMvS8V5CZgPNYmCxWR6bxvJs2MRYBg2` | `99a0ab3a-18ab-4664-9ac2-23f5e896d24e` | `23c1a361-dea3-4f9f-870b-0de778ef4355` | DELIVERED | 1 | 22.3 | ✅ |
+| 10 | `e2e-10x-1776625654515-10` | 28 | `CAWjqf8mm5XRicmmWYYmNEaNYpJhAvoieVdTXwW1Ehre` | `4860ae81-8fb1-4156-a782-0fc7cdeee786` | `cf5346df-80ba-4f6c-81d7-7a9dd2fa1418` | DELIVERED | 1 | 52.4 | ✅ |
 
 ## Per-customer request / response log
 
-### Customer 1 — `e2e-10x-1776597783066-1`
+### Customer 1 — `e2e-10x-1776625135759-1`
 
-- walletId: `8`  solanaAddress: `38LhK36pBiBY6PvaG1PUB4tZemCxMFWxPF4HbnGLmJAj`
-- fundingId: `c9cd5fa8-7c67-403f-8a8b-df8c16cb3b28`  paymentIntentId: `pi_3TNtRM3nnME1dfOB1jvCcDMS`
-- remittanceId: `24eb9ede-3bd3-40c2-9630-951ada545130`  claimTokenId: `60e97f79-f86d-4227-aa13-532400e8f7db`
-- final status: **DELIVERED**  elapsed: 16.9s  **PASS**
-- On-chain USDC after fund: 1
-- Claim authority USDC after claim: 27
-- Payout: id=`pout_wm_1afbxunzb5mb` status=`processing`
+- walletId: `19`  solanaAddress: `Gvw75z4HiSAuuysi5kLXUfpDCNptBv4f9pSYqwSAqsgv`
+- fundingId: `b2c8a29a-fcca-487f-979b-bf355c82faeb`  paymentIntentId: `pi_3TO0YZ3nnME1dfOB0dz1SICr`
+- remittanceId: `None`  claimTokenId: `None`
+- final status: **None**  elapsed: 95.0s  **FAIL: fund not FUNDED: status=PAYMENT_CONFIRMED**
+- On-chain USDC after fund: None
+- Claim authority USDC after claim: None
 
 #### 1-create-wallet
 
@@ -41,26 +40,26 @@ Generated: 2026-04-19 11:30:09 UTC
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776597783066-1"
+  "userId": "e2e-10x-1776625135759-1"
 }
 ```
 
 Response:
 ```json
 {
-  "id": 8,
-  "userId": "e2e-10x-1776597783066-1",
-  "solanaAddress": "38LhK36pBiBY6PvaG1PUB4tZemCxMFWxPF4HbnGLmJAj",
+  "id": 19,
+  "userId": "e2e-10x-1776625135759-1",
+  "solanaAddress": "Gvw75z4HiSAuuysi5kLXUfpDCNptBv4f9pSYqwSAqsgv",
   "availableBalance": 0,
   "totalBalance": 0,
-  "createdAt": "2026-04-19T11:23:03.237617654Z",
-  "updatedAt": "2026-04-19T11:23:03.237617654Z"
+  "createdAt": "2026-04-19T18:58:57.518704602Z",
+  "updatedAt": "2026-04-19T18:58:57.518704602Z"
 }
 ```
 
 #### 2-initiate-fund
 
-`POST /api/wallets/8/fund`  → **HTTP 201**
+`POST /api/wallets/19/fund`  → **HTTP 201**
 
 Request:
 ```json
@@ -72,19 +71,19 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "c9cd5fa8-7c67-403f-8a8b-df8c16cb3b28",
-  "walletId": 8,
+  "fundingId": "b2c8a29a-fcca-487f-979b-bf355c82faeb",
+  "walletId": 19,
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtRM3nnME1dfOB1jvCcDMS",
+  "stripePaymentIntentId": "pi_3TO0YZ3nnME1dfOB0dz1SICr",
   "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:23:03.262730811Z"
+  "createdAt": "2026-04-19T18:58:57.689975209Z"
 }
 ```
 
 #### 3-poll-funded
 
-`GET /api/funding-orders/c9cd5fa8-7c67-403f-8a8b-df8c16cb3b28`  → **HTTP 200**
+`GET /api/funding-orders/b2c8a29a-fcca-487f-979b-bf355c82faeb`  → **HTTP 200**
 
 Request:
 ```json
@@ -94,165 +93,25 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "c9cd5fa8-7c67-403f-8a8b-df8c16cb3b28",
-  "walletId": 8,
+  "fundingId": "b2c8a29a-fcca-487f-979b-bf355c82faeb",
+  "walletId": 19,
   "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtRM3nnME1dfOB1jvCcDMS",
-  "createdAt": "2026-04-19T11:23:03.262731Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776597783066-1",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 2,
-  "remittanceId": "24eb9ede-3bd3-40c2-9630-951ada545130",
-  "senderId": "e2e-10x-1776597783066-1",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "INITIATED",
-  "escrowPda": null,
-  "claimTokenId": "60e97f79-f86d-4227-aa13-532400e8f7db",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:23:12.893929266Z",
-  "updatedAt": "2026-04-19T11:23:12.897653796Z",
-  "expiresAt": null
-}
-```
-
-#### 5-poll-escrowed
-
-`GET /api/remittances/24eb9ede-3bd3-40c2-9630-951ada545130`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 2,
-  "remittanceId": "24eb9ede-3bd3-40c2-9630-951ada545130",
-  "senderId": "e2e-10x-1776597783066-1",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "escrowPda": null,
-  "claimTokenId": "60e97f79-f86d-4227-aa13-532400e8f7db",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:23:12.893929Z",
-  "updatedAt": "2026-04-19T11:23:13.765042Z",
-  "expiresAt": null
-}
-```
-
-#### 6-get-claim
-
-`GET /api/claims/60e97f79-f86d-4227-aa13-532400e8f7db`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "remittanceId": "24eb9ede-3bd3-40c2-9630-951ada545130",
-  "senderId": "e2e-10x-1776597783066-1",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": false,
-  "expiresAt": "2026-04-21T11:23:12.896743Z"
-}
-```
-
-#### 7-submit-claim
-
-`POST /api/claims/60e97f79-f86d-4227-aa13-532400e8f7db`  → **HTTP 200**
-
-Request:
-```json
-{
-  "upiId": "test@upi"
-}
-```
-
-Response:
-```json
-{
-  "remittanceId": "24eb9ede-3bd3-40c2-9630-951ada545130",
-  "senderId": "e2e-10x-1776597783066-1",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": true,
-  "expiresAt": "2026-04-21T11:23:12.896743Z"
-}
-```
-
-#### 8-poll-delivered
-
-`GET /api/remittances/24eb9ede-3bd3-40c2-9630-951ada545130`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 2,
-  "remittanceId": "24eb9ede-3bd3-40c2-9630-951ada545130",
-  "senderId": "e2e-10x-1776597783066-1",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "DELIVERED",
-  "escrowPda": null,
-  "claimTokenId": "60e97f79-f86d-4227-aa13-532400e8f7db",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:23:12.893929Z",
-  "updatedAt": "2026-04-19T11:23:17.783516Z",
-  "expiresAt": null
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0YZ3nnME1dfOB0dz1SICr",
+  "createdAt": "2026-04-19T18:58:57.689975Z"
 }
 ```
 
 ---
 
-### Customer 2 — `e2e-10x-1776597799939-2`
+### Customer 2 — `e2e-10x-1776625230787-2`
 
-- walletId: `9`  solanaAddress: `HjHG4A5H8cLsac9WPpAB3B6aqJpbWfGrqkDvpX4Zfsht`
-- fundingId: `51d94938-615d-4587-ba12-851cea5710af`  paymentIntentId: `pi_3TNtS93nnME1dfOB0r2lPGyp`
-- remittanceId: `c7f52cb1-9965-40d8-9e1a-927008dd9da6`  claimTokenId: `44d16798-e4fa-4530-aa6d-1e0a6d81c767`
-- final status: **DELIVERED**  elapsed: 49.1s  **PASS**
-- On-chain USDC after fund: 1
-- Claim authority USDC after claim: 28
-- Payout: id=`pout_wm_4fgovobnrnkj` status=`processing`
+- walletId: `20`  solanaAddress: `EJ5nmbwLXZtVZqcRriH4ZzZHnvPt8p31BFxNYdjonfrs`
+- fundingId: `e10e7206-4523-4156-ab1b-20a6bb92dbed`  paymentIntentId: `pi_3TO0a43nnME1dfOB0MrYiKky`
+- remittanceId: `None`  claimTokenId: `None`
+- final status: **None**  elapsed: 92.9s  **FAIL: fund not FUNDED: status=PAYMENT_CONFIRMED**
+- On-chain USDC after fund: None
+- Claim authority USDC after claim: None
 
 #### 1-create-wallet
 
@@ -261,26 +120,26 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776597799939-2"
+  "userId": "e2e-10x-1776625230787-2"
 }
 ```
 
 Response:
 ```json
 {
-  "id": 9,
-  "userId": "e2e-10x-1776597799939-2",
-  "solanaAddress": "HjHG4A5H8cLsac9WPpAB3B6aqJpbWfGrqkDvpX4Zfsht",
+  "id": 20,
+  "userId": "e2e-10x-1776625230787-2",
+  "solanaAddress": "EJ5nmbwLXZtVZqcRriH4ZzZHnvPt8p31BFxNYdjonfrs",
   "availableBalance": 0,
   "totalBalance": 0,
-  "createdAt": "2026-04-19T11:23:52.149506393Z",
-  "updatedAt": "2026-04-19T11:23:52.149506393Z"
+  "createdAt": "2026-04-19T19:00:30.951370297Z",
+  "updatedAt": "2026-04-19T19:00:30.951370297Z"
 }
 ```
 
 #### 2-initiate-fund
 
-`POST /api/wallets/9/fund`  → **HTTP 201**
+`POST /api/wallets/20/fund`  → **HTTP 201**
 
 Request:
 ```json
@@ -292,19 +151,19 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "51d94938-615d-4587-ba12-851cea5710af",
-  "walletId": 9,
+  "fundingId": "e10e7206-4523-4156-ab1b-20a6bb92dbed",
+  "walletId": 20,
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtS93nnME1dfOB0r2lPGyp",
+  "stripePaymentIntentId": "pi_3TO0a43nnME1dfOB0MrYiKky",
   "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:23:52.226785757Z"
+  "createdAt": "2026-04-19T19:00:30.985332093Z"
 }
 ```
 
 #### 3-poll-funded
 
-`GET /api/funding-orders/51d94938-615d-4587-ba12-851cea5710af`  → **HTTP 200**
+`GET /api/funding-orders/e10e7206-4523-4156-ab1b-20a6bb92dbed`  → **HTTP 200**
 
 Request:
 ```json
@@ -314,165 +173,25 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "51d94938-615d-4587-ba12-851cea5710af",
-  "walletId": 9,
+  "fundingId": "e10e7206-4523-4156-ab1b-20a6bb92dbed",
+  "walletId": 20,
   "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtS93nnME1dfOB0r2lPGyp",
-  "createdAt": "2026-04-19T11:23:52.226786Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776597799939-2",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 3,
-  "remittanceId": "c7f52cb1-9965-40d8-9e1a-927008dd9da6",
-  "senderId": "e2e-10x-1776597799939-2",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "INITIATED",
-  "escrowPda": null,
-  "claimTokenId": "44d16798-e4fa-4530-aa6d-1e0a6d81c767",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:24:01.942099622Z",
-  "updatedAt": "2026-04-19T11:24:01.946288239Z",
-  "expiresAt": null
-}
-```
-
-#### 5-poll-escrowed
-
-`GET /api/remittances/c7f52cb1-9965-40d8-9e1a-927008dd9da6`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 3,
-  "remittanceId": "c7f52cb1-9965-40d8-9e1a-927008dd9da6",
-  "senderId": "e2e-10x-1776597799939-2",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "escrowPda": null,
-  "claimTokenId": "44d16798-e4fa-4530-aa6d-1e0a6d81c767",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:24:01.942100Z",
-  "updatedAt": "2026-04-19T11:24:03.070156Z",
-  "expiresAt": null
-}
-```
-
-#### 6-get-claim
-
-`GET /api/claims/44d16798-e4fa-4530-aa6d-1e0a6d81c767`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "remittanceId": "c7f52cb1-9965-40d8-9e1a-927008dd9da6",
-  "senderId": "e2e-10x-1776597799939-2",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": false,
-  "expiresAt": "2026-04-21T11:24:01.945198Z"
-}
-```
-
-#### 7-submit-claim
-
-`POST /api/claims/44d16798-e4fa-4530-aa6d-1e0a6d81c767`  → **HTTP 200**
-
-Request:
-```json
-{
-  "upiId": "test@upi"
-}
-```
-
-Response:
-```json
-{
-  "remittanceId": "c7f52cb1-9965-40d8-9e1a-927008dd9da6",
-  "senderId": "e2e-10x-1776597799939-2",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": true,
-  "expiresAt": "2026-04-21T11:24:01.945198Z"
-}
-```
-
-#### 8-poll-delivered
-
-`GET /api/remittances/c7f52cb1-9965-40d8-9e1a-927008dd9da6`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 3,
-  "remittanceId": "c7f52cb1-9965-40d8-9e1a-927008dd9da6",
-  "senderId": "e2e-10x-1776597799939-2",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "DELIVERED",
-  "escrowPda": null,
-  "claimTokenId": "44d16798-e4fa-4530-aa6d-1e0a6d81c767",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:24:01.942100Z",
-  "updatedAt": "2026-04-19T11:24:06.602173Z",
-  "expiresAt": null
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0a43nnME1dfOB0MrYiKky",
+  "createdAt": "2026-04-19T19:00:30.985332Z"
 }
 ```
 
 ---
 
-### Customer 3 — `e2e-10x-1776597849019-3`
+### Customer 3 — `e2e-10x-1776625323684-3`
 
-- walletId: `10`  solanaAddress: `GvqrmXdXV6Eak8NRP3F24FAQ2EzP3JkXbzkXarbyeXfZ`
-- fundingId: `6f108599-3f3a-4e1c-bf41-d3e5b5c9d488`  paymentIntentId: `pi_3TNtSQ3nnME1dfOB0siozHXF`
-- remittanceId: `53c43ad7-6fda-4b0d-8c6f-310d6218cecc`  claimTokenId: `88d625be-bb00-4fb2-be56-f2d2b452683e`
-- final status: **DELIVERED**  elapsed: 46.4s  **PASS**
-- On-chain USDC after fund: 1
-- Claim authority USDC after claim: 29
-- Payout: id=`pout_wm_gyf0zd8q7idy` status=`processing`
+- walletId: `21`  solanaAddress: `7ZWifM27D53pukKjEDkqNHZiZUuUjVXEJcqcfiaEaseN`
+- fundingId: `a5f32227-179e-4181-9f81-25cdcbbd367e`  paymentIntentId: `pi_3TO0c53nnME1dfOB0tm13xXf`
+- remittanceId: `None`  claimTokenId: `None`
+- final status: **None**  elapsed: 125.3s  **FAIL: fund not FUNDED: status=PAYMENT_CONFIRMED**
+- On-chain USDC after fund: None
+- Claim authority USDC after claim: None
 
 #### 1-create-wallet
 
@@ -481,26 +200,26 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776597849019-3"
+  "userId": "e2e-10x-1776625323684-3"
 }
 ```
 
 Response:
 ```json
 {
-  "id": 10,
-  "userId": "e2e-10x-1776597849019-3",
-  "solanaAddress": "GvqrmXdXV6Eak8NRP3F24FAQ2EzP3JkXbzkXarbyeXfZ",
+  "id": 21,
+  "userId": "e2e-10x-1776625323684-3",
+  "solanaAddress": "7ZWifM27D53pukKjEDkqNHZiZUuUjVXEJcqcfiaEaseN",
   "availableBalance": 0,
   "totalBalance": 0,
-  "createdAt": "2026-04-19T11:24:09.110994670Z",
-  "updatedAt": "2026-04-19T11:24:09.110994670Z"
+  "createdAt": "2026-04-19T19:02:35.997741733Z",
+  "updatedAt": "2026-04-19T19:02:35.997741733Z"
 }
 ```
 
 #### 2-initiate-fund
 
-`POST /api/wallets/10/fund`  → **HTTP 201**
+`POST /api/wallets/21/fund`  → **HTTP 201**
 
 Request:
 ```json
@@ -512,19 +231,19 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "6f108599-3f3a-4e1c-bf41-d3e5b5c9d488",
-  "walletId": 10,
+  "fundingId": "a5f32227-179e-4181-9f81-25cdcbbd367e",
+  "walletId": 21,
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtSQ3nnME1dfOB0siozHXF",
+  "stripePaymentIntentId": "pi_3TO0c53nnME1dfOB0tm13xXf",
   "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:24:09.128502434Z"
+  "createdAt": "2026-04-19T19:02:36.044561385Z"
 }
 ```
 
 #### 3-poll-funded
 
-`GET /api/funding-orders/6f108599-3f3a-4e1c-bf41-d3e5b5c9d488`  → **HTTP 200**
+`GET /api/funding-orders/a5f32227-179e-4181-9f81-25cdcbbd367e`  → **HTTP 200**
 
 Request:
 ```json
@@ -534,165 +253,25 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "6f108599-3f3a-4e1c-bf41-d3e5b5c9d488",
-  "walletId": 10,
+  "fundingId": "a5f32227-179e-4181-9f81-25cdcbbd367e",
+  "walletId": 21,
   "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtSQ3nnME1dfOB0siozHXF",
-  "createdAt": "2026-04-19T11:24:09.128502Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776597849019-3",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 4,
-  "remittanceId": "53c43ad7-6fda-4b0d-8c6f-310d6218cecc",
-  "senderId": "e2e-10x-1776597849019-3",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "INITIATED",
-  "escrowPda": null,
-  "claimTokenId": "88d625be-bb00-4fb2-be56-f2d2b452683e",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:24:18.065621408Z",
-  "updatedAt": "2026-04-19T11:24:18.069339354Z",
-  "expiresAt": null
-}
-```
-
-#### 5-poll-escrowed
-
-`GET /api/remittances/53c43ad7-6fda-4b0d-8c6f-310d6218cecc`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 4,
-  "remittanceId": "53c43ad7-6fda-4b0d-8c6f-310d6218cecc",
-  "senderId": "e2e-10x-1776597849019-3",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "escrowPda": null,
-  "claimTokenId": "88d625be-bb00-4fb2-be56-f2d2b452683e",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:24:18.065621Z",
-  "updatedAt": "2026-04-19T11:24:49.479968Z",
-  "expiresAt": null
-}
-```
-
-#### 6-get-claim
-
-`GET /api/claims/88d625be-bb00-4fb2-be56-f2d2b452683e`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "remittanceId": "53c43ad7-6fda-4b0d-8c6f-310d6218cecc",
-  "senderId": "e2e-10x-1776597849019-3",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": false,
-  "expiresAt": "2026-04-21T11:24:18.068118Z"
-}
-```
-
-#### 7-submit-claim
-
-`POST /api/claims/88d625be-bb00-4fb2-be56-f2d2b452683e`  → **HTTP 200**
-
-Request:
-```json
-{
-  "upiId": "test@upi"
-}
-```
-
-Response:
-```json
-{
-  "remittanceId": "53c43ad7-6fda-4b0d-8c6f-310d6218cecc",
-  "senderId": "e2e-10x-1776597849019-3",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": true,
-  "expiresAt": "2026-04-21T11:24:18.068118Z"
-}
-```
-
-#### 8-poll-delivered
-
-`GET /api/remittances/53c43ad7-6fda-4b0d-8c6f-310d6218cecc`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 4,
-  "remittanceId": "53c43ad7-6fda-4b0d-8c6f-310d6218cecc",
-  "senderId": "e2e-10x-1776597849019-3",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "DELIVERED",
-  "escrowPda": null,
-  "claimTokenId": "88d625be-bb00-4fb2-be56-f2d2b452683e",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:24:18.065621Z",
-  "updatedAt": "2026-04-19T11:24:52.866001Z",
-  "expiresAt": null
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0c53nnME1dfOB0tm13xXf",
+  "createdAt": "2026-04-19T19:02:36.044561Z"
 }
 ```
 
 ---
 
-### Customer 4 — `e2e-10x-1776597895402-4`
+### Customer 4 — `e2e-10x-1776625448980-4`
 
-- walletId: `11`  solanaAddress: `UqtBgvFcJkagupTZn14Wwe1NkhNj6iD8rgQZ2omyTUR`
-- fundingId: `f0b2e2f6-b26e-4ac1-93d8-d7b50d85fa5f`  paymentIntentId: `pi_3TNtTA3nnME1dfOB06dB2yza`
-- remittanceId: `3b296846-fe40-41a3-ade8-eda73f5e8af2`  claimTokenId: `607e544f-2ec9-4d08-a684-947c25a2c1be`
-- final status: **DELIVERED**  elapsed: 16.7s  **PASS**
-- On-chain USDC after fund: 1
-- Claim authority USDC after claim: 30
-- Payout: id=`pout_wm_kvrbr3peaes8` status=`processing`
+- walletId: `22`  solanaAddress: `26u5KveR5nty1h4oyXsEqvJ5arBfox9Zp8k1Eop9tgyi`
+- fundingId: `a8f04346-bba5-4bf3-905a-f8746a959921`  paymentIntentId: `pi_3TO0da3nnME1dfOB1VxP75xo`
+- remittanceId: `None`  claimTokenId: `None`
+- final status: **None**  elapsed: 93.0s  **FAIL: fund not FUNDED: status=PAYMENT_CONFIRMED**
+- On-chain USDC after fund: None
+- Claim authority USDC after claim: None
 
 #### 1-create-wallet
 
@@ -701,26 +280,26 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776597895402-4"
+  "userId": "e2e-10x-1776625448980-4"
 }
 ```
 
 Response:
 ```json
 {
-  "id": 11,
-  "userId": "e2e-10x-1776597895402-4",
-  "solanaAddress": "UqtBgvFcJkagupTZn14Wwe1NkhNj6iD8rgQZ2omyTUR",
+  "id": 22,
+  "userId": "e2e-10x-1776625448980-4",
+  "solanaAddress": "26u5KveR5nty1h4oyXsEqvJ5arBfox9Zp8k1Eop9tgyi",
   "availableBalance": 0,
   "totalBalance": 0,
-  "createdAt": "2026-04-19T11:24:55.485703917Z",
-  "updatedAt": "2026-04-19T11:24:55.485703917Z"
+  "createdAt": "2026-04-19T19:04:09.207185794Z",
+  "updatedAt": "2026-04-19T19:04:09.207185794Z"
 }
 ```
 
 #### 2-initiate-fund
 
-`POST /api/wallets/11/fund`  → **HTTP 201**
+`POST /api/wallets/22/fund`  → **HTTP 201**
 
 Request:
 ```json
@@ -732,19 +311,19 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "f0b2e2f6-b26e-4ac1-93d8-d7b50d85fa5f",
-  "walletId": 11,
+  "fundingId": "a8f04346-bba5-4bf3-905a-f8746a959921",
+  "walletId": 22,
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtTA3nnME1dfOB06dB2yza",
+  "stripePaymentIntentId": "pi_3TO0da3nnME1dfOB1VxP75xo",
   "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:24:55.503511475Z"
+  "createdAt": "2026-04-19T19:04:09.248421368Z"
 }
 ```
 
 #### 3-poll-funded
 
-`GET /api/funding-orders/f0b2e2f6-b26e-4ac1-93d8-d7b50d85fa5f`  → **HTTP 200**
+`GET /api/funding-orders/a8f04346-bba5-4bf3-905a-f8746a959921`  → **HTTP 200**
 
 Request:
 ```json
@@ -754,165 +333,25 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "f0b2e2f6-b26e-4ac1-93d8-d7b50d85fa5f",
-  "walletId": 11,
+  "fundingId": "a8f04346-bba5-4bf3-905a-f8746a959921",
+  "walletId": 22,
   "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtTA3nnME1dfOB06dB2yza",
-  "createdAt": "2026-04-19T11:24:55.503511Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776597895402-4",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 5,
-  "remittanceId": "3b296846-fe40-41a3-ade8-eda73f5e8af2",
-  "senderId": "e2e-10x-1776597895402-4",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "INITIATED",
-  "escrowPda": null,
-  "claimTokenId": "607e544f-2ec9-4d08-a684-947c25a2c1be",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:25:05.082749926Z",
-  "updatedAt": "2026-04-19T11:25:05.090090234Z",
-  "expiresAt": null
-}
-```
-
-#### 5-poll-escrowed
-
-`GET /api/remittances/3b296846-fe40-41a3-ade8-eda73f5e8af2`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 5,
-  "remittanceId": "3b296846-fe40-41a3-ade8-eda73f5e8af2",
-  "senderId": "e2e-10x-1776597895402-4",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "escrowPda": null,
-  "claimTokenId": "607e544f-2ec9-4d08-a684-947c25a2c1be",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:25:05.082750Z",
-  "updatedAt": "2026-04-19T11:25:06.166160Z",
-  "expiresAt": null
-}
-```
-
-#### 6-get-claim
-
-`GET /api/claims/607e544f-2ec9-4d08-a684-947c25a2c1be`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "remittanceId": "3b296846-fe40-41a3-ade8-eda73f5e8af2",
-  "senderId": "e2e-10x-1776597895402-4",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": false,
-  "expiresAt": "2026-04-21T11:25:05.087736Z"
-}
-```
-
-#### 7-submit-claim
-
-`POST /api/claims/607e544f-2ec9-4d08-a684-947c25a2c1be`  → **HTTP 200**
-
-Request:
-```json
-{
-  "upiId": "test@upi"
-}
-```
-
-Response:
-```json
-{
-  "remittanceId": "3b296846-fe40-41a3-ade8-eda73f5e8af2",
-  "senderId": "e2e-10x-1776597895402-4",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": true,
-  "expiresAt": "2026-04-21T11:25:05.087736Z"
-}
-```
-
-#### 8-poll-delivered
-
-`GET /api/remittances/3b296846-fe40-41a3-ade8-eda73f5e8af2`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 5,
-  "remittanceId": "3b296846-fe40-41a3-ade8-eda73f5e8af2",
-  "senderId": "e2e-10x-1776597895402-4",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "DELIVERED",
-  "escrowPda": null,
-  "claimTokenId": "607e544f-2ec9-4d08-a684-947c25a2c1be",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:25:05.082750Z",
-  "updatedAt": "2026-04-19T11:25:09.402940Z",
-  "expiresAt": null
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0da3nnME1dfOB1VxP75xo",
+  "createdAt": "2026-04-19T19:04:09.248421Z"
 }
 ```
 
 ---
 
-### Customer 5 — `e2e-10x-1776597912110-5`
+### Customer 5 — `e2e-10x-1776625541994-5`
 
-- walletId: `12`  solanaAddress: `9RsH8fyUypCxnz4xD1KF6MhxaU6cfU4jGSkbGcRKwS5g`
-- fundingId: `4d43b24a-0f9b-4f01-8b98-3c8342e80f53`  paymentIntentId: `pi_3TNtTy3nnME1dfOB1uBLkSQH`
-- remittanceId: `721ffdb1-9f30-426b-97ee-565f197549d2`  claimTokenId: `fdc7ec65-d273-4d6a-83d9-df68e3fbe5cc`
-- final status: **DELIVERED**  elapsed: 113.0s  **PASS**
+- walletId: `23`  solanaAddress: `BHBm4cN3ZveqboS2i93nNvsgGkYU8tfKDpj1nTcMEJth`
+- fundingId: `bfc25787-1cfd-41d9-906c-b18493afa79d`  paymentIntentId: `pi_3TO0f53nnME1dfOB0HeZyeRu`
+- remittanceId: `b26db8dd-8330-4071-8b30-dde2051dcb9c`  claimTokenId: `188d3d81-4871-4751-959a-ca13bddb4ae5`
+- final status: **DELIVERED**  elapsed: 23.4s  **PASS**
 - On-chain USDC after fund: 1
-- Claim authority USDC after claim: 31
-- Payout: id=`pout_wm_tg980vmggklj` status=`processing`
+- Claim authority USDC after claim: 38
 
 #### 1-create-wallet
 
@@ -921,26 +360,26 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776597912110-5"
+  "userId": "e2e-10x-1776625541994-5"
 }
 ```
 
 Response:
 ```json
 {
-  "id": 12,
-  "userId": "e2e-10x-1776597912110-5",
-  "solanaAddress": "9RsH8fyUypCxnz4xD1KF6MhxaU6cfU4jGSkbGcRKwS5g",
+  "id": 23,
+  "userId": "e2e-10x-1776625541994-5",
+  "solanaAddress": "BHBm4cN3ZveqboS2i93nNvsgGkYU8tfKDpj1nTcMEJth",
   "availableBalance": 0,
   "totalBalance": 0,
-  "createdAt": "2026-04-19T11:25:44.274575379Z",
-  "updatedAt": "2026-04-19T11:25:44.274575379Z"
+  "createdAt": "2026-04-19T19:05:42.160330871Z",
+  "updatedAt": "2026-04-19T19:05:42.160330871Z"
 }
 ```
 
 #### 2-initiate-fund
 
-`POST /api/wallets/12/fund`  → **HTTP 201**
+`POST /api/wallets/23/fund`  → **HTTP 201**
 
 Request:
 ```json
@@ -952,19 +391,19 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "4d43b24a-0f9b-4f01-8b98-3c8342e80f53",
-  "walletId": 12,
+  "fundingId": "bfc25787-1cfd-41d9-906c-b18493afa79d",
+  "walletId": 23,
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtTy3nnME1dfOB1uBLkSQH",
+  "stripePaymentIntentId": "pi_3TO0f53nnME1dfOB0HeZyeRu",
   "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:25:44.340020702Z"
+  "createdAt": "2026-04-19T19:05:42.182085132Z"
 }
 ```
 
 #### 3-poll-funded
 
-`GET /api/funding-orders/4d43b24a-0f9b-4f01-8b98-3c8342e80f53`  → **HTTP 200**
+`GET /api/funding-orders/bfc25787-1cfd-41d9-906c-b18493afa79d`  → **HTTP 200**
 
 Request:
 ```json
@@ -974,12 +413,12 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "4d43b24a-0f9b-4f01-8b98-3c8342e80f53",
-  "walletId": 12,
+  "fundingId": "bfc25787-1cfd-41d9-906c-b18493afa79d",
+  "walletId": 23,
   "amountUsdc": 1.0,
   "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtTy3nnME1dfOB1uBLkSQH",
-  "createdAt": "2026-04-19T11:25:44.340021Z"
+  "stripePaymentIntentId": "pi_3TO0f53nnME1dfOB0HeZyeRu",
+  "createdAt": "2026-04-19T19:05:42.182085Z"
 }
 ```
 
@@ -990,158 +429,9 @@ Response:
 Request:
 ```json
 {
-  "senderId": "e2e-10x-1776597912110-5",
+  "senderId": "e2e-10x-1776625541994-5",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 6,
-  "remittanceId": "721ffdb1-9f30-426b-97ee-565f197549d2",
-  "senderId": "e2e-10x-1776597912110-5",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "INITIATED",
-  "escrowPda": null,
-  "claimTokenId": "fdc7ec65-d273-4d6a-83d9-df68e3fbe5cc",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:25:54.292973907Z",
-  "updatedAt": "2026-04-19T11:25:54.302824570Z",
-  "expiresAt": null
-}
-```
-
-#### 5-poll-escrowed
-
-`GET /api/remittances/721ffdb1-9f30-426b-97ee-565f197549d2`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 6,
-  "remittanceId": "721ffdb1-9f30-426b-97ee-565f197549d2",
-  "senderId": "e2e-10x-1776597912110-5",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "escrowPda": null,
-  "claimTokenId": "fdc7ec65-d273-4d6a-83d9-df68e3fbe5cc",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:25:54.292974Z",
-  "updatedAt": "2026-04-19T11:26:58.460790Z",
-  "expiresAt": null
-}
-```
-
-#### 6-get-claim
-
-`GET /api/claims/fdc7ec65-d273-4d6a-83d9-df68e3fbe5cc`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "remittanceId": "721ffdb1-9f30-426b-97ee-565f197549d2",
-  "senderId": "e2e-10x-1776597912110-5",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": false,
-  "expiresAt": "2026-04-21T11:25:54.297624Z"
-}
-```
-
-#### 7-submit-claim
-
-`POST /api/claims/fdc7ec65-d273-4d6a-83d9-df68e3fbe5cc`  → **HTTP 200**
-
-Request:
-```json
-{
-  "upiId": "test@upi"
-}
-```
-
-Response:
-```json
-{
-  "remittanceId": "721ffdb1-9f30-426b-97ee-565f197549d2",
-  "senderId": "e2e-10x-1776597912110-5",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "ESCROWED",
-  "claimed": true,
-  "expiresAt": "2026-04-21T11:25:54.297624Z"
-}
-```
-
-#### 8-poll-delivered
-
-`GET /api/remittances/721ffdb1-9f30-426b-97ee-565f197549d2`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "id": 6,
-  "remittanceId": "721ffdb1-9f30-426b-97ee-565f197549d2",
-  "senderId": "e2e-10x-1776597912110-5",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0,
-  "amountInr": 92.92,
-  "fxRate": 92.922391,
-  "status": "DELIVERED",
-  "escrowPda": null,
-  "claimTokenId": "fdc7ec65-d273-4d6a-83d9-df68e3fbe5cc",
-  "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:25:54.292974Z",
-  "updatedAt": "2026-04-19T11:27:02.456120Z",
-  "expiresAt": null
-}
-```
-
----
-
-### Customer 6 — `e2e-10x-1776598025160-6`
-
-- walletId: `13`  solanaAddress: `51GMAD8xXDEN9jr8virrMkMBXVrG2RAV49etrsMbs6gV`
-- fundingId: `108dfcb4-9e95-47ee-a7c1-7b5c60c0e437`  paymentIntentId: `pi_3TNtVG3nnME1dfOB1t6dXwZU`
-- remittanceId: `b9d7812a-aae2-448e-8b40-368810451de6`  claimTokenId: `9aea7175-5647-4f1d-90f4-80126fdc28a7`
-- final status: **DELIVERED**  elapsed: 50.8s  **PASS**
-- On-chain USDC after fund: 1
-- Claim authority USDC after claim: 32
-- Payout: id=`pout_wm_pqbbwa8babew` status=`processing`
-
-#### 1-create-wallet
-
-`POST /api/wallets`  → **HTTP 201**
-
-Request:
-```json
-{
-  "userId": "e2e-10x-1776598025160-6"
 }
 ```
 
@@ -1149,96 +439,25 @@ Response:
 ```json
 {
   "id": 13,
-  "userId": "e2e-10x-1776598025160-6",
-  "solanaAddress": "51GMAD8xXDEN9jr8virrMkMBXVrG2RAV49etrsMbs6gV",
-  "availableBalance": 0,
-  "totalBalance": 0,
-  "createdAt": "2026-04-19T11:27:05.320014949Z",
-  "updatedAt": "2026-04-19T11:27:05.320014949Z"
-}
-```
-
-#### 2-initiate-fund
-
-`POST /api/wallets/13/fund`  → **HTTP 201**
-
-Request:
-```json
-{
-  "amount": 1.0
-}
-```
-
-Response:
-```json
-{
-  "fundingId": "108dfcb4-9e95-47ee-a7c1-7b5c60c0e437",
-  "walletId": 13,
-  "amountUsdc": 1.0,
-  "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtVG3nnME1dfOB1t6dXwZU",
-  "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:27:05.352018460Z"
-}
-```
-
-#### 3-poll-funded
-
-`GET /api/funding-orders/108dfcb4-9e95-47ee-a7c1-7b5c60c0e437`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "fundingId": "108dfcb4-9e95-47ee-a7c1-7b5c60c0e437",
-  "walletId": 13,
-  "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtVG3nnME1dfOB1t6dXwZU",
-  "createdAt": "2026-04-19T11:27:05.352018Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776598025160-6",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 7,
-  "remittanceId": "b9d7812a-aae2-448e-8b40-368810451de6",
-  "senderId": "e2e-10x-1776598025160-6",
+  "remittanceId": "b26db8dd-8330-4071-8b30-dde2051dcb9c",
+  "senderId": "e2e-10x-1776625541994-5",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "INITIATED",
   "escrowPda": null,
-  "claimTokenId": "9aea7175-5647-4f1d-90f4-80126fdc28a7",
+  "claimTokenId": "188d3d81-4871-4751-959a-ca13bddb4ae5",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:27:15.108897695Z",
-  "updatedAt": "2026-04-19T11:27:15.118965735Z",
+  "createdAt": "2026-04-19T19:05:52.315181754Z",
+  "updatedAt": "2026-04-19T19:05:52.330885107Z",
   "expiresAt": null
 }
 ```
 
 #### 5-poll-escrowed
 
-`GET /api/remittances/b9d7812a-aae2-448e-8b40-368810451de6`  → **HTTP 200**
+`GET /api/remittances/b26db8dd-8330-4071-8b30-dde2051dcb9c`  → **HTTP 200**
 
 Request:
 ```json
@@ -1248,26 +467,26 @@ Request:
 Response:
 ```json
 {
-  "id": 7,
-  "remittanceId": "b9d7812a-aae2-448e-8b40-368810451de6",
-  "senderId": "e2e-10x-1776598025160-6",
+  "id": 13,
+  "remittanceId": "b26db8dd-8330-4071-8b30-dde2051dcb9c",
+  "senderId": "e2e-10x-1776625541994-5",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "escrowPda": null,
-  "claimTokenId": "9aea7175-5647-4f1d-90f4-80126fdc28a7",
+  "claimTokenId": "188d3d81-4871-4751-959a-ca13bddb4ae5",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:27:15.108898Z",
-  "updatedAt": "2026-04-19T11:27:48.830549Z",
+  "createdAt": "2026-04-19T19:05:52.315182Z",
+  "updatedAt": "2026-04-19T19:05:56.930484Z",
   "expiresAt": null
 }
 ```
 
 #### 6-get-claim
 
-`GET /api/claims/9aea7175-5647-4f1d-90f4-80126fdc28a7`  → **HTTP 200**
+`GET /api/claims/188d3d81-4871-4751-959a-ca13bddb4ae5`  → **HTTP 200**
 
 Request:
 ```json
@@ -1277,20 +496,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "b9d7812a-aae2-448e-8b40-368810451de6",
-  "senderId": "e2e-10x-1776598025160-6",
+  "remittanceId": "b26db8dd-8330-4071-8b30-dde2051dcb9c",
+  "senderId": "e2e-10x-1776625541994-5",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": false,
-  "expiresAt": "2026-04-21T11:27:15.116943Z"
+  "expiresAt": "2026-04-21T19:05:52.325623Z"
 }
 ```
 
 #### 7-submit-claim
 
-`POST /api/claims/9aea7175-5647-4f1d-90f4-80126fdc28a7`  → **HTTP 200**
+`POST /api/claims/188d3d81-4871-4751-959a-ca13bddb4ae5`  → **HTTP 200**
 
 Request:
 ```json
@@ -1302,20 +521,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "b9d7812a-aae2-448e-8b40-368810451de6",
-  "senderId": "e2e-10x-1776598025160-6",
+  "remittanceId": "b26db8dd-8330-4071-8b30-dde2051dcb9c",
+  "senderId": "e2e-10x-1776625541994-5",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": true,
-  "expiresAt": "2026-04-21T11:27:15.116943Z"
+  "expiresAt": "2026-04-21T19:05:52.325623Z"
 }
 ```
 
 #### 8-poll-delivered
 
-`GET /api/remittances/b9d7812a-aae2-448e-8b40-368810451de6`  → **HTTP 200**
+`GET /api/remittances/b26db8dd-8330-4071-8b30-dde2051dcb9c`  → **HTTP 200**
 
 Request:
 ```json
@@ -1325,34 +544,33 @@ Request:
 Response:
 ```json
 {
-  "id": 7,
-  "remittanceId": "b9d7812a-aae2-448e-8b40-368810451de6",
-  "senderId": "e2e-10x-1776598025160-6",
+  "id": 13,
+  "remittanceId": "b26db8dd-8330-4071-8b30-dde2051dcb9c",
+  "senderId": "e2e-10x-1776625541994-5",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "DELIVERED",
   "escrowPda": null,
-  "claimTokenId": "9aea7175-5647-4f1d-90f4-80126fdc28a7",
+  "claimTokenId": "188d3d81-4871-4751-959a-ca13bddb4ae5",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:27:15.108898Z",
-  "updatedAt": "2026-04-19T11:27:53.242882Z",
+  "createdAt": "2026-04-19T19:05:52.315182Z",
+  "updatedAt": "2026-04-19T19:06:03.622223Z",
   "expiresAt": null
 }
 ```
 
 ---
 
-### Customer 7 — `e2e-10x-1776598075964-7`
+### Customer 6 — `e2e-10x-1776625565425-6`
 
-- walletId: `14`  solanaAddress: `Fwex4a76GAFvsYEA8XDWYfFu4xBPTNdgmgBa8tzNCdCY`
-- fundingId: `8ee040a8-a3a6-459d-a90f-71138b3d65bd`  paymentIntentId: `pi_3TNtW53nnME1dfOB1KfgIqZa`
-- remittanceId: `1dee3072-adc6-4872-8fbb-593675866249`  claimTokenId: `ac5d8a94-830f-4cf2-802a-24f064e08681`
-- final status: **DELIVERED**  elapsed: 22.9s  **PASS**
+- walletId: `24`  solanaAddress: `Hp3jRdvzsQkC9icQmZJSTqQ2Jty516XsLd6TEF3D2YK1`
+- fundingId: `edf93bd6-8407-46a0-a995-f9d2705e2cbe`  paymentIntentId: `pi_3TO0fS3nnME1dfOB1T93KrgL`
+- remittanceId: `5c3ef5af-8e44-42f3-97d0-0d64adb728d2`  claimTokenId: `5d7849b3-eef4-4105-a2a1-60b6b9c61209`
+- final status: **DELIVERED**  elapsed: 22.1s  **PASS**
 - On-chain USDC after fund: 1
-- Claim authority USDC after claim: 33
-- Payout: id=`pout_wm_6jarhbmk9wio` status=`processing`
+- Claim authority USDC after claim: 39
 
 #### 1-create-wallet
 
@@ -1361,7 +579,78 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776598075964-7"
+  "userId": "e2e-10x-1776625565425-6"
+}
+```
+
+Response:
+```json
+{
+  "id": 24,
+  "userId": "e2e-10x-1776625565425-6",
+  "solanaAddress": "Hp3jRdvzsQkC9icQmZJSTqQ2Jty516XsLd6TEF3D2YK1",
+  "availableBalance": 0,
+  "totalBalance": 0,
+  "createdAt": "2026-04-19T19:06:05.572299827Z",
+  "updatedAt": "2026-04-19T19:06:05.572299827Z"
+}
+```
+
+#### 2-initiate-fund
+
+`POST /api/wallets/24/fund`  → **HTTP 201**
+
+Request:
+```json
+{
+  "amount": 1.0
+}
+```
+
+Response:
+```json
+{
+  "fundingId": "edf93bd6-8407-46a0-a995-f9d2705e2cbe",
+  "walletId": 24,
+  "amountUsdc": 1.0,
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0fS3nnME1dfOB1T93KrgL",
+  "stripeClientSecret": "***REDACTED***",
+  "createdAt": "2026-04-19T19:06:05.589472678Z"
+}
+```
+
+#### 3-poll-funded
+
+`GET /api/funding-orders/edf93bd6-8407-46a0-a995-f9d2705e2cbe`  → **HTTP 200**
+
+Request:
+```json
+(no body)
+```
+
+Response:
+```json
+{
+  "fundingId": "edf93bd6-8407-46a0-a995-f9d2705e2cbe",
+  "walletId": 24,
+  "amountUsdc": 1.0,
+  "status": "FUNDED",
+  "stripePaymentIntentId": "pi_3TO0fS3nnME1dfOB1T93KrgL",
+  "createdAt": "2026-04-19T19:06:05.589473Z"
+}
+```
+
+#### 4-create-remittance
+
+`POST /api/remittances`  → **HTTP 201**
+
+Request:
+```json
+{
+  "senderId": "e2e-10x-1776625565425-6",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 1.0
 }
 ```
 
@@ -1369,96 +658,25 @@ Response:
 ```json
 {
   "id": 14,
-  "userId": "e2e-10x-1776598075964-7",
-  "solanaAddress": "Fwex4a76GAFvsYEA8XDWYfFu4xBPTNdgmgBa8tzNCdCY",
-  "availableBalance": 0,
-  "totalBalance": 0,
-  "createdAt": "2026-04-19T11:27:56.061156720Z",
-  "updatedAt": "2026-04-19T11:27:56.061156720Z"
-}
-```
-
-#### 2-initiate-fund
-
-`POST /api/wallets/14/fund`  → **HTTP 201**
-
-Request:
-```json
-{
-  "amount": 1.0
-}
-```
-
-Response:
-```json
-{
-  "fundingId": "8ee040a8-a3a6-459d-a90f-71138b3d65bd",
-  "walletId": 14,
-  "amountUsdc": 1.0,
-  "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtW53nnME1dfOB1KfgIqZa",
-  "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:27:56.084879579Z"
-}
-```
-
-#### 3-poll-funded
-
-`GET /api/funding-orders/8ee040a8-a3a6-459d-a90f-71138b3d65bd`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "fundingId": "8ee040a8-a3a6-459d-a90f-71138b3d65bd",
-  "walletId": 14,
-  "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtW53nnME1dfOB1KfgIqZa",
-  "createdAt": "2026-04-19T11:27:56.084880Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776598075964-7",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 8,
-  "remittanceId": "1dee3072-adc6-4872-8fbb-593675866249",
-  "senderId": "e2e-10x-1776598075964-7",
+  "remittanceId": "5c3ef5af-8e44-42f3-97d0-0d64adb728d2",
+  "senderId": "e2e-10x-1776625565425-6",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "INITIATED",
   "escrowPda": null,
-  "claimTokenId": "ac5d8a94-830f-4cf2-802a-24f064e08681",
+  "claimTokenId": "5d7849b3-eef4-4105-a2a1-60b6b9c61209",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:11.801409970Z",
-  "updatedAt": "2026-04-19T11:28:11.808384151Z",
+  "createdAt": "2026-04-19T19:06:14.316230063Z",
+  "updatedAt": "2026-04-19T19:06:14.321558639Z",
   "expiresAt": null
 }
 ```
 
 #### 5-poll-escrowed
 
-`GET /api/remittances/1dee3072-adc6-4872-8fbb-593675866249`  → **HTTP 200**
+`GET /api/remittances/5c3ef5af-8e44-42f3-97d0-0d64adb728d2`  → **HTTP 200**
 
 Request:
 ```json
@@ -1468,26 +686,26 @@ Request:
 Response:
 ```json
 {
-  "id": 8,
-  "remittanceId": "1dee3072-adc6-4872-8fbb-593675866249",
-  "senderId": "e2e-10x-1776598075964-7",
+  "id": 14,
+  "remittanceId": "5c3ef5af-8e44-42f3-97d0-0d64adb728d2",
+  "senderId": "e2e-10x-1776625565425-6",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "escrowPda": null,
-  "claimTokenId": "ac5d8a94-830f-4cf2-802a-24f064e08681",
+  "claimTokenId": "5d7849b3-eef4-4105-a2a1-60b6b9c61209",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:11.801410Z",
-  "updatedAt": "2026-04-19T11:28:12.958556Z",
+  "createdAt": "2026-04-19T19:06:14.316230Z",
+  "updatedAt": "2026-04-19T19:06:18.909359Z",
   "expiresAt": null
 }
 ```
 
 #### 6-get-claim
 
-`GET /api/claims/ac5d8a94-830f-4cf2-802a-24f064e08681`  → **HTTP 200**
+`GET /api/claims/5d7849b3-eef4-4105-a2a1-60b6b9c61209`  → **HTTP 200**
 
 Request:
 ```json
@@ -1497,20 +715,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "1dee3072-adc6-4872-8fbb-593675866249",
-  "senderId": "e2e-10x-1776598075964-7",
+  "remittanceId": "5c3ef5af-8e44-42f3-97d0-0d64adb728d2",
+  "senderId": "e2e-10x-1776625565425-6",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": false,
-  "expiresAt": "2026-04-21T11:28:11.805796Z"
+  "expiresAt": "2026-04-21T19:06:14.319893Z"
 }
 ```
 
 #### 7-submit-claim
 
-`POST /api/claims/ac5d8a94-830f-4cf2-802a-24f064e08681`  → **HTTP 200**
+`POST /api/claims/5d7849b3-eef4-4105-a2a1-60b6b9c61209`  → **HTTP 200**
 
 Request:
 ```json
@@ -1522,20 +740,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "1dee3072-adc6-4872-8fbb-593675866249",
-  "senderId": "e2e-10x-1776598075964-7",
+  "remittanceId": "5c3ef5af-8e44-42f3-97d0-0d64adb728d2",
+  "senderId": "e2e-10x-1776625565425-6",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": true,
-  "expiresAt": "2026-04-21T11:28:11.805796Z"
+  "expiresAt": "2026-04-21T19:06:14.319893Z"
 }
 ```
 
 #### 8-poll-delivered
 
-`GET /api/remittances/1dee3072-adc6-4872-8fbb-593675866249`  → **HTTP 200**
+`GET /api/remittances/5c3ef5af-8e44-42f3-97d0-0d64adb728d2`  → **HTTP 200**
 
 Request:
 ```json
@@ -1545,34 +763,33 @@ Request:
 Response:
 ```json
 {
-  "id": 8,
-  "remittanceId": "1dee3072-adc6-4872-8fbb-593675866249",
-  "senderId": "e2e-10x-1776598075964-7",
+  "id": 14,
+  "remittanceId": "5c3ef5af-8e44-42f3-97d0-0d64adb728d2",
+  "senderId": "e2e-10x-1776625565425-6",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "DELIVERED",
   "escrowPda": null,
-  "claimTokenId": "ac5d8a94-830f-4cf2-802a-24f064e08681",
+  "claimTokenId": "5d7849b3-eef4-4105-a2a1-60b6b9c61209",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:11.801410Z",
-  "updatedAt": "2026-04-19T11:28:16.173532Z",
+  "createdAt": "2026-04-19T19:06:14.316230Z",
+  "updatedAt": "2026-04-19T19:06:25.791184Z",
   "expiresAt": null
 }
 ```
 
 ---
 
-### Customer 8 — `e2e-10x-1776598098872-8`
+### Customer 7 — `e2e-10x-1776625587534-7`
 
-- walletId: `15`  solanaAddress: `CogKwMA8W5oVBhE8fMUKVQKdVBbB6y6uQ5ggCgiytdF3`
-- fundingId: `99f047f0-ab7f-415c-9960-66de2917cb54`  paymentIntentId: `pi_3TNtWS3nnME1dfOB1oC0Ax7k`
-- remittanceId: `9c6d725f-32dc-42df-bc00-3eaff10f8c9d`  claimTokenId: `73835f3a-0c6e-4d91-9fc4-0f76391e46ac`
-- final status: **DELIVERED**  elapsed: 16.3s  **PASS**
+- walletId: `25`  solanaAddress: `2EJTtS636CELwrdh6oBzF37LGMgYsNe9vu3BCxjxgvLP`
+- fundingId: `8d16860c-ae69-499a-aad3-74a5b6cea6a3`  paymentIntentId: `pi_3TO0fp3nnME1dfOB1doaELNR`
+- remittanceId: `29e02376-179f-43eb-905c-0b2272bc029f`  claimTokenId: `70f4b9ba-c26a-49f1-873f-498f8483bebf`
+- final status: **DELIVERED**  elapsed: 22.3s  **PASS**
 - On-chain USDC after fund: 1
-- Claim authority USDC after claim: 34
-- Payout: id=`pout_wm_u5hmkb1zwkd0` status=`processing`
+- Claim authority USDC after claim: 40
 
 #### 1-create-wallet
 
@@ -1581,7 +798,78 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776598098872-8"
+  "userId": "e2e-10x-1776625587534-7"
+}
+```
+
+Response:
+```json
+{
+  "id": 25,
+  "userId": "e2e-10x-1776625587534-7",
+  "solanaAddress": "2EJTtS636CELwrdh6oBzF37LGMgYsNe9vu3BCxjxgvLP",
+  "availableBalance": 0,
+  "totalBalance": 0,
+  "createdAt": "2026-04-19T19:06:27.646606450Z",
+  "updatedAt": "2026-04-19T19:06:27.646606450Z"
+}
+```
+
+#### 2-initiate-fund
+
+`POST /api/wallets/25/fund`  → **HTTP 201**
+
+Request:
+```json
+{
+  "amount": 1.0
+}
+```
+
+Response:
+```json
+{
+  "fundingId": "8d16860c-ae69-499a-aad3-74a5b6cea6a3",
+  "walletId": 25,
+  "amountUsdc": 1.0,
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0fp3nnME1dfOB1doaELNR",
+  "stripeClientSecret": "***REDACTED***",
+  "createdAt": "2026-04-19T19:06:27.659964640Z"
+}
+```
+
+#### 3-poll-funded
+
+`GET /api/funding-orders/8d16860c-ae69-499a-aad3-74a5b6cea6a3`  → **HTTP 200**
+
+Request:
+```json
+(no body)
+```
+
+Response:
+```json
+{
+  "fundingId": "8d16860c-ae69-499a-aad3-74a5b6cea6a3",
+  "walletId": 25,
+  "amountUsdc": 1.0,
+  "status": "FUNDED",
+  "stripePaymentIntentId": "pi_3TO0fp3nnME1dfOB1doaELNR",
+  "createdAt": "2026-04-19T19:06:27.659965Z"
+}
+```
+
+#### 4-create-remittance
+
+`POST /api/remittances`  → **HTTP 201**
+
+Request:
+```json
+{
+  "senderId": "e2e-10x-1776625587534-7",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 1.0
 }
 ```
 
@@ -1589,96 +877,25 @@ Response:
 ```json
 {
   "id": 15,
-  "userId": "e2e-10x-1776598098872-8",
-  "solanaAddress": "CogKwMA8W5oVBhE8fMUKVQKdVBbB6y6uQ5ggCgiytdF3",
-  "availableBalance": 0,
-  "totalBalance": 0,
-  "createdAt": "2026-04-19T11:28:18.977911813Z",
-  "updatedAt": "2026-04-19T11:28:18.977911813Z"
-}
-```
-
-#### 2-initiate-fund
-
-`POST /api/wallets/15/fund`  → **HTTP 201**
-
-Request:
-```json
-{
-  "amount": 1.0
-}
-```
-
-Response:
-```json
-{
-  "fundingId": "99f047f0-ab7f-415c-9960-66de2917cb54",
-  "walletId": 15,
-  "amountUsdc": 1.0,
-  "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtWS3nnME1dfOB1oC0Ax7k",
-  "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:28:18.997408221Z"
-}
-```
-
-#### 3-poll-funded
-
-`GET /api/funding-orders/99f047f0-ab7f-415c-9960-66de2917cb54`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "fundingId": "99f047f0-ab7f-415c-9960-66de2917cb54",
-  "walletId": 15,
-  "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtWS3nnME1dfOB1oC0Ax7k",
-  "createdAt": "2026-04-19T11:28:18.997408Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776598098872-8",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 9,
-  "remittanceId": "9c6d725f-32dc-42df-bc00-3eaff10f8c9d",
-  "senderId": "e2e-10x-1776598098872-8",
+  "remittanceId": "29e02376-179f-43eb-905c-0b2272bc029f",
+  "senderId": "e2e-10x-1776625587534-7",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "INITIATED",
   "escrowPda": null,
-  "claimTokenId": "73835f3a-0c6e-4d91-9fc4-0f76391e46ac",
+  "claimTokenId": "70f4b9ba-c26a-49f1-873f-498f8483bebf",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:27.892978521Z",
-  "updatedAt": "2026-04-19T11:28:27.912344928Z",
+  "createdAt": "2026-04-19T19:06:36.814173551Z",
+  "updatedAt": "2026-04-19T19:06:36.822497664Z",
   "expiresAt": null
 }
 ```
 
 #### 5-poll-escrowed
 
-`GET /api/remittances/9c6d725f-32dc-42df-bc00-3eaff10f8c9d`  → **HTTP 200**
+`GET /api/remittances/29e02376-179f-43eb-905c-0b2272bc029f`  → **HTTP 200**
 
 Request:
 ```json
@@ -1688,26 +905,26 @@ Request:
 Response:
 ```json
 {
-  "id": 9,
-  "remittanceId": "9c6d725f-32dc-42df-bc00-3eaff10f8c9d",
-  "senderId": "e2e-10x-1776598098872-8",
+  "id": 15,
+  "remittanceId": "29e02376-179f-43eb-905c-0b2272bc029f",
+  "senderId": "e2e-10x-1776625587534-7",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "escrowPda": null,
-  "claimTokenId": "73835f3a-0c6e-4d91-9fc4-0f76391e46ac",
+  "claimTokenId": "70f4b9ba-c26a-49f1-873f-498f8483bebf",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:27.892979Z",
-  "updatedAt": "2026-04-19T11:28:28.804371Z",
+  "createdAt": "2026-04-19T19:06:36.814174Z",
+  "updatedAt": "2026-04-19T19:06:41.809937Z",
   "expiresAt": null
 }
 ```
 
 #### 6-get-claim
 
-`GET /api/claims/73835f3a-0c6e-4d91-9fc4-0f76391e46ac`  → **HTTP 200**
+`GET /api/claims/70f4b9ba-c26a-49f1-873f-498f8483bebf`  → **HTTP 200**
 
 Request:
 ```json
@@ -1717,20 +934,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "9c6d725f-32dc-42df-bc00-3eaff10f8c9d",
-  "senderId": "e2e-10x-1776598098872-8",
+  "remittanceId": "29e02376-179f-43eb-905c-0b2272bc029f",
+  "senderId": "e2e-10x-1776625587534-7",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": false,
-  "expiresAt": "2026-04-21T11:28:27.908348Z"
+  "expiresAt": "2026-04-21T19:06:36.820068Z"
 }
 ```
 
 #### 7-submit-claim
 
-`POST /api/claims/73835f3a-0c6e-4d91-9fc4-0f76391e46ac`  → **HTTP 200**
+`POST /api/claims/70f4b9ba-c26a-49f1-873f-498f8483bebf`  → **HTTP 200**
 
 Request:
 ```json
@@ -1742,20 +959,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "9c6d725f-32dc-42df-bc00-3eaff10f8c9d",
-  "senderId": "e2e-10x-1776598098872-8",
+  "remittanceId": "29e02376-179f-43eb-905c-0b2272bc029f",
+  "senderId": "e2e-10x-1776625587534-7",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": true,
-  "expiresAt": "2026-04-21T11:28:27.908348Z"
+  "expiresAt": "2026-04-21T19:06:36.820068Z"
 }
 ```
 
 #### 8-poll-delivered
 
-`GET /api/remittances/9c6d725f-32dc-42df-bc00-3eaff10f8c9d`  → **HTTP 200**
+`GET /api/remittances/29e02376-179f-43eb-905c-0b2272bc029f`  → **HTTP 200**
 
 Request:
 ```json
@@ -1765,34 +982,33 @@ Request:
 Response:
 ```json
 {
-  "id": 9,
-  "remittanceId": "9c6d725f-32dc-42df-bc00-3eaff10f8c9d",
-  "senderId": "e2e-10x-1776598098872-8",
+  "id": 15,
+  "remittanceId": "29e02376-179f-43eb-905c-0b2272bc029f",
+  "senderId": "e2e-10x-1776625587534-7",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "DELIVERED",
   "escrowPda": null,
-  "claimTokenId": "73835f3a-0c6e-4d91-9fc4-0f76391e46ac",
+  "claimTokenId": "70f4b9ba-c26a-49f1-873f-498f8483bebf",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:27.892979Z",
-  "updatedAt": "2026-04-19T11:28:32.418422Z",
+  "createdAt": "2026-04-19T19:06:36.814174Z",
+  "updatedAt": "2026-04-19T19:06:48.098718Z",
   "expiresAt": null
 }
 ```
 
 ---
 
-### Customer 9 — `e2e-10x-1776598115130-9`
+### Customer 8 — `e2e-10x-1776625609866-8`
 
-- walletId: `16`  solanaAddress: `74GboL5qRGncSJJYXCrFgabNNpfweqUuC5gfF8YQmfA4`
-- fundingId: `32466a08-4bcc-4b60-9e98-4919e12ad5a0`  paymentIntentId: `pi_3TNtWi3nnME1dfOB0Yevm0QL`
-- remittanceId: `af3b0178-7931-4d19-9721-bb3e96727a1c`  claimTokenId: `131682fa-885a-4dab-b44b-7b9cf65c791e`
-- final status: **DELIVERED**  elapsed: 46.8s  **PASS**
+- walletId: `26`  solanaAddress: `EvuvHjCFj6bNpeM9e3q6o6T6GE4KzvHaDgiS5tB4WjQ6`
+- fundingId: `12aa01d4-9eba-4e87-9a0d-f69290de94fb`  paymentIntentId: `pi_3TO0gB3nnME1dfOB1fg2vQKt`
+- remittanceId: `8925ec59-c663-4298-a627-a6736cabc5e5`  claimTokenId: `3485830d-5f46-40fd-b70e-c619e30bdc4c`
+- final status: **DELIVERED**  elapsed: 22.3s  **PASS**
 - On-chain USDC after fund: 1
-- Claim authority USDC after claim: 35
-- Payout: id=`pout_wm_pfi0ubnabdur` status=`processing`
+- Claim authority USDC after claim: 41
 
 #### 1-create-wallet
 
@@ -1801,7 +1017,78 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776598115130-9"
+  "userId": "e2e-10x-1776625609866-8"
+}
+```
+
+Response:
+```json
+{
+  "id": 26,
+  "userId": "e2e-10x-1776625609866-8",
+  "solanaAddress": "EvuvHjCFj6bNpeM9e3q6o6T6GE4KzvHaDgiS5tB4WjQ6",
+  "availableBalance": 0,
+  "totalBalance": 0,
+  "createdAt": "2026-04-19T19:06:49.969699599Z",
+  "updatedAt": "2026-04-19T19:06:49.969699599Z"
+}
+```
+
+#### 2-initiate-fund
+
+`POST /api/wallets/26/fund`  → **HTTP 201**
+
+Request:
+```json
+{
+  "amount": 1.0
+}
+```
+
+Response:
+```json
+{
+  "fundingId": "12aa01d4-9eba-4e87-9a0d-f69290de94fb",
+  "walletId": 26,
+  "amountUsdc": 1.0,
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0gB3nnME1dfOB1fg2vQKt",
+  "stripeClientSecret": "***REDACTED***",
+  "createdAt": "2026-04-19T19:06:49.988436740Z"
+}
+```
+
+#### 3-poll-funded
+
+`GET /api/funding-orders/12aa01d4-9eba-4e87-9a0d-f69290de94fb`  → **HTTP 200**
+
+Request:
+```json
+(no body)
+```
+
+Response:
+```json
+{
+  "fundingId": "12aa01d4-9eba-4e87-9a0d-f69290de94fb",
+  "walletId": 26,
+  "amountUsdc": 1.0,
+  "status": "FUNDED",
+  "stripePaymentIntentId": "pi_3TO0gB3nnME1dfOB1fg2vQKt",
+  "createdAt": "2026-04-19T19:06:49.988437Z"
+}
+```
+
+#### 4-create-remittance
+
+`POST /api/remittances`  → **HTTP 201**
+
+Request:
+```json
+{
+  "senderId": "e2e-10x-1776625609866-8",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 1.0
 }
 ```
 
@@ -1809,96 +1096,25 @@ Response:
 ```json
 {
   "id": 16,
-  "userId": "e2e-10x-1776598115130-9",
-  "solanaAddress": "74GboL5qRGncSJJYXCrFgabNNpfweqUuC5gfF8YQmfA4",
-  "availableBalance": 0,
-  "totalBalance": 0,
-  "createdAt": "2026-04-19T11:28:35.330552520Z",
-  "updatedAt": "2026-04-19T11:28:35.330552520Z"
-}
-```
-
-#### 2-initiate-fund
-
-`POST /api/wallets/16/fund`  → **HTTP 201**
-
-Request:
-```json
-{
-  "amount": 1.0
-}
-```
-
-Response:
-```json
-{
-  "fundingId": "32466a08-4bcc-4b60-9e98-4919e12ad5a0",
-  "walletId": 16,
-  "amountUsdc": 1.0,
-  "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtWi3nnME1dfOB0Yevm0QL",
-  "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:28:35.375705052Z"
-}
-```
-
-#### 3-poll-funded
-
-`GET /api/funding-orders/32466a08-4bcc-4b60-9e98-4919e12ad5a0`  → **HTTP 200**
-
-Request:
-```json
-(no body)
-```
-
-Response:
-```json
-{
-  "fundingId": "32466a08-4bcc-4b60-9e98-4919e12ad5a0",
-  "walletId": 16,
-  "amountUsdc": 1.0,
-  "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtWi3nnME1dfOB0Yevm0QL",
-  "createdAt": "2026-04-19T11:28:35.375705Z"
-}
-```
-
-#### 4-create-remittance
-
-`POST /api/remittances`  → **HTTP 201**
-
-Request:
-```json
-{
-  "senderId": "e2e-10x-1776598115130-9",
-  "recipientPhone": "+919876543210",
-  "amountUsdc": 1.0
-}
-```
-
-Response:
-```json
-{
-  "id": 10,
-  "remittanceId": "af3b0178-7931-4d19-9721-bb3e96727a1c",
-  "senderId": "e2e-10x-1776598115130-9",
+  "remittanceId": "8925ec59-c663-4298-a627-a6736cabc5e5",
+  "senderId": "e2e-10x-1776625609866-8",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "INITIATED",
   "escrowPda": null,
-  "claimTokenId": "131682fa-885a-4dab-b44b-7b9cf65c791e",
+  "claimTokenId": "3485830d-5f46-40fd-b70e-c619e30bdc4c",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:44.550884574Z",
-  "updatedAt": "2026-04-19T11:28:44.556493453Z",
+  "createdAt": "2026-04-19T19:06:58.777742412Z",
+  "updatedAt": "2026-04-19T19:06:58.787357774Z",
   "expiresAt": null
 }
 ```
 
 #### 5-poll-escrowed
 
-`GET /api/remittances/af3b0178-7931-4d19-9721-bb3e96727a1c`  → **HTTP 200**
+`GET /api/remittances/8925ec59-c663-4298-a627-a6736cabc5e5`  → **HTTP 200**
 
 Request:
 ```json
@@ -1908,26 +1124,26 @@ Request:
 Response:
 ```json
 {
-  "id": 10,
-  "remittanceId": "af3b0178-7931-4d19-9721-bb3e96727a1c",
-  "senderId": "e2e-10x-1776598115130-9",
+  "id": 16,
+  "remittanceId": "8925ec59-c663-4298-a627-a6736cabc5e5",
+  "senderId": "e2e-10x-1776625609866-8",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "escrowPda": null,
-  "claimTokenId": "131682fa-885a-4dab-b44b-7b9cf65c791e",
+  "claimTokenId": "3485830d-5f46-40fd-b70e-c619e30bdc4c",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:44.550885Z",
-  "updatedAt": "2026-04-19T11:29:15.976473Z",
+  "createdAt": "2026-04-19T19:06:58.777742Z",
+  "updatedAt": "2026-04-19T19:07:03.492727Z",
   "expiresAt": null
 }
 ```
 
 #### 6-get-claim
 
-`GET /api/claims/131682fa-885a-4dab-b44b-7b9cf65c791e`  → **HTTP 200**
+`GET /api/claims/3485830d-5f46-40fd-b70e-c619e30bdc4c`  → **HTTP 200**
 
 Request:
 ```json
@@ -1937,20 +1153,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "af3b0178-7931-4d19-9721-bb3e96727a1c",
-  "senderId": "e2e-10x-1776598115130-9",
+  "remittanceId": "8925ec59-c663-4298-a627-a6736cabc5e5",
+  "senderId": "e2e-10x-1776625609866-8",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": false,
-  "expiresAt": "2026-04-21T11:28:44.555437Z"
+  "expiresAt": "2026-04-21T19:06:58.781537Z"
 }
 ```
 
 #### 7-submit-claim
 
-`POST /api/claims/131682fa-885a-4dab-b44b-7b9cf65c791e`  → **HTTP 200**
+`POST /api/claims/3485830d-5f46-40fd-b70e-c619e30bdc4c`  → **HTTP 200**
 
 Request:
 ```json
@@ -1962,20 +1178,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "af3b0178-7931-4d19-9721-bb3e96727a1c",
-  "senderId": "e2e-10x-1776598115130-9",
+  "remittanceId": "8925ec59-c663-4298-a627-a6736cabc5e5",
+  "senderId": "e2e-10x-1776625609866-8",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": true,
-  "expiresAt": "2026-04-21T11:28:44.555437Z"
+  "expiresAt": "2026-04-21T19:06:58.781537Z"
 }
 ```
 
 #### 8-poll-delivered
 
-`GET /api/remittances/af3b0178-7931-4d19-9721-bb3e96727a1c`  → **HTTP 200**
+`GET /api/remittances/8925ec59-c663-4298-a627-a6736cabc5e5`  → **HTTP 200**
 
 Request:
 ```json
@@ -1985,34 +1201,33 @@ Request:
 Response:
 ```json
 {
-  "id": 10,
-  "remittanceId": "af3b0178-7931-4d19-9721-bb3e96727a1c",
-  "senderId": "e2e-10x-1776598115130-9",
+  "id": 16,
+  "remittanceId": "8925ec59-c663-4298-a627-a6736cabc5e5",
+  "senderId": "e2e-10x-1776625609866-8",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "DELIVERED",
   "escrowPda": null,
-  "claimTokenId": "131682fa-885a-4dab-b44b-7b9cf65c791e",
+  "claimTokenId": "3485830d-5f46-40fd-b70e-c619e30bdc4c",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:28:44.550885Z",
-  "updatedAt": "2026-04-19T11:29:19.498799Z",
+  "createdAt": "2026-04-19T19:06:58.777742Z",
+  "updatedAt": "2026-04-19T19:07:09.774656Z",
   "expiresAt": null
 }
 ```
 
 ---
 
-### Customer 10 — `e2e-10x-1776598161943-10`
+### Customer 9 — `e2e-10x-1776625632190-9`
 
-- walletId: `17`  solanaAddress: `G37Th6CcvAVRtjUw5acdDCdJmn3y7H8JTKB9W2ViKze9`
-- fundingId: `7a7a7dc6-fd38-4e2a-8572-21cf8b0110ca`  paymentIntentId: `pi_3TNtXT3nnME1dfOB0n69tF9W`
-- remittanceId: `5138141b-9a20-461f-b7df-e4dbf27d6d46`  claimTokenId: `765aac14-5e5f-49b1-9943-08806535ed75`
-- final status: **DELIVERED**  elapsed: 47.4s  **PASS**
+- walletId: `27`  solanaAddress: `F2muFfMgmKXfqkMvS8V5CZgPNYmCxWR6bxvJs2MRYBg2`
+- fundingId: `99a0ab3a-18ab-4664-9ac2-23f5e896d24e`  paymentIntentId: `pi_3TO0gX3nnME1dfOB065tNPzK`
+- remittanceId: `23c1a361-dea3-4f9f-870b-0de778ef4355`  claimTokenId: `499a5e65-84a8-4ddb-8258-d8c60dda9f88`
+- final status: **DELIVERED**  elapsed: 22.3s  **PASS**
 - On-chain USDC after fund: 1
-- Claim authority USDC after claim: 36
-- Payout: id=`pout_wm_mmxjbzzuhsnk` status=`processing`
+- Claim authority USDC after claim: 42
 
 #### 1-create-wallet
 
@@ -2021,26 +1236,26 @@ Response:
 Request:
 ```json
 {
-  "userId": "e2e-10x-1776598161943-10"
+  "userId": "e2e-10x-1776625632190-9"
 }
 ```
 
 Response:
 ```json
 {
-  "id": 17,
-  "userId": "e2e-10x-1776598161943-10",
-  "solanaAddress": "G37Th6CcvAVRtjUw5acdDCdJmn3y7H8JTKB9W2ViKze9",
+  "id": 27,
+  "userId": "e2e-10x-1776625632190-9",
+  "solanaAddress": "F2muFfMgmKXfqkMvS8V5CZgPNYmCxWR6bxvJs2MRYBg2",
   "availableBalance": 0,
   "totalBalance": 0,
-  "createdAt": "2026-04-19T11:29:22.027111483Z",
-  "updatedAt": "2026-04-19T11:29:22.027111483Z"
+  "createdAt": "2026-04-19T19:07:12.344890426Z",
+  "updatedAt": "2026-04-19T19:07:12.344890426Z"
 }
 ```
 
 #### 2-initiate-fund
 
-`POST /api/wallets/17/fund`  → **HTTP 201**
+`POST /api/wallets/27/fund`  → **HTTP 201**
 
 Request:
 ```json
@@ -2052,19 +1267,19 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "7a7a7dc6-fd38-4e2a-8572-21cf8b0110ca",
-  "walletId": 17,
+  "fundingId": "99a0ab3a-18ab-4664-9ac2-23f5e896d24e",
+  "walletId": 27,
   "amountUsdc": 1.0,
   "status": "PAYMENT_CONFIRMED",
-  "stripePaymentIntentId": "pi_3TNtXT3nnME1dfOB0n69tF9W",
+  "stripePaymentIntentId": "pi_3TO0gX3nnME1dfOB065tNPzK",
   "stripeClientSecret": "***REDACTED***",
-  "createdAt": "2026-04-19T11:29:22.040386216Z"
+  "createdAt": "2026-04-19T19:07:12.373961260Z"
 }
 ```
 
 #### 3-poll-funded
 
-`GET /api/funding-orders/7a7a7dc6-fd38-4e2a-8572-21cf8b0110ca`  → **HTTP 200**
+`GET /api/funding-orders/99a0ab3a-18ab-4664-9ac2-23f5e896d24e`  → **HTTP 200**
 
 Request:
 ```json
@@ -2074,12 +1289,12 @@ Request:
 Response:
 ```json
 {
-  "fundingId": "7a7a7dc6-fd38-4e2a-8572-21cf8b0110ca",
-  "walletId": 17,
+  "fundingId": "99a0ab3a-18ab-4664-9ac2-23f5e896d24e",
+  "walletId": 27,
   "amountUsdc": 1.0,
   "status": "FUNDED",
-  "stripePaymentIntentId": "pi_3TNtXT3nnME1dfOB0n69tF9W",
-  "createdAt": "2026-04-19T11:29:22.040386Z"
+  "stripePaymentIntentId": "pi_3TO0gX3nnME1dfOB065tNPzK",
+  "createdAt": "2026-04-19T19:07:12.373961Z"
 }
 ```
 
@@ -2090,7 +1305,7 @@ Response:
 Request:
 ```json
 {
-  "senderId": "e2e-10x-1776598161943-10",
+  "senderId": "e2e-10x-1776625632190-9",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0
 }
@@ -2099,26 +1314,26 @@ Request:
 Response:
 ```json
 {
-  "id": 11,
-  "remittanceId": "5138141b-9a20-461f-b7df-e4dbf27d6d46",
-  "senderId": "e2e-10x-1776598161943-10",
+  "id": 17,
+  "remittanceId": "23c1a361-dea3-4f9f-870b-0de778ef4355",
+  "senderId": "e2e-10x-1776625632190-9",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "INITIATED",
   "escrowPda": null,
-  "claimTokenId": "765aac14-5e5f-49b1-9943-08806535ed75",
+  "claimTokenId": "499a5e65-84a8-4ddb-8258-d8c60dda9f88",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:29:31.785075306Z",
-  "updatedAt": "2026-04-19T11:29:31.790060930Z",
+  "createdAt": "2026-04-19T19:07:21.424828857Z",
+  "updatedAt": "2026-04-19T19:07:21.438793004Z",
   "expiresAt": null
 }
 ```
 
 #### 5-poll-escrowed
 
-`GET /api/remittances/5138141b-9a20-461f-b7df-e4dbf27d6d46`  → **HTTP 200**
+`GET /api/remittances/23c1a361-dea3-4f9f-870b-0de778ef4355`  → **HTTP 200**
 
 Request:
 ```json
@@ -2128,26 +1343,26 @@ Request:
 Response:
 ```json
 {
-  "id": 11,
-  "remittanceId": "5138141b-9a20-461f-b7df-e4dbf27d6d46",
-  "senderId": "e2e-10x-1776598161943-10",
+  "id": 17,
+  "remittanceId": "23c1a361-dea3-4f9f-870b-0de778ef4355",
+  "senderId": "e2e-10x-1776625632190-9",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "escrowPda": null,
-  "claimTokenId": "765aac14-5e5f-49b1-9943-08806535ed75",
+  "claimTokenId": "499a5e65-84a8-4ddb-8258-d8c60dda9f88",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:29:31.785075Z",
-  "updatedAt": "2026-04-19T11:30:03.054652Z",
+  "createdAt": "2026-04-19T19:07:21.424829Z",
+  "updatedAt": "2026-04-19T19:07:26.434834Z",
   "expiresAt": null
 }
 ```
 
 #### 6-get-claim
 
-`GET /api/claims/765aac14-5e5f-49b1-9943-08806535ed75`  → **HTTP 200**
+`GET /api/claims/499a5e65-84a8-4ddb-8258-d8c60dda9f88`  → **HTTP 200**
 
 Request:
 ```json
@@ -2157,20 +1372,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "5138141b-9a20-461f-b7df-e4dbf27d6d46",
-  "senderId": "e2e-10x-1776598161943-10",
+  "remittanceId": "23c1a361-dea3-4f9f-870b-0de778ef4355",
+  "senderId": "e2e-10x-1776625632190-9",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": false,
-  "expiresAt": "2026-04-21T11:29:31.788423Z"
+  "expiresAt": "2026-04-21T19:07:21.435853Z"
 }
 ```
 
 #### 7-submit-claim
 
-`POST /api/claims/765aac14-5e5f-49b1-9943-08806535ed75`  → **HTTP 200**
+`POST /api/claims/499a5e65-84a8-4ddb-8258-d8c60dda9f88`  → **HTTP 200**
 
 Request:
 ```json
@@ -2182,20 +1397,20 @@ Request:
 Response:
 ```json
 {
-  "remittanceId": "5138141b-9a20-461f-b7df-e4dbf27d6d46",
-  "senderId": "e2e-10x-1776598161943-10",
+  "remittanceId": "23c1a361-dea3-4f9f-870b-0de778ef4355",
+  "senderId": "e2e-10x-1776625632190-9",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "ESCROWED",
   "claimed": true,
-  "expiresAt": "2026-04-21T11:29:31.788423Z"
+  "expiresAt": "2026-04-21T19:07:21.435853Z"
 }
 ```
 
 #### 8-poll-delivered
 
-`GET /api/remittances/5138141b-9a20-461f-b7df-e4dbf27d6d46`  → **HTTP 200**
+`GET /api/remittances/23c1a361-dea3-4f9f-870b-0de778ef4355`  → **HTTP 200**
 
 Request:
 ```json
@@ -2205,19 +1420,238 @@ Request:
 Response:
 ```json
 {
-  "id": 11,
-  "remittanceId": "5138141b-9a20-461f-b7df-e4dbf27d6d46",
-  "senderId": "e2e-10x-1776598161943-10",
+  "id": 17,
+  "remittanceId": "23c1a361-dea3-4f9f-870b-0de778ef4355",
+  "senderId": "e2e-10x-1776625632190-9",
   "recipientPhone": "+919876543210",
   "amountUsdc": 1.0,
   "amountInr": 92.92,
   "fxRate": 92.922391,
   "status": "DELIVERED",
   "escrowPda": null,
-  "claimTokenId": "765aac14-5e5f-49b1-9943-08806535ed75",
+  "claimTokenId": "499a5e65-84a8-4ddb-8258-d8c60dda9f88",
   "smsNotificationFailed": false,
-  "createdAt": "2026-04-19T11:29:31.785075Z",
-  "updatedAt": "2026-04-19T11:30:06.334869Z",
+  "createdAt": "2026-04-19T19:07:21.424829Z",
+  "updatedAt": "2026-04-19T19:07:32.502073Z",
+  "expiresAt": null
+}
+```
+
+---
+
+### Customer 10 — `e2e-10x-1776625654515-10`
+
+- walletId: `28`  solanaAddress: `CAWjqf8mm5XRicmmWYYmNEaNYpJhAvoieVdTXwW1Ehre`
+- fundingId: `4860ae81-8fb1-4156-a782-0fc7cdeee786`  paymentIntentId: `pi_3TO0gu3nnME1dfOB1MBgLKRc`
+- remittanceId: `cf5346df-80ba-4f6c-81d7-7a9dd2fa1418`  claimTokenId: `6a931f2e-c22e-4c60-b2c5-ada5d4872c5d`
+- final status: **DELIVERED**  elapsed: 52.4s  **PASS**
+- On-chain USDC after fund: 1
+- Claim authority USDC after claim: 43
+
+#### 1-create-wallet
+
+`POST /api/wallets`  → **HTTP 201**
+
+Request:
+```json
+{
+  "userId": "e2e-10x-1776625654515-10"
+}
+```
+
+Response:
+```json
+{
+  "id": 28,
+  "userId": "e2e-10x-1776625654515-10",
+  "solanaAddress": "CAWjqf8mm5XRicmmWYYmNEaNYpJhAvoieVdTXwW1Ehre",
+  "availableBalance": 0,
+  "totalBalance": 0,
+  "createdAt": "2026-04-19T19:07:34.634291456Z",
+  "updatedAt": "2026-04-19T19:07:34.634291456Z"
+}
+```
+
+#### 2-initiate-fund
+
+`POST /api/wallets/28/fund`  → **HTTP 201**
+
+Request:
+```json
+{
+  "amount": 1.0
+}
+```
+
+Response:
+```json
+{
+  "fundingId": "4860ae81-8fb1-4156-a782-0fc7cdeee786",
+  "walletId": 28,
+  "amountUsdc": 1.0,
+  "status": "PAYMENT_CONFIRMED",
+  "stripePaymentIntentId": "pi_3TO0gu3nnME1dfOB1MBgLKRc",
+  "stripeClientSecret": "***REDACTED***",
+  "createdAt": "2026-04-19T19:07:34.656950049Z"
+}
+```
+
+#### 3-poll-funded
+
+`GET /api/funding-orders/4860ae81-8fb1-4156-a782-0fc7cdeee786`  → **HTTP 200**
+
+Request:
+```json
+(no body)
+```
+
+Response:
+```json
+{
+  "fundingId": "4860ae81-8fb1-4156-a782-0fc7cdeee786",
+  "walletId": 28,
+  "amountUsdc": 1.0,
+  "status": "FUNDED",
+  "stripePaymentIntentId": "pi_3TO0gu3nnME1dfOB1MBgLKRc",
+  "createdAt": "2026-04-19T19:07:34.656950Z"
+}
+```
+
+#### 4-create-remittance
+
+`POST /api/remittances`  → **HTTP 201**
+
+Request:
+```json
+{
+  "senderId": "e2e-10x-1776625654515-10",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 1.0
+}
+```
+
+Response:
+```json
+{
+  "id": 18,
+  "remittanceId": "cf5346df-80ba-4f6c-81d7-7a9dd2fa1418",
+  "senderId": "e2e-10x-1776625654515-10",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 1.0,
+  "amountInr": 92.92,
+  "fxRate": 92.922391,
+  "status": "INITIATED",
+  "escrowPda": null,
+  "claimTokenId": "6a931f2e-c22e-4c60-b2c5-ada5d4872c5d",
+  "smsNotificationFailed": false,
+  "createdAt": "2026-04-19T19:07:43.466338785Z",
+  "updatedAt": "2026-04-19T19:07:43.479094974Z",
+  "expiresAt": null
+}
+```
+
+#### 5-poll-escrowed
+
+`GET /api/remittances/cf5346df-80ba-4f6c-81d7-7a9dd2fa1418`  → **HTTP 200**
+
+Request:
+```json
+(no body)
+```
+
+Response:
+```json
+{
+  "id": 18,
+  "remittanceId": "cf5346df-80ba-4f6c-81d7-7a9dd2fa1418",
+  "senderId": "e2e-10x-1776625654515-10",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 1.0,
+  "amountInr": 92.92,
+  "fxRate": 92.922391,
+  "status": "ESCROWED",
+  "escrowPda": null,
+  "claimTokenId": "6a931f2e-c22e-4c60-b2c5-ada5d4872c5d",
+  "smsNotificationFailed": false,
+  "createdAt": "2026-04-19T19:07:43.466339Z",
+  "updatedAt": "2026-04-19T19:08:18.559514Z",
+  "expiresAt": null
+}
+```
+
+#### 6-get-claim
+
+`GET /api/claims/6a931f2e-c22e-4c60-b2c5-ada5d4872c5d`  → **HTTP 200**
+
+Request:
+```json
+(no body)
+```
+
+Response:
+```json
+{
+  "remittanceId": "cf5346df-80ba-4f6c-81d7-7a9dd2fa1418",
+  "senderId": "e2e-10x-1776625654515-10",
+  "amountUsdc": 1.0,
+  "amountInr": 92.92,
+  "fxRate": 92.922391,
+  "status": "ESCROWED",
+  "claimed": false,
+  "expiresAt": "2026-04-21T19:07:43.473649Z"
+}
+```
+
+#### 7-submit-claim
+
+`POST /api/claims/6a931f2e-c22e-4c60-b2c5-ada5d4872c5d`  → **HTTP 200**
+
+Request:
+```json
+{
+  "upiId": "test@upi"
+}
+```
+
+Response:
+```json
+{
+  "remittanceId": "cf5346df-80ba-4f6c-81d7-7a9dd2fa1418",
+  "senderId": "e2e-10x-1776625654515-10",
+  "amountUsdc": 1.0,
+  "amountInr": 92.92,
+  "fxRate": 92.922391,
+  "status": "ESCROWED",
+  "claimed": true,
+  "expiresAt": "2026-04-21T19:07:43.473649Z"
+}
+```
+
+#### 8-poll-delivered
+
+`GET /api/remittances/cf5346df-80ba-4f6c-81d7-7a9dd2fa1418`  → **HTTP 200**
+
+Request:
+```json
+(no body)
+```
+
+Response:
+```json
+{
+  "id": 18,
+  "remittanceId": "cf5346df-80ba-4f6c-81d7-7a9dd2fa1418",
+  "senderId": "e2e-10x-1776625654515-10",
+  "recipientPhone": "+919876543210",
+  "amountUsdc": 1.0,
+  "amountInr": 92.92,
+  "fxRate": 92.922391,
+  "status": "DELIVERED",
+  "escrowPda": null,
+  "claimTokenId": "6a931f2e-c22e-4c60-b2c5-ada5d4872c5d",
+  "smsNotificationFailed": false,
+  "createdAt": "2026-04-19T19:07:43.466339Z",
+  "updatedAt": "2026-04-19T19:08:24.868512Z",
   "expiresAt": null
 }
 ```

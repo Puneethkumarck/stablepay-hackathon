@@ -6,7 +6,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 
 import com.stablepay.domain.remittance.exception.DisbursementException;
+import com.stablepay.domain.remittance.exception.SolanaTransactionException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.infrastructure.temporal.TaskQueue.Constants;
 
 import io.temporal.activity.ActivityOptions;
@@ -23,6 +25,9 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     private static final Duration DISBURSEMENT_ACTIVITY_TIMEOUT = Duration.ofSeconds(45);
     private static final Duration SMS_ACTIVITY_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration STATUS_UPDATE_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration TX_CONFIRMATION_ACTIVITY_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration TX_CONFIRMATION_POLL_INTERVAL = Duration.ofSeconds(3);
+    private static final Duration TX_CONFIRMATION_TIMEOUT = Duration.ofMinutes(2);
     private static final int SOLANA_MAX_ATTEMPTS = 3;
     private static final int SMS_MAX_ATTEMPTS = 3;
     private static final int DISBURSEMENT_MAX_ATTEMPTS = 3;
@@ -41,6 +46,9 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
     private final RemittanceLifecycleActivities statusActivities =
             Workflow.newActivityStub(RemittanceLifecycleActivities.class, statusUpdateActivityOptions());
 
+    private final RemittanceLifecycleActivities confirmationActivities =
+            Workflow.newActivityStub(RemittanceLifecycleActivities.class, confirmationActivityOptions());
+
     private UUID remittanceId;
     private RemittanceStatus currentStatus = RemittanceStatus.INITIATED;
     private String escrowTxSignature;
@@ -56,6 +64,16 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
 
         var depositSignature = depositEscrow(request);
         this.escrowTxSignature = depositSignature;
+
+        try {
+            awaitTransactionConfirmation(depositSignature);
+        } catch (SolanaTransactionException e) {
+            log.error("Deposit confirmation failed for remittance {}", remittanceId, e);
+            statusActivities.updateRemittanceStatus(
+                    remittanceId.toString(), RemittanceStatus.DEPOSIT_FAILED);
+            currentStatus = RemittanceStatus.DEPOSIT_FAILED;
+            return failedResult(RemittanceStatus.DEPOSIT_FAILED, depositSignature);
+        }
 
         statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.ESCROWED);
         currentStatus = RemittanceStatus.ESCROWED;
@@ -118,6 +136,17 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
                 pendingClaim.destinationAddress(),
                 request.senderAddress());
 
+        try {
+            awaitTransactionConfirmation(releaseSignature);
+        } catch (SolanaTransactionException e) {
+            log.error("SP-0031: CRITICAL — release confirmation failed for remittance {},"
+                    + " escrow may be released on-chain", remittanceId, e);
+            statusActivities.updateRemittanceStatus(
+                    remittanceId.toString(), RemittanceStatus.CLAIM_FAILED);
+            currentStatus = RemittanceStatus.CLAIM_FAILED;
+            return failedResult(RemittanceStatus.CLAIM_FAILED, releaseSignature);
+        }
+
         statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.CLAIMED);
         currentStatus = RemittanceStatus.CLAIMED;
         log.info("Escrow released for remittanceId={} with tx={}", remittanceId, releaseSignature);
@@ -167,6 +196,16 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         var refundSignature = solanaActivities.refundEscrow(
                 remittanceId.toString(),
                 request.senderAddress());
+
+        try {
+            awaitTransactionConfirmation(refundSignature);
+        } catch (SolanaTransactionException e) {
+            log.error("Refund confirmation failed for remittance {}", remittanceId, e);
+            statusActivities.updateRemittanceStatus(
+                    remittanceId.toString(), RemittanceStatus.REFUND_FAILED);
+            currentStatus = RemittanceStatus.REFUND_FAILED;
+            return failedResult(RemittanceStatus.REFUND_FAILED, refundSignature);
+        }
 
         statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.REFUNDED);
         currentStatus = RemittanceStatus.REFUNDED;
@@ -222,6 +261,51 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
                         .setInitialInterval(Duration.ofSeconds(1))
                         .setBackoffCoefficient(2.0)
                         .build())
+                .build();
+    }
+
+    private static ActivityOptions confirmationActivityOptions() {
+        return ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(TX_CONFIRMATION_ACTIVITY_TIMEOUT)
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(SOLANA_MAX_ATTEMPTS)
+                        .setInitialInterval(Duration.ofSeconds(1))
+                        .setBackoffCoefficient(1.5)
+                        .setDoNotRetry(IllegalArgumentException.class.getName())
+                        .build())
+                .build();
+    }
+
+    private void awaitTransactionConfirmation(String signature) {
+        var deadline = Workflow.currentTimeMillis() + TX_CONFIRMATION_TIMEOUT.toMillis();
+        var status = TransactionConfirmationStatus.NOT_FOUND;
+
+        while (!status.isTerminal()) {
+            if (Workflow.currentTimeMillis() >= deadline) {
+                throw SolanaTransactionException.confirmationTimeout(signature);
+            }
+
+            status = confirmationActivities.checkTransactionStatus(signature);
+
+            switch (status) {
+                case CONFIRMED, FINALIZED ->
+                    log.info("Transaction {} confirmed (status={})", signature, status);
+                case FAILED_ON_CHAIN ->
+                    throw SolanaTransactionException.transactionFailed(signature);
+                default -> {
+                    log.info("Transaction {} pending (status={})", signature, status);
+                    Workflow.sleep(TX_CONFIRMATION_POLL_INTERVAL);
+                }
+            }
+        }
+    }
+
+    private RemittanceWorkflowResult failedResult(RemittanceStatus status, String txSignature) {
+        return RemittanceWorkflowResult.builder()
+                .remittanceId(remittanceId)
+                .finalStatus(status.name())
+                .escrowPda(escrowTxSignature)
+                .txSignature(txSignature)
                 .build();
     }
 }

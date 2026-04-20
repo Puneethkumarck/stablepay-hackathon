@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 
 import com.stablepay.domain.remittance.model.DisbursementResult;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 
 import io.temporal.activity.ActivityInterface;
 
 @ActivityInterface
 public interface RemittanceLifecycleActivities {
+
+    TransactionConfirmationStatus checkTransactionStatus(String transactionSignature);
 
     String depositEscrow(
             String remittanceId,

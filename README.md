@@ -3,6 +3,7 @@
 [![CI](https://github.com/Puneethkumarck/stablepay-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/Puneethkumarck/stablepay-hackathon/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-25-orange)](https://jdk.java.net/25/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Stripe](https://img.shields.io/badge/Stripe-On--Ramp-635BFF?logo=stripe&logoColor=white)](https://stripe.com/)
 [![Solana](https://img.shields.io/badge/Solana-devnet-9945FF?logo=solana&logoColor=white)](https://solana.com/)
 [![Anchor](https://img.shields.io/badge/Anchor-0.32.1-blue)](https://www.anchor-lang.com/)
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev/)
@@ -54,6 +55,8 @@ graph TB
         A2["/api/remittances"]
         A3["/api/fx"]
         A4["/api/claims"]
+        A5["/api/funding-orders"]
+        A6["/webhooks/stripe"]
     end
 
     subgraph "Domain Layer — Zero Framework Dependencies"
@@ -70,7 +73,8 @@ graph TB
         I[ExchangeRate-API + Redis Cache]
         J[Temporal Workflows]
         K[Twilio SMS]
-        L[Transak Off-Ramp]
+        L[Razorpay UPI Disbursement]
+        S[Stripe Payments]
     end
 
     subgraph "External Systems"
@@ -78,7 +82,8 @@ graph TB
         N[Solana Devnet — Anchor Escrow]
         O[open.er-api.com]
         P[Twilio API]
-        Q[Transak API]
+        Q[Razorpay API]
+        R[Stripe API]
     end
 
     A --> B
@@ -90,11 +95,13 @@ graph TB
     D --> J
     D --> K
     D --> L
+    D --> S
     G --> M
     H --> N
     I --> O
     K --> P
     L --> Q
+    S --> R
 ```
 
 **Dependency rule:** `domain` → nothing. `application` → `domain`. `infrastructure` → `domain`. Never the reverse.
@@ -107,13 +114,14 @@ graph TB
 sequenceDiagram
     participant Sender as Sender (Mobile/API)
     participant API as StablePay API
+    participant Stripe as Stripe
     participant MPC as MPC Sidecar x2
     participant DB as PostgreSQL
     participant Temporal as Temporal Workflow
     participant Solana as Solana Devnet
     participant SMS as Twilio SMS
     participant Recipient as Recipient (Web)
-    participant Transak as Transak Off-Ramp
+    participant Razorpay as Razorpay UPI
 
     Note over Sender,API: Use Case 1 — Create MPC Wallet
     Sender->>API: POST /api/wallets {userId}
@@ -122,17 +130,23 @@ sequenceDiagram
     API->>DB: INSERT wallet
     API-->>Sender: 201 {solanaAddress, balance: 0}
 
-    Note over Sender,API: Use Case 2 — Fund Wallet
+    Note over Sender,Stripe: Use Case 2 — Fund Wallet (Stripe On-Ramp)
     Sender->>API: POST /api/wallets/{id}/fund {amount}
-    API->>DB: UPDATE wallet balance += amount
-    API-->>Sender: 200 {updated balance}
+    API->>Stripe: Create PaymentIntent
+    Stripe-->>API: clientSecret + paymentIntentId
+    API->>DB: INSERT funding_order (PAYMENT_CONFIRMED)
+    API-->>Sender: 201 {fundingId, clientSecret}
+    Stripe->>API: Webhook: payment_intent.succeeded
+    API->>Temporal: Start WalletFundingWorkflow
+    Temporal->>Solana: Transfer SOL (rent) + create ATA + transfer USDC
+    Temporal->>DB: UPDATE funding_order → FUNDED
 
     Note over Sender,API: Use Case 3 — Get FX Rate
     Sender->>API: GET /api/fx/USD-INR
     API->>API: Check Redis cache
     API-->>Sender: {rate: 84.50, source, expiresAt}
 
-    Note over Sender,Transak: Use Case 4 — Send Remittance
+    Note over Sender,Razorpay: Use Case 4 — Send Remittance
     Sender->>API: POST /api/remittances {senderId, phone, amount}
     API->>DB: Reserve sender balance
     API->>API: Lock FX rate, calculate INR
@@ -145,7 +159,10 @@ sequenceDiagram
     Temporal->>MPC: Sign escrow deposit transaction
     MPC-->>Temporal: Ed25519 signature
     Temporal->>Solana: Submit deposit (USDC → PDA vault)
-    Solana-->>Temporal: Transaction confirmed
+    loop Poll getSignatureStatuses (3s interval, max 40 attempts)
+        Temporal->>Solana: Check confirmation status
+        Solana-->>Temporal: PROCESSED / CONFIRMED / FINALIZED
+    end
     Temporal->>DB: UPDATE status → ESCROWED
 
     Note over Temporal,SMS: Workflow Phase 2 — Notify
@@ -155,18 +172,20 @@ sequenceDiagram
     Note over Temporal,Recipient: Workflow Phase 3 — Wait
     Temporal->>Temporal: Await claim signal (48h timeout)
 
-    Note over Recipient,Transak: Use Case 5 — Claim Funds
+    Note over Recipient,Razorpay: Use Case 5 — Claim Funds
     Recipient->>API: GET /api/claims/{token}
     API-->>Recipient: {amountUsdc, amountInr, fxRate}
     Recipient->>API: POST /api/claims/{token} {upiId}
     API->>DB: UPDATE claim_token (claimed=true, upiId)
     API->>Temporal: Signal claimSubmitted(upiId)
 
-    Note over Temporal,Transak: Workflow Phase 4 — Deliver
+    Note over Temporal,Razorpay: Workflow Phase 4 — Deliver
     Temporal->>Solana: Release escrow to recipient
-    Solana-->>Temporal: USDC released
+    loop Poll getSignatureStatuses (3s interval, max 40 attempts)
+        Temporal->>Solana: Check confirmation status
+    end
     Temporal->>DB: UPDATE status → CLAIMED
-    Temporal->>Transak: Disburse INR to UPI
+    Temporal->>Razorpay: Disburse INR to UPI
     Temporal->>DB: UPDATE status → DELIVERED
 ```
 
@@ -267,55 +286,73 @@ Content-Type: application/json
 
 ---
 
-## Use Case 2: Fund Wallet
+## Use Case 2: Fund Wallet (Stripe On-Ramp)
 
-> **Demo treasury funding.** For the hackathon, a pre-funded treasury account transfers USDC to the sender's wallet. The treasury adapter is currently a stub that updates balances in the database.
+> **Real Stripe integration.** The sender pays via Stripe (card), which triggers a webhook. A Temporal workflow then transfers SOL (for rent/fees), creates an Associated Token Account, and transfers USDC from the treasury to the sender's MPC wallet on-chain.
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Controller as WalletController
-    participant Handler as FundWalletHandler
-    participant Treasury as TreasuryServiceAdapter
-    participant Repo as WalletRepository
+    participant Controller as FundingController
+    participant Handler as InitiateFundingHandler
+    participant Writer as FundingOrderWriter
+    participant Stripe as StripePaymentAdapter
     participant DB as PostgreSQL
+    participant Webhook as StripeWebhookController
+    participant Complete as CompleteFundingHandler
+    participant Temporal as WalletFundingWorkflow
+    participant Treasury as TreasuryServiceAdapter
+    participant Solana as Solana Devnet
 
-    Client->>Controller: POST /api/wallets/1/fund {amount: 100.00}
+    Client->>Controller: POST /api/wallets/1/fund {amount: 1.00}
+    Controller->>Writer: persist funding order
+    Writer->>DB: INSERT funding_order (PAYMENT_CONFIRMED)
+    Controller->>Handler: initiate funding
+    Handler->>Stripe: Create PaymentIntent ($1.00)
+    Stripe-->>Handler: paymentIntentId + clientSecret
+    Handler-->>Client: 201 {fundingId, clientSecret}
 
-    Controller->>Handler: handle(1, 100.00)
-    Handler->>Repo: findById(1)
-    Repo-->>Handler: Wallet{balance: 0}
+    Note over Stripe,Webhook: Stripe fires webhook
+    Stripe->>Webhook: POST /webhooks/stripe (payment_intent.succeeded)
+    Webhook->>Complete: handle(fundingId)
+    Complete->>Temporal: Start WalletFundingWorkflow
 
-    Handler->>Treasury: getBalance()
-    Treasury-->>Handler: 1,000,000 (stub)
-
-    Handler->>Treasury: transferFromTreasury("7xK...abc", 100.00)
-    Note over Treasury: Logs transfer (stub — no Solana call)
-
-    Handler->>Handler: wallet.availableBalance += 100.00
-    Handler->>Handler: wallet.totalBalance += 100.00
-    Handler->>Repo: save(updatedWallet)
-    Repo->>DB: UPDATE wallets SET available_balance=100, total_balance=100
-
-    Handler-->>Controller: Updated Wallet
-    Controller-->>Client: 200 OK
+    Note over Temporal,Solana: Temporal orchestrates on-chain funding
+    Temporal->>Treasury: checkTreasuryBalance(1.00 USDC)
+    Temporal->>Treasury: ensureSolBalance(senderAddress)
+    Treasury->>Solana: Transfer SOL for rent + fees
+    Temporal->>Treasury: createAtaIfNeeded(senderAddress)
+    Treasury->>Solana: Create Associated Token Account
+    Temporal->>Treasury: transferUsdc(senderAddress, 1.00)
+    Treasury->>Solana: SPL token transfer (treasury → sender ATA)
+    Temporal->>DB: UPDATE funding_order → FUNDED
 ```
 
 ```
 POST /api/wallets/1/fund
 Content-Type: application/json
 
-{ "amount": 100.00 }
+{ "amount": 1.00 }
 ```
 
 ```json
 {
-  "id": 1,
-  "userId": "user-123",
-  "solanaAddress": "7xK...abc",
-  "availableBalance": 100.000000,
-  "totalBalance": 100.000000
+  "fundingId": "b2c8a29a-fcca-487f-979b-bf355c82faeb",
+  "stripePaymentIntentId": "pi_3TO0YZ3nnME1dfOB0dz1SICr",
+  "stripeClientSecret": "pi_...secret_...",
+  "walletId": 1,
+  "amountUsdc": 1.00,
+  "status": "PAYMENT_CONFIRMED"
 }
+```
+
+### Funding Order Status Machine
+
+```
+PAYMENT_CONFIRMED → FUNDED     (webhook + Temporal workflow succeeds)
+PAYMENT_CONFIRMED → FAILED     (webhook: payment_intent.payment_failed)
+FUNDED → REFUND_INITIATED      (manual refund)
+REFUND_INITIATED → REFUNDED    (refund completed)
 ```
 
 ### Error Paths
@@ -324,12 +361,14 @@ Content-Type: application/json
 |---|---|---|
 | Wallet not found | SP-0006 | 404 |
 | Treasury balance insufficient | SP-0007 | 503 |
+| Funding already in progress for wallet | SP-0022 | 409 |
+| Stripe PaymentIntent creation failed | SP-0021 | 502 |
 
 ---
 
 ## Use Case 3: Get FX Rate
 
-> **Real-time rates with fallback.** FX rates come from ExchangeRate-API with Redis caching (60s TTL). If the API is unreachable, a hardcoded fallback rate of 84.50 is used.
+> **Real-time rates with fallback.** FX rates come from ExchangeRate-API with Redis caching (5-minute TTL). If the API is unreachable, a hardcoded fallback rate of 84.50 is used.
 
 ```mermaid
 sequenceDiagram
@@ -350,7 +389,7 @@ sequenceDiagram
     else Cache Miss
         Adapter->>API: GET /v6/latest/USD
         API-->>Adapter: {rates: {INR: 84.50, ...}}
-        Adapter->>Redis: SET fxRate::USD (60s TTL)
+        Adapter->>Redis: SET fxRate::USD (5m TTL)
     else API Failure
         Note over Adapter: Fallback: rate=84.50, source="fallback"
     end
@@ -521,7 +560,12 @@ stateDiagram-v2
 │  │   ├─ Fetch wallet's keyShareData from DB                     │
 │  │   ├─ Build Solana escrow deposit instruction                  │
 │  │   ├─ MPC-sign transaction (gRPC → sidecar)                   │
-│  │   └─ Submit to Solana devnet                                  │
+│  │   └─ Submit to Solana devnet → returns signature              │
+│  ├─ Poll: awaitTransactionConfirmation(signature)                │
+│  │   ├─ Calls getSignatureStatuses RPC every 3 seconds           │
+│  │   ├─ Max 40 attempts (~120s total polling window)             │
+│  │   ├─ Accepts CONFIRMED or FINALIZED as success                │
+│  │   └─ Throws SP-0012 on timeout, SP-0031 on on-chain failure  │
 │  └─ Status Update: INITIATED → ESCROWED                         │
 │                                                                  │
 │  Phase 2: SMS NOTIFICATION                                       │
@@ -535,14 +579,16 @@ stateDiagram-v2
 │  │                                                               │
 │  │   ┌─ PATH A: Claim signal received ──────────────────────┐   │
 │  │   │  Activity: releaseEscrow (60s, 3 retries, 2s backoff)│   │
+│  │   │  Poll: awaitTransactionConfirmation (3s × 40 max)     │   │
 │  │   │  Status Update: ESCROWED → CLAIMED                    │   │
-│  │   │  Activity: disburseInr (45s, NO retry)                │   │
+│  │   │  Activity: disburseInr (45s, NO retry) via Razorpay   │   │
 │  │   │  ├─ Success: Status → DELIVERED                       │   │
 │  │   │  └─ Failure: Status → DISBURSEMENT_FAILED             │   │
 │  │   └──────────────────────────────────────────────────────┘   │
 │  │                                                               │
 │  │   ┌─ PATH B: 48h timeout — no claim ────────────────────┐   │
 │  │   │  Activity: refundEscrow (60s, 3 retries, 2s backoff) │   │
+│  │   │  Poll: awaitTransactionConfirmation (3s × 40 max)     │   │
 │  │   │  Status Update: ESCROWED → REFUNDED                   │   │
 │  │   └──────────────────────────────────────────────────────┘   │
 │  └                                                               │
@@ -648,8 +694,8 @@ Content-Type: application/json
 │  3. Status update: ESCROWED → CLAIMED                          │
 │                                                                │
 │  4. disburseInr activity                                       │
-│     ├─ Call Transak API: createQuote(USDC→INR)                 │
-│     ├─ Call Transak API: createOrder(upiId, amount)            │
+│     ├─ Call Razorpay Payout API                                │
+│     ├─ Transfer INR to recipient's UPI ID                      │
 │     └─ INR credited to recipient's bank via UPI                │
 │                                                                │
 │  5. Status update: CLAIMED → DELIVERED ✓                       │
@@ -859,7 +905,7 @@ Now the actual wallets involved in StablePay:
 
 #### Act 2: 💰 Funding the Wallet
 
-> Before the sender can make a remittance, their MPC wallet needs SOL (for transaction fees) and USDC (the stablecoin to send). In production, this happens via Stripe ACH on-ramp. For the hackathon, we use a pre-funded treasury.
+> Before the sender can make a remittance, their MPC wallet needs SOL (for transaction fees) and USDC (the stablecoin to send). The sender pays via Stripe (card payment), which triggers a Temporal workflow that transfers SOL and USDC from a pre-funded treasury on Solana devnet.
 
 ```
   🏛️ Deployer / Treasury               👤 Sender MPC Wallet
@@ -1055,11 +1101,11 @@ Now the actual wallets involved in StablePay:
 #### Act 7: 🏦 INR Disbursement
 
 ```
-  Temporal Workflow                     Transak API
+  Temporal Workflow                     Razorpay API
   ┌──────────────┐                     ┌──────────────────┐
-  │ disburseInr  │────── API call ────►│ Convert USDC→INR │
+  │ disburseInr  │────── API call ────►│ Create Payout    │
   │ activity     │                     │ Send ₹2,336 to   │
-  └──────────────┘                     │ raj@upi           │
+  └──────────────┘                     │ raj@upi via UPI  │
                                        └──────────────────┘
   Status: CLAIMED → DELIVERED ✅
 ```
@@ -1143,12 +1189,19 @@ Now the actual wallets involved in StablePay:
 | SP-0007 | 503 | TreasuryDepletedException | Treasury has insufficient funds |
 | SP-0008 | 409 | WalletAlreadyExistsException | Wallet already exists for userId |
 | SP-0009 | 400 | UnsupportedCorridorException | Currency pair not supported |
-| SP-0010 | 404 | RemittanceNotFoundException | Remittance not found by ID |
+| SP-0010 | 404/500 | RemittanceNotFoundException / MpcKeyGenerationException | Remittance not found / MPC ceremony failed |
 | SP-0011 | 404 | ClaimTokenNotFoundException | Claim token not found |
-| SP-0012 | 409 | ClaimAlreadyClaimedException | Claim already submitted |
+| SP-0012 | 409/500 | ClaimAlreadyClaimedException / SolanaTransactionException | Claim already submitted / TX confirmation timeout |
 | SP-0013 | 410 | ClaimTokenExpiredException | Claim token past 48h expiry |
 | SP-0014 | 409 | InvalidRemittanceStateException | Invalid state for operation |
+| SP-0016 | 409 | InvalidRemittanceStateException | Invalid status transition |
+| SP-0017 | 500 | SmsDeliveryException | SMS delivery failed |
 | SP-0018 | 502 | DisbursementException | INR disbursement failed |
+| SP-0020 | 404 | FundingOrderNotFoundException | Funding order not found |
+| SP-0021 | 502 | FundingFailedException | Stripe payment / funding failed |
+| SP-0022 | 409 | FundingAlreadyInProgressException | Funding already in progress for wallet |
+| SP-0026 | 400 | InvalidWebhookSignatureException | Stripe webhook signature invalid |
+| SP-0031 | 500 | SolanaTransactionException | Transaction failed on-chain |
 
 ---
 
@@ -1227,10 +1280,10 @@ Interactive Swagger UI: http://localhost:8080/swagger-ui.html
 # Backend: all tests + formatting
 cd backend && ./gradlew build
 
-# Unit tests only (34 test files)
+# Unit tests only
 cd backend && ./gradlew test
 
-# Integration tests with TestContainers (6 test files)
+# Integration tests with TestContainers
 cd backend && ./gradlew integrationTest
 
 # Anchor program tests (799 lines, TypeScript on localnet)
@@ -1267,8 +1320,9 @@ graph TD
 | On-chain | Rust, Anchor 0.32.1, Solana 2.2.7 (devnet) |
 | MPC | Go 1.26, bnb-chain/tss-lib (fystack fork) |
 | Solana SDK | sol4k 0.7.0 |
+| On-ramp | Stripe (card payments + webhooks) |
+| Off-ramp | Razorpay UPI Payouts |
 | SMS | Twilio 11.3.6 |
-| Off-ramp | Transak API |
 | Mapping | MapStruct 1.6.3 |
 | Resilience | Resilience4j 2.3.0 |
 | API Docs | springdoc-openapi 3.0.2 |
@@ -1289,19 +1343,21 @@ stablepay-hackathon/
 │       │   ├── domain/               # Models, handlers, ports
 │       │   │   ├── wallet/           #   MPC wallet management
 │       │   │   ├── remittance/       #   Core remittance flow
+│       │   │   ├── funding/          #   Stripe funding orders
 │       │   │   ├── claim/            #   SMS claim tokens
 │       │   │   ├── fx/               #   FX rate quotes
 │       │   │   └── common/           #   Shared ports (SMS, disbursement)
 │       │   └── infrastructure/       # Adapters
-│       │       ├── db/               #   JPA + Flyway (3 migrations)
-│       │       ├── temporal/         #   Workflow + 6 activities
+│       │       ├── db/               #   JPA + Flyway (7 migrations)
+│       │       ├── temporal/         #   Workflows + activities
 │       │       ├── mpc/              #   gRPC client to sidecars
-│       │       ├── solana/           #   RPC + escrow instruction builder
+│       │       ├── solana/           #   RPC + escrow instruction builder + tx confirmation
+│       │       ├── stripe/           #   Stripe payments + webhook verification
+│       │       ├── razorpay/         #   Razorpay UPI disbursement
 │       │       ├── fx/               #   ExchangeRate-API + Redis cache
-│       │       ├── sms/              #   Twilio + logging fallback
-│       │       └── transak/          #   INR off-ramp adapter
-│       ├── test/                     # 34 unit test files
-│       └── integration-test/         # 6 integration test files
+│       │       └── sms/              #   Twilio + logging fallback
+│       ├── test/                     # 61 unit test files
+│       └── integration-test/         # 18 integration test files
 ├── programs/stablepay-escrow/        # Anchor program (Rust)
 │   └── src/
 │       ├── lib.rs                    # 4 instructions
