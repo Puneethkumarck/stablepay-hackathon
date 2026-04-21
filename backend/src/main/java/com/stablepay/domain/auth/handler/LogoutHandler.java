@@ -18,8 +18,8 @@ public class LogoutHandler {
 
     private final RefreshTokenRepository refreshTokenRepository;
 
-    public void handle(UUID userId) {
+    public void handle(UUID userId, String ip, String userAgent) {
         refreshTokenRepository.revokeByUserId(userId);
-        log.info("All refresh tokens revoked for userId={}", userId);
+        log.info("LOGOUT userId={} ip={} userAgent={}", userId, ip, userAgent);
     }
 }

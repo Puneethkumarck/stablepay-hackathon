@@ -25,7 +25,7 @@ class LogoutHandlerTest {
         // given
 
         // when
-        logoutHandler.handle(SOME_AUTH_USER_ID);
+        logoutHandler.handle(SOME_AUTH_USER_ID, "127.0.0.1", "TestAgent");
 
         // then
         then(refreshTokenRepository).should().revokeByUserId(SOME_AUTH_USER_ID);

@@ -42,7 +42,7 @@ public class SocialLoginHandler {
     private final AuthTokenConfig authTokenConfig;
     private final Clock clock;
 
-    public LoginResult handle(String provider, String idToken) {
+    public LoginResult handle(String provider, String idToken, String ip, String userAgent) {
         var now = Instant.now(clock);
         var identity = socialIdentityVerifier.verify(provider, idToken);
 
@@ -83,7 +83,7 @@ public class SocialLoginHandler {
                 .build();
         refreshTokenRepository.save(refreshToken);
 
-        log.info("Social login completed for userId={}, newUser={}", appUser.id(), newUser);
+        log.info("LOGIN_SUCCESS userId={} ip={} userAgent={}", appUser.id(), ip, userAgent);
 
         return LoginResult.builder()
                 .session(session)

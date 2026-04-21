@@ -24,6 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.controller.claim.mapper.ClaimApiMapper;
 import com.stablepay.application.dto.ClaimResponse;
 import com.stablepay.application.dto.SubmitClaimRequest;
@@ -56,6 +57,9 @@ class ClaimControllerTest {
 
     @MockitoBean
     private ClaimApiMapper claimApiMapper;
+
+    @MockitoBean
+    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
 
     @Test
     @SneakyThrows

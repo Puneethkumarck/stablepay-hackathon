@@ -22,6 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.controller.wallet.mapper.WalletApiMapper;
 import com.stablepay.application.dto.CreateWalletRequest;
 import com.stablepay.application.dto.WalletResponse;
@@ -45,6 +46,9 @@ class WalletControllerTest {
 
     @MockitoBean
     private WalletApiMapper walletApiMapper;
+
+    @MockitoBean
+    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
 
     @Test
     @SneakyThrows

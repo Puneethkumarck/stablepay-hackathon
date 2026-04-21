@@ -17,9 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-// Spring Security is NOT wired in the project. When it is, this endpoint must be
-// permit-all and CSRF-exempt (/webhooks/**): the Stripe signature header plus the
-// 300s replay tolerance is the authentication mechanism for this endpoint.
 @Slf4j
 @RestController
 @RequestMapping("/webhooks")

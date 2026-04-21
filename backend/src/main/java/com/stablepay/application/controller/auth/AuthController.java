@@ -1,5 +1,6 @@
 package com.stablepay.application.controller.auth;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -52,8 +53,12 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid or unverified ID token",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public ResponseEntity<AuthResponse> socialLogin(@Valid @RequestBody SocialLoginRequest request) {
-        var result = socialLoginHandler.handle(request.provider(), request.idToken());
+    public ResponseEntity<AuthResponse> socialLogin(
+            @Valid @RequestBody SocialLoginRequest request,
+            HttpServletRequest httpRequest) {
+        var ip = httpRequest.getRemoteAddr();
+        var userAgent = httpRequest.getHeader("User-Agent");
+        var result = socialLoginHandler.handle(request.provider(), request.idToken(), ip, userAgent);
         var expiresIn = (int) authTokenConfig.accessTtl().toSeconds();
         var response = authResponseMapper.toResponse(result, expiresIn);
         var status = result.newUser() ? HttpStatus.CREATED : HttpStatus.OK;
@@ -67,8 +72,12 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public AuthResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        var session = refreshTokenHandler.handle(request.refreshToken());
+    public AuthResponse refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request,
+            HttpServletRequest httpRequest) {
+        var ip = httpRequest.getRemoteAddr();
+        var userAgent = httpRequest.getHeader("User-Agent");
+        var session = refreshTokenHandler.handle(request.refreshToken(), ip, userAgent);
         var expiresIn = (int) authTokenConfig.accessTtl().toSeconds();
         return authResponseMapper.toRefreshResponse(session, expiresIn);
     }
@@ -81,7 +90,11 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Not authenticated",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public void logout(@AuthenticationPrincipal AuthPrincipal principal) {
-        logoutHandler.handle(principal.id());
+    public void logout(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            HttpServletRequest httpRequest) {
+        var ip = httpRequest.getRemoteAddr();
+        var userAgent = httpRequest.getHeader("User-Agent");
+        logoutHandler.handle(principal.id(), ip, userAgent);
     }
 }

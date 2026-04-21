@@ -117,7 +117,7 @@ class SocialLoginHandlerTest {
         given(tokenHasher.hash(SOME_RAW_REFRESH_TOKEN)).willReturn(SOME_TOKEN_HASH);
 
         // when
-        var result = socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN);
+        var result = socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", "TestAgent");
 
         // then
         var expected = LoginResult.builder()
@@ -158,7 +158,7 @@ class SocialLoginHandlerTest {
         given(tokenHasher.hash(SOME_RAW_REFRESH_TOKEN)).willReturn(SOME_TOKEN_HASH);
 
         // when
-        var result = socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN);
+        var result = socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", "TestAgent");
 
         // then
         var expected = LoginResult.builder()
@@ -185,7 +185,7 @@ class SocialLoginHandlerTest {
                 .willThrow(EmailNotVerifiedException.forEmail(SOME_SOCIAL_EMAIL));
 
         // when
-        var thrown = catchThrowable(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN));
+        var thrown = catchThrowable(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", "TestAgent"));
 
         // then
         assertThat(thrown)
@@ -213,7 +213,7 @@ class SocialLoginHandlerTest {
                 .willThrow(new RuntimeException("MPC sidecar unavailable"));
 
         // when
-        var thrown = catchThrowable(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN));
+        var thrown = catchThrowable(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", "TestAgent"));
 
         // then
         assertThat(thrown)
