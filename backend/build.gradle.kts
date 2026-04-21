@@ -188,7 +188,7 @@ dependencies {
     implementation("com.twilio.sdk:twilio:11.3.6")
 
     // Stripe
-    implementation("com.stripe:stripe-java:28.2.0")
+    implementation("com.stripe:stripe-java:28.4.0")
 
     // Test
     testCompileOnly("org.projectlombok:lombok:1.18.44")
