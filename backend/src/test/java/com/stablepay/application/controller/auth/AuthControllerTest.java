@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablepay.application.config.AppUserConverter;
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.config.SecurityConfig;
 import com.stablepay.application.controller.auth.mapper.AuthResponseMapper;
 import com.stablepay.application.dto.AuthResponse;
@@ -51,7 +52,7 @@ import com.stablepay.testutil.TestClockConfig;
 import lombok.SneakyThrows;
 
 @WebMvcTest(AuthController.class)
-@Import({TestClockConfig.class, SecurityConfig.class})
+@Import({TestClockConfig.class, SecurityConfig.class, SecurityAuthenticationEntryPoint.class})
 class AuthControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -104,7 +105,7 @@ class AuthControllerTest {
                     .wallet(WalletResponse.builder().build())
                     .build();
 
-            given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN)).willReturn(loginResult);
+            given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", null)).willReturn(loginResult);
             given(authTokenConfig.accessTtl()).willReturn(Duration.ofMinutes(15));
             given(authResponseMapper.toResponse(loginResult, EXPIRES_IN_SECONDS)).willReturn(authResponse);
 
@@ -143,7 +144,7 @@ class AuthControllerTest {
                     .expiresIn(EXPIRES_IN_SECONDS)
                     .build();
 
-            given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN)).willReturn(loginResult);
+            given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", null)).willReturn(loginResult);
             given(authTokenConfig.accessTtl()).willReturn(Duration.ofMinutes(15));
             given(authResponseMapper.toResponse(loginResult, EXPIRES_IN_SECONDS)).willReturn(authResponse);
 
@@ -165,7 +166,7 @@ class AuthControllerTest {
         @SneakyThrows
         void shouldReturn401WhenIdTokenInvalid() {
             // given
-            given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN))
+            given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", null))
                     .willThrow(InvalidIdTokenException.of("bad signature"));
 
             var request = SocialLoginRequest.builder()
@@ -187,7 +188,7 @@ class AuthControllerTest {
         @SneakyThrows
         void shouldReturn400WhenProviderUnsupported() {
             // given
-            given(socialLoginHandler.handle("facebook", SOME_ID_TOKEN))
+            given(socialLoginHandler.handle("facebook", SOME_ID_TOKEN, "127.0.0.1", null))
                     .willThrow(UnsupportedAuthProviderException.forProvider("facebook"));
 
             var request = SocialLoginRequest.builder()
@@ -240,7 +241,7 @@ class AuthControllerTest {
                     .expiresIn(EXPIRES_IN_SECONDS)
                     .build();
 
-            given(refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN)).willReturn(session);
+            given(refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN, "127.0.0.1", null)).willReturn(session);
             given(authTokenConfig.accessTtl()).willReturn(Duration.ofMinutes(15));
             given(authResponseMapper.toRefreshResponse(session, EXPIRES_IN_SECONDS)).willReturn(authResponse);
 
@@ -263,7 +264,7 @@ class AuthControllerTest {
         @SneakyThrows
         void shouldReturn401WhenRefreshTokenInvalid() {
             // given
-            given(refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN))
+            given(refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN, "127.0.0.1", null))
                     .willThrow(InvalidRefreshTokenException.of("not found"));
 
             var request = RefreshTokenRequest.builder()
@@ -325,7 +326,7 @@ class AuthControllerTest {
 
             // then
             result.andExpect(status().isNoContent());
-            then(logoutHandler).should().handle(SOME_AUTH_USER_ID);
+            then(logoutHandler).should().handle(SOME_AUTH_USER_ID, "127.0.0.1", null);
         }
 
         @Test

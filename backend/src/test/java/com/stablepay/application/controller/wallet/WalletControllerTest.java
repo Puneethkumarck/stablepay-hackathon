@@ -22,6 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.controller.wallet.mapper.WalletApiMapper;
 import com.stablepay.application.dto.CreateWalletRequest;
 import com.stablepay.application.dto.WalletResponse;
@@ -45,6 +46,9 @@ class WalletControllerTest {
 
     @MockitoBean
     private WalletApiMapper walletApiMapper;
+
+    @MockitoBean
+    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
 
     @Test
     @SneakyThrows
@@ -94,6 +98,41 @@ class WalletControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("SP-0003"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldAllowAnonymousWalletCreation() {
+        // given
+        var wallet = walletBuilder()
+                .availableBalance(BigDecimal.ZERO)
+                .totalBalance(BigDecimal.ZERO)
+                .build();
+
+        var response = WalletResponse.builder()
+                .id(SOME_WALLET_ID)
+                .userId(SOME_USER_ID)
+                .solanaAddress(SOME_SOLANA_ADDRESS)
+                .availableBalance(BigDecimal.ZERO)
+                .totalBalance(BigDecimal.ZERO)
+                .createdAt(SOME_CREATED_AT)
+                .updatedAt(SOME_UPDATED_AT)
+                .build();
+
+        given(createWalletHandler.handle(SOME_USER_ID)).willReturn(wallet);
+        given(walletApiMapper.toResponse(wallet)).willReturn(response);
+
+        var request = CreateWalletRequest.builder()
+                .userId(SOME_USER_ID)
+                .build();
+
+        // when / then
+        mockMvc.perform(post("/api/wallets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
+                .andExpect(jsonPath("$.userId").value(SOME_USER_ID.toString()));
     }
 
     @Test

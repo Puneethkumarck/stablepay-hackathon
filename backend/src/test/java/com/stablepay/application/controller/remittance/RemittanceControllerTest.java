@@ -11,6 +11,7 @@ import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_UPDATED_AT;
 import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,6 +32,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.controller.remittance.mapper.RemittanceApiMapper;
 import com.stablepay.application.dto.CreateRemittanceRequest;
 import com.stablepay.application.dto.RemittanceResponse;
@@ -65,6 +67,9 @@ class RemittanceControllerTest {
     @MockitoBean
     private RemittanceApiMapper remittanceApiMapper;
 
+    @MockitoBean
+    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
+
     @Test
     @SneakyThrows
     void shouldCreateRemittance() {
@@ -96,6 +101,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/remittances")
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -128,7 +134,7 @@ class RemittanceControllerTest {
         given(remittanceApiMapper.toResponse(domain)).willReturn(response);
 
         // when / then
-        mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID))
+        mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID).with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remittanceId").value(SOME_REMITTANCE_ID.toString()))
                 .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID.toString()));
@@ -154,6 +160,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(get("/api/remittances")
+                        .with(jwt())
                         .param("senderId", SOME_SENDER_ID.toString())
                         .param("page", "0")
                         .param("size", "20"))
@@ -172,7 +179,7 @@ class RemittanceControllerTest {
                 .willThrow(RemittanceNotFoundException.byId(unknownId));
 
         // when / then
-        mockMvc.perform(get("/api/remittances/{remittanceId}", unknownId))
+        mockMvc.perform(get("/api/remittances/{remittanceId}", unknownId).with(jwt()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("SP-0010"));
     }
@@ -192,6 +199,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/remittances")
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -210,6 +218,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/remittances")
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -226,6 +235,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/remittances")
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isBadRequest());

@@ -87,7 +87,7 @@ class RefreshTokenHandlerTest {
         given(tokenHasher.hash(SOME_NEW_RAW_REFRESH_TOKEN)).willReturn(SOME_NEW_TOKEN_HASH);
 
         // when
-        var result = refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN);
+        var result = refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN, "127.0.0.1", "TestAgent");
 
         // then
         assertThat(result)
@@ -106,7 +106,7 @@ class RefreshTokenHandlerTest {
         given(refreshTokenRepository.findByHashForUpdate(SOME_TOKEN_HASH)).willReturn(Optional.empty());
 
         // when
-        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN));
+        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN, "127.0.0.1", "TestAgent"));
 
         // then
         assertThat(thrown)
@@ -126,7 +126,7 @@ class RefreshTokenHandlerTest {
                 .willReturn(Optional.of(revokedToken));
 
         // when
-        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN));
+        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN, "127.0.0.1", "TestAgent"));
 
         // then
         assertThat(thrown)
@@ -146,7 +146,7 @@ class RefreshTokenHandlerTest {
                 .willReturn(Optional.of(expiredToken));
 
         // when
-        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN));
+        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN, "127.0.0.1", "TestAgent"));
 
         // then
         assertThat(thrown)

@@ -5,6 +5,7 @@ import static com.stablepay.testutil.FxQuoteFixtures.SOME_RATE;
 import static com.stablepay.testutil.FxQuoteFixtures.SOME_TIMESTAMP;
 import static com.stablepay.testutil.FxQuoteFixtures.fxQuoteBuilder;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.controller.fx.mapper.FxRateApiMapper;
 import com.stablepay.application.dto.FxRateResponse;
 import com.stablepay.domain.fx.exception.UnsupportedCorridorException;
@@ -39,6 +41,9 @@ class FxRateControllerTest {
     @MockitoBean
     private FxRateApiMapper fxRateApiMapper;
 
+    @MockitoBean
+    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
+
     @Test
     @SneakyThrows
     void shouldReturnLiveFxRate() {
@@ -57,7 +62,7 @@ class FxRateControllerTest {
         given(fxRateApiMapper.toResponse(quote)).willReturn(response);
 
         // when / then
-        mockMvc.perform(get("/api/fx/USD-INR"))
+        mockMvc.perform(get("/api/fx/USD-INR").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rate").value(83.25))
                 .andExpect(jsonPath("$.source").value("open.er-api.com"));
@@ -82,7 +87,7 @@ class FxRateControllerTest {
         given(fxRateApiMapper.toResponse(quote)).willReturn(response);
 
         // when / then
-        mockMvc.perform(get("/api/fx/usd-inr"))
+        mockMvc.perform(get("/api/fx/usd-inr").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rate").value(84.50))
                 .andExpect(jsonPath("$.source").value("fallback"));
@@ -96,7 +101,7 @@ class FxRateControllerTest {
                 .willThrow(UnsupportedCorridorException.forPair("EUR", "INR"));
 
         // when / then
-        mockMvc.perform(get("/api/fx/EUR-INR"))
+        mockMvc.perform(get("/api/fx/EUR-INR").with(jwt()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("SP-0009"))
                 .andExpect(jsonPath("$.message").value("SP-0009: Unsupported corridor: EUR -> INR"));

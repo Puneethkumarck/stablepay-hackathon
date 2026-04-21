@@ -42,54 +42,60 @@ public class SocialLoginHandler {
     private final AuthTokenConfig authTokenConfig;
     private final Clock clock;
 
-    public LoginResult handle(String provider, String idToken) {
-        var now = Instant.now(clock);
-        var identity = socialIdentityVerifier.verify(provider, idToken);
+    public LoginResult handle(String provider, String idToken, String ip, String userAgent) {
+        try {
+            var now = Instant.now(clock);
+            var identity = socialIdentityVerifier.verify(provider, idToken);
 
-        var existingIdentity = socialIdentityRepository.findByProviderAndSubject(
-                identity.provider(), identity.subject());
+            var existingIdentity = socialIdentityRepository.findByProviderAndSubject(
+                    identity.provider(), identity.subject());
 
-        var newUser = existingIdentity.isEmpty();
-        var appUser = existingIdentity
-                .map(existing -> userRepository.findById(existing.userId())
-                        .orElseThrow(() -> UserNotFoundException.byId(existing.userId())))
-                .orElseGet(() -> {
-                    var user = AppUser.builder()
-                            .id(UUID.randomUUID())
-                            .email(identity.email())
-                            .createdAt(now)
-                            .build();
-                    var savedUser = userRepository.save(user);
-                    socialIdentityRepository.save(
-                            identity.toBuilder().userId(savedUser.id()).build());
-                    return savedUser;
-                });
+            var newUser = existingIdentity.isEmpty();
+            var appUser = existingIdentity
+                    .map(existing -> userRepository.findById(existing.userId())
+                            .orElseThrow(() -> UserNotFoundException.byId(existing.userId())))
+                    .orElseGet(() -> {
+                        var user = AppUser.builder()
+                                .id(UUID.randomUUID())
+                                .email(identity.email())
+                                .createdAt(now)
+                                .build();
+                        var savedUser = userRepository.save(user);
+                        socialIdentityRepository.save(
+                                identity.toBuilder().userId(savedUser.id()).build());
+                        return savedUser;
+                    });
 
-        var wallet = existingIdentity.isPresent()
-                ? walletRepository.findByUserId(appUser.id())
-                        .orElseThrow(() -> WalletNotFoundException.byUserId(appUser.id()))
-                : createWalletHandler.handle(appUser.id());
+            var wallet = existingIdentity.isPresent()
+                    ? walletRepository.findByUserId(appUser.id())
+                            .orElseThrow(() -> WalletNotFoundException.byUserId(appUser.id()))
+                    : createWalletHandler.handle(appUser.id());
 
-        var session = authTokenIssuer.issue(appUser.id());
-        var tokenHash = tokenHasher.hash(session.refreshToken());
+            var session = authTokenIssuer.issue(appUser.id());
+            var tokenHash = tokenHasher.hash(session.refreshToken());
 
-        refreshTokenRepository.revokeByUserId(appUser.id());
+            refreshTokenRepository.revokeByUserId(appUser.id());
 
-        var refreshToken = RefreshToken.builder()
-                .id(UUID.randomUUID())
-                .userId(appUser.id())
-                .tokenHash(tokenHash)
-                .expiresAt(now.plus(authTokenConfig.refreshTtl()))
-                .build();
-        refreshTokenRepository.save(refreshToken);
+            var refreshToken = RefreshToken.builder()
+                    .id(UUID.randomUUID())
+                    .userId(appUser.id())
+                    .tokenHash(tokenHash)
+                    .expiresAt(now.plus(authTokenConfig.refreshTtl()))
+                    .build();
+            refreshTokenRepository.save(refreshToken);
 
-        log.info("Social login completed for userId={}, newUser={}", appUser.id(), newUser);
+            log.info("LOGIN_SUCCESS userId={} ip={} userAgent={}", appUser.id(), ip, userAgent);
 
-        return LoginResult.builder()
-                .session(session)
-                .user(appUser)
-                .wallet(wallet)
-                .newUser(newUser)
-                .build();
+            return LoginResult.builder()
+                    .session(session)
+                    .user(appUser)
+                    .wallet(wallet)
+                    .newUser(newUser)
+                    .build();
+        } catch (RuntimeException ex) {
+            log.warn("LOGIN_FAILURE provider={} ip={} userAgent={} reason={}",
+                    provider, ip, userAgent, ex.getMessage());
+            throw ex;
+        }
     }
 }

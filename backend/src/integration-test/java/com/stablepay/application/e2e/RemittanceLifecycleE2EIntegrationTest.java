@@ -2,6 +2,7 @@ package com.stablepay.application.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -138,7 +139,7 @@ class RemittanceLifecycleE2EIntegrationTest {
     @SneakyThrows
     private void checkFxRate() {
         // when / then
-        mockMvc.perform(get("/api/fx/USD-INR"))
+        mockMvc.perform(get("/api/fx/USD-INR").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rate").isNumber())
                 .andExpect(jsonPath("$.source").isString())
@@ -159,6 +160,7 @@ class RemittanceLifecycleE2EIntegrationTest {
 
         // when
         var result = mockMvc.perform(post("/api/remittances")
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
@@ -184,7 +186,7 @@ class RemittanceLifecycleE2EIntegrationTest {
     @SneakyThrows
     private void getRemittance(String remittanceId, String expectedStatus) {
         // when / then
-        mockMvc.perform(get("/api/remittances/{remittanceId}", remittanceId))
+        mockMvc.perform(get("/api/remittances/{remittanceId}", remittanceId).with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remittanceId").value(remittanceId))
                 .andExpect(jsonPath("$.status").value(expectedStatus));
@@ -221,6 +223,7 @@ class RemittanceLifecycleE2EIntegrationTest {
     private void listRemittances() {
         // when / then
         mockMvc.perform(get("/api/remittances")
+                        .with(jwt())
                         .param("senderId", E2E_USER_ID.toString())
                         .param("page", "0")
                         .param("size", "20"))

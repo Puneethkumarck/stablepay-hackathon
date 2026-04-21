@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.domain.funding.exception.InvalidWebhookSignatureException;
 import com.stablepay.domain.funding.handler.CompleteFundingHandler;
 import com.stablepay.domain.funding.handler.FailFundingHandler;
@@ -45,6 +46,9 @@ class StripeWebhookControllerTest {
 
     @MockitoBean
     private FailFundingHandler failFundingHandler;
+
+    @MockitoBean
+    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
 
     @Test
     @SneakyThrows

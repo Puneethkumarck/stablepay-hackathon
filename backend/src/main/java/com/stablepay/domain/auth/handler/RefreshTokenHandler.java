@@ -31,7 +31,7 @@ public class RefreshTokenHandler {
     private final AuthTokenConfig authTokenConfig;
     private final Clock clock;
 
-    public AuthSession handle(String rawRefreshToken) {
+    public AuthSession handle(String rawRefreshToken, String ip, String userAgent) {
         var now = Instant.now(clock);
         var tokenHash = tokenHasher.hash(rawRefreshToken);
 
@@ -59,7 +59,7 @@ public class RefreshTokenHandler {
                 .build();
         refreshTokenRepository.save(newRefreshToken);
 
-        log.info("Refresh token rotated for userId={}", token.userId());
+        log.info("REFRESH userId={} ip={} userAgent={}", token.userId(), ip, userAgent);
 
         return newSession;
     }
