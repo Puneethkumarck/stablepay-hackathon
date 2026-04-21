@@ -10,7 +10,7 @@ import com.stablepay.domain.claim.model.ClaimDetails;
 public interface ClaimApiMapper {
 
     @Mapping(source = "remittance.remittanceId", target = "remittanceId")
-    @Mapping(source = "remittance.senderId", target = "senderId")
+    @Mapping(source = "senderDisplayName", target = "senderDisplayName")
     @Mapping(source = "remittance.amountUsdc", target = "amountUsdc")
     @Mapping(source = "remittance.amountInr", target = "amountInr")
     @Mapping(source = "remittance.fxRate", target = "fxRate")

@@ -9,7 +9,8 @@ import lombok.Builder;
 @Builder(toBuilder = true)
 public record ClaimDetails(
     ClaimToken claimToken,
-    Remittance remittance
+    Remittance remittance,
+    String senderDisplayName
 ) {
     public ClaimDetails {
         requireNonNull(claimToken, "claimToken cannot be null");

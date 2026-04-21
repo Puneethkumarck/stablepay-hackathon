@@ -1,6 +1,7 @@
 package com.stablepay.domain.funding.handler;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -33,8 +34,11 @@ public class InitiateFundingHandler {
     private final PaymentGateway paymentGateway;
     private final FundingOrderWriter fundingOrderWriter;
 
-    public FundingInitiationResult handle(Long walletId, BigDecimal amount) {
-        if (!walletRepository.existsById(walletId)) {
+    public FundingInitiationResult handle(Long walletId, BigDecimal amount, UUID authenticatedUserId) {
+        var wallet = walletRepository.findById(walletId)
+                .orElseThrow(() -> WalletNotFoundException.byId(walletId));
+
+        if (!wallet.userId().equals(authenticatedUserId)) {
             throw WalletNotFoundException.byId(walletId);
         }
 

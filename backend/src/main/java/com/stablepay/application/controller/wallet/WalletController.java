@@ -3,6 +3,8 @@ package com.stablepay.application.controller.wallet;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +15,9 @@ import com.stablepay.application.controller.wallet.mapper.WalletApiMapper;
 import com.stablepay.application.dto.CreateWalletRequest;
 import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.application.dto.WalletResponse;
+import com.stablepay.domain.auth.model.AuthPrincipal;
 import com.stablepay.domain.wallet.handler.CreateWalletHandler;
+import com.stablepay.domain.wallet.handler.GetWalletQueryHandler;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class WalletController {
 
     private final CreateWalletHandler createWalletHandler;
+    private final GetWalletQueryHandler getWalletQueryHandler;
     private final WalletApiMapper walletApiMapper;
 
     @PostMapping
@@ -44,6 +49,18 @@ public class WalletController {
     })
     public WalletResponse createWallet(@Valid @RequestBody CreateWalletRequest request) {
         var wallet = createWalletHandler.handle(request.userId());
+        return walletApiMapper.toResponse(wallet);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Get my wallet", description = "Returns the authenticated user's wallet")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Wallet found"),
+        @ApiResponse(responseCode = "404", description = "Wallet not found",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public WalletResponse getMyWallet(@AuthenticationPrincipal AuthPrincipal principal) {
+        var wallet = getWalletQueryHandler.handle(principal.id());
         return walletApiMapper.toResponse(wallet);
     }
 }

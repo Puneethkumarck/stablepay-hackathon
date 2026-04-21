@@ -1,5 +1,6 @@
 package com.stablepay.application.controller.claim;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_SENDER_DISPLAY_NAME;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_TOKEN;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_UPI_ID;
 import static com.stablepay.testutil.ClaimTokenFixtures.claimTokenBuilder;
@@ -7,7 +8,6 @@ import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_FX_RATE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
-import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -37,11 +37,12 @@ import com.stablepay.domain.claim.model.ClaimDetails;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.testutil.TestClockConfig;
+import com.stablepay.testutil.TestSecurityConfig;
 
 import lombok.SneakyThrows;
 
 @WebMvcTest(ClaimController.class)
-@Import(TestClockConfig.class)
+@Import({TestClockConfig.class, TestSecurityConfig.class})
 class ClaimControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -70,11 +71,12 @@ class ClaimControllerTest {
         var claimDetails = ClaimDetails.builder()
                 .claimToken(claimToken)
                 .remittance(remittance)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .build();
 
         var response = ClaimResponse.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
-                .senderId(SOME_SENDER_ID)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .amountInr(SOME_AMOUNT_INR)
                 .fxRate(SOME_FX_RATE)
@@ -89,7 +91,7 @@ class ClaimControllerTest {
         mockMvc.perform(get("/api/claims/{token}", SOME_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remittanceId").value(SOME_REMITTANCE_ID.toString()))
-                .andExpect(jsonPath("$.senderId").value(SOME_SENDER_ID.toString()))
+                .andExpect(jsonPath("$.senderDisplayName").value(SOME_SENDER_DISPLAY_NAME))
                 .andExpect(jsonPath("$.claimed").value(false));
     }
 
@@ -102,11 +104,12 @@ class ClaimControllerTest {
         var claimDetails = ClaimDetails.builder()
                 .claimToken(claimToken)
                 .remittance(remittance)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .build();
 
         var response = ClaimResponse.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
-                .senderId(SOME_SENDER_ID)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .amountInr(SOME_AMOUNT_INR)
                 .fxRate(SOME_FX_RATE)

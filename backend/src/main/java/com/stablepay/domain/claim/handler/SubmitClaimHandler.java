@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
@@ -29,6 +30,7 @@ public class SubmitClaimHandler {
     private final ClaimTokenRepository claimTokenRepository;
     private final RemittanceRepository remittanceRepository;
     private final Optional<RemittanceClaimSignaler> claimSignaler;
+    private final UserRepository userRepository;
 
     public ClaimDetails handle(String token, String upiId) {
         var claimToken = claimTokenRepository.findByToken(token)
@@ -61,9 +63,14 @@ public class SubmitClaimHandler {
         claimSignaler.ifPresent(signaler ->
                 signaler.signalClaim(claimToken.remittanceId(), token, upiId));
 
+        var senderDisplayName = userRepository.findById(remittance.senderId())
+                .map(user -> user.email().split("@")[0])
+                .orElse("Unknown");
+
         return ClaimDetails.builder()
                 .claimToken(savedClaim)
                 .remittance(remittance)
+                .senderDisplayName(senderDisplayName)
                 .build();
     }
 }

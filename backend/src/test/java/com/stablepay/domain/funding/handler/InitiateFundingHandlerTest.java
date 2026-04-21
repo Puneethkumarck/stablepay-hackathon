@@ -1,15 +1,20 @@
 package com.stablepay.domain.funding.handler;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_OTHER_USER_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_STRIPE_PAYMENT_INTENT_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_WALLET_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.fundingOrderBuilder;
+import static com.stablepay.testutil.WalletFixtures.SOME_USER_ID;
+import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
+
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,7 +61,8 @@ class InitiateFundingHandlerTest {
 
     @Test
     void shouldCommitPendingOrderBeforeStripeCallAndAttachPaymentIntentAfter() {
-        // given — the writer commits each save in its own REQUIRES_NEW tx.
+        // given
+        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
         var pending = fundingOrderBuilder()
                 .stripePaymentIntentId(null)
                 .build();
@@ -64,7 +70,7 @@ class InitiateFundingHandlerTest {
                 .stripePaymentIntentId(SOME_STRIPE_PAYMENT_INTENT_ID)
                 .build();
 
-        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(true);
+        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
         given(fundingOrderWriter.savePending(SOME_WALLET_ID, SOME_AMOUNT_USDC)).willReturn(pending);
         given(paymentGateway.initiatePayment(paymentRequestCaptor.capture()))
                 .willReturn(PaymentResult.builder()
@@ -76,11 +82,9 @@ class InitiateFundingHandlerTest {
                 .willReturn(withIntent);
 
         // when
-        var result = initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC);
+        var result = initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC, SOME_USER_ID);
 
-        // then — pending row committed before Stripe is called; payment-intent
-        // attached after Stripe returns. Webhook handler is guaranteed to find
-        // the row regardless of arrival order.
+        // then
         InOrder inOrder = Mockito.inOrder(fundingOrderWriter, paymentGateway);
         inOrder.verify(fundingOrderWriter).savePending(SOME_WALLET_ID, SOME_AMOUNT_USDC);
         inOrder.verify(paymentGateway).initiatePayment(Mockito.any(PaymentRequest.class));
@@ -107,10 +111,25 @@ class InitiateFundingHandlerTest {
     @Test
     void shouldThrowWhenWalletNotFound() {
         // given
-        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(false);
+        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.empty());
 
         // when / then
-        assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC))
+        assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC, SOME_USER_ID))
+                .isInstanceOf(WalletNotFoundException.class)
+                .hasMessageContaining("SP-0006");
+
+        then(fundingOrderWriter).shouldHaveNoInteractions();
+        then(paymentGateway).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void shouldThrowWhenWalletBelongsToDifferentUser() {
+        // given
+        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
+        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
+
+        // when / then
+        assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC, SOME_OTHER_USER_ID))
                 .isInstanceOf(WalletNotFoundException.class)
                 .hasMessageContaining("SP-0006");
 
@@ -120,13 +139,14 @@ class InitiateFundingHandlerTest {
 
     @Test
     void shouldNotCallStripeWhenWriterRejectsConcurrentFunding() {
-        // given — partial unique index translates to FundingAlreadyInProgress in the writer.
-        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(true);
+        // given
+        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
+        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
         willThrow(FundingAlreadyInProgressException.forWallet(SOME_WALLET_ID))
                 .given(fundingOrderWriter).savePending(SOME_WALLET_ID, SOME_AMOUNT_USDC);
 
         // when / then
-        assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC))
+        assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC, SOME_USER_ID))
                 .isInstanceOf(FundingAlreadyInProgressException.class)
                 .hasMessageContaining("SP-0022");
 
@@ -138,17 +158,18 @@ class InitiateFundingHandlerTest {
     @Test
     void shouldMarkOrderFailedAndPropagateWhenStripeRejects() {
         // given
+        var wallet = walletBuilder().id(SOME_WALLET_ID).build();
         var pending = fundingOrderBuilder()
                 .stripePaymentIntentId(null)
                 .build();
 
-        given(walletRepository.existsById(SOME_WALLET_ID)).willReturn(true);
+        given(walletRepository.findById(SOME_WALLET_ID)).willReturn(Optional.of(wallet));
         given(fundingOrderWriter.savePending(SOME_WALLET_ID, SOME_AMOUNT_USDC)).willReturn(pending);
         willThrow(FundingFailedException.stripeError("card_declined", new RuntimeException("boom")))
                 .given(paymentGateway).initiatePayment(paymentRequestCaptor.capture());
 
         // when / then
-        assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC))
+        assertThatThrownBy(() -> initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC, SOME_USER_ID))
                 .isInstanceOf(FundingFailedException.class)
                 .hasMessageContaining("SP-0021");
 

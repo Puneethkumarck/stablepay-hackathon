@@ -35,7 +35,6 @@ class ClaimApiMapperTest {
         // then
         var expected = ClaimResponse.builder()
                 .remittanceId(remittance.remittanceId())
-                .senderId(remittance.senderId())
                 .amountUsdc(remittance.amountUsdc())
                 .amountInr(remittance.amountInr())
                 .fxRate(remittance.fxRate())
