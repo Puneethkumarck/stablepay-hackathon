@@ -30,6 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.stablepay.domain.auth.exception.EmailNotVerifiedException;
+import com.stablepay.domain.auth.exception.InvalidIdTokenException;
+import com.stablepay.domain.auth.exception.InvalidRefreshTokenException;
+import com.stablepay.domain.auth.exception.RefreshTokenExpiredException;
+import com.stablepay.domain.auth.exception.UnsupportedAuthProviderException;
 import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
@@ -67,6 +72,32 @@ class GlobalExceptionHandlerTest {
 
     @RestController
     static class StubController {
+
+        @GetMapping("/test/invalid-id-token")
+        public void invalidIdToken() {
+            throw InvalidIdTokenException.of("bad signature");
+        }
+
+        @GetMapping("/test/email-not-verified")
+        public void emailNotVerified() {
+            throw EmailNotVerifiedException.forEmail("user@example.com");
+        }
+
+        @GetMapping("/test/unsupported-auth-provider")
+        public void unsupportedAuthProvider() {
+            throw UnsupportedAuthProviderException.forProvider("facebook");
+        }
+
+        @GetMapping("/test/invalid-refresh-token")
+        public void invalidRefreshToken() {
+            throw InvalidRefreshTokenException.of("not found");
+        }
+
+        @GetMapping("/test/refresh-token-expired")
+        public void refreshTokenExpired() {
+            throw RefreshTokenExpiredException.forToken(
+                    UUID.fromString("00000000-0000-0000-0000-000000000099"));
+        }
 
         @GetMapping("/test/wallet-not-found")
         public void walletNotFound() {
@@ -143,6 +174,77 @@ class GlobalExceptionHandlerTest {
         }
 
         record ValidationRequest(@NotBlank String name) {}
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WithEnrichedResponseForInvalidIdToken() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/test/invalid-id-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0032"))
+                .andExpect(jsonPath("$.message").value("SP-0032: Invalid ID token: bad signature"))
+                .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
+                .andExpect(jsonPath("$.path").value("/test/invalid-id-token"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WithEnrichedResponseForEmailNotVerified() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/test/email-not-verified"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0033"))
+                .andExpect(jsonPath("$.message").value("SP-0033: Email not verified"))
+                .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
+                .andExpect(jsonPath("$.path").value("/test/email-not-verified"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn400WithEnrichedResponseForUnsupportedAuthProvider() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/test/unsupported-auth-provider"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("SP-0034"))
+                .andExpect(jsonPath("$.message").value("SP-0034: Unsupported auth provider: facebook"))
+                .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
+                .andExpect(jsonPath("$.path").value("/test/unsupported-auth-provider"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WithEnrichedResponseForInvalidRefreshToken() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/test/invalid-refresh-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0035"))
+                .andExpect(jsonPath("$.message").value("SP-0035: Invalid refresh token: not found"))
+                .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
+                .andExpect(jsonPath("$.path").value("/test/invalid-refresh-token"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WithEnrichedResponseForRefreshTokenExpired() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/test/refresh-token-expired"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0036"))
+                .andExpect(jsonPath("$.message").value(
+                        "SP-0036: Refresh token expired: 00000000-0000-0000-0000-000000000099"))
+                .andExpect(jsonPath("$.timestamp").value(FIXED_INSTANT.toString()))
+                .andExpect(jsonPath("$.path").value("/test/refresh-token-expired"));
     }
 
     @Test

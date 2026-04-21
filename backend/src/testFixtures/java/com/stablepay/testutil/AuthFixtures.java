@@ -6,9 +6,11 @@ import java.util.UUID;
 
 import com.stablepay.domain.auth.model.AppUser;
 import com.stablepay.domain.auth.model.AuthSession;
+import com.stablepay.domain.auth.model.LoginResult;
 import com.stablepay.domain.auth.model.RefreshToken;
 import com.stablepay.domain.auth.model.SocialIdentity;
 import com.stablepay.domain.auth.port.UserRepository;
+import com.stablepay.domain.wallet.model.Wallet;
 
 public final class AuthFixtures {
 
@@ -65,6 +67,14 @@ public final class AuthFixtures {
                 .accessToken(SOME_ACCESS_TOKEN)
                 .refreshToken(SOME_RAW_REFRESH_TOKEN)
                 .accessExpiresAt(SOME_ACCESS_EXPIRES_AT);
+    }
+
+    public static LoginResult.LoginResultBuilder loginResultBuilder(Wallet wallet) {
+        return LoginResult.builder()
+                .session(authSessionBuilder().build())
+                .user(appUserBuilder().build())
+                .wallet(wallet)
+                .newUser(true);
     }
 
     public static UUID createTestUser(UserRepository userRepository) {
