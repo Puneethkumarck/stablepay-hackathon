@@ -95,4 +95,36 @@ class GoogleIdTokenVerifierAdapterTest {
         assertThatThrownBy(() -> adapter.verify("apple", SOME_ID_TOKEN))
                 .isInstanceOf(UnsupportedAuthProviderException.class);
     }
+
+    @Test
+    void shouldThrowInvalidIdTokenExceptionWhenSubClaimIsMissing() {
+        // given
+        var jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("email", SOME_SOCIAL_EMAIL)
+                .claim("email_verified", true)
+                .build();
+        given(googleJwtDecoder.decode(SOME_ID_TOKEN)).willReturn(jwt);
+
+        // when
+        // then
+        assertThatThrownBy(() -> adapter.verify(SOME_PROVIDER, SOME_ID_TOKEN))
+                .isInstanceOf(InvalidIdTokenException.class);
+    }
+
+    @Test
+    void shouldThrowInvalidIdTokenExceptionWhenEmailClaimIsMissing() {
+        // given
+        var jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("sub", SOME_SUBJECT)
+                .claim("email_verified", true)
+                .build();
+        given(googleJwtDecoder.decode(SOME_ID_TOKEN)).willReturn(jwt);
+
+        // when
+        // then
+        assertThatThrownBy(() -> adapter.verify(SOME_PROVIDER, SOME_ID_TOKEN))
+                .isInstanceOf(InvalidIdTokenException.class);
+    }
 }

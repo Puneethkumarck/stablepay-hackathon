@@ -35,6 +35,11 @@ public class GoogleIdTokenVerifierAdapter implements SocialIdentityVerifier {
             var jwt = googleJwtDecoder.decode(idToken);
             var sub = jwt.getClaimAsString("sub");
             var email = jwt.getClaimAsString("email");
+
+            if (sub == null || email == null) {
+                throw InvalidIdTokenException.of("Missing required claims: sub or email");
+            }
+
             var emailVerified = Boolean.TRUE.equals(jwt.getClaim("email_verified"));
 
             if (!emailVerified) {
