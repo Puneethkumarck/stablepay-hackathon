@@ -170,7 +170,7 @@ dependencies {
     compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 
     // Resilience4j
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.4.0")
 
     // Database
     runtimeOnly("org.postgresql:postgresql")
