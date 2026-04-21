@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.auth.exception.UserNotFoundException;
 import com.stablepay.domain.auth.model.AppUser;
 import com.stablepay.domain.auth.model.AuthTokenConfig;
 import com.stablepay.domain.auth.model.LoginResult;
@@ -17,6 +18,7 @@ import com.stablepay.domain.auth.port.SocialIdentityRepository;
 import com.stablepay.domain.auth.port.SocialIdentityVerifier;
 import com.stablepay.domain.auth.port.TokenHasher;
 import com.stablepay.domain.auth.port.UserRepository;
+import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 import com.stablepay.domain.wallet.handler.CreateWalletHandler;
 import com.stablepay.domain.wallet.port.WalletRepository;
 
@@ -41,6 +43,7 @@ public class SocialLoginHandler {
     private final Clock clock;
 
     public LoginResult handle(String provider, String idToken) {
+        var now = Instant.now(clock);
         var identity = socialIdentityVerifier.verify(provider, idToken);
 
         var existingIdentity = socialIdentityRepository.findByProviderAndSubject(
@@ -48,12 +51,13 @@ public class SocialLoginHandler {
 
         var newUser = existingIdentity.isEmpty();
         var appUser = existingIdentity
-                .map(existing -> userRepository.findById(existing.userId()).orElseThrow())
+                .map(existing -> userRepository.findById(existing.userId())
+                        .orElseThrow(() -> UserNotFoundException.byId(existing.userId())))
                 .orElseGet(() -> {
                     var user = AppUser.builder()
                             .id(UUID.randomUUID())
                             .email(identity.email())
-                            .createdAt(Instant.now(clock))
+                            .createdAt(now)
                             .build();
                     var savedUser = userRepository.save(user);
                     socialIdentityRepository.save(
@@ -62,7 +66,8 @@ public class SocialLoginHandler {
                 });
 
         var wallet = existingIdentity.isPresent()
-                ? walletRepository.findByUserId(appUser.id()).orElseThrow()
+                ? walletRepository.findByUserId(appUser.id())
+                        .orElseThrow(() -> WalletNotFoundException.byUserId(appUser.id()))
                 : createWalletHandler.handle(appUser.id());
 
         var session = authTokenIssuer.issue(appUser.id());
@@ -72,7 +77,7 @@ public class SocialLoginHandler {
                 .id(UUID.randomUUID())
                 .userId(appUser.id())
                 .tokenHash(tokenHash)
-                .expiresAt(Instant.now(clock).plus(authTokenConfig.refreshTtl()))
+                .expiresAt(now.plus(authTokenConfig.refreshTtl()))
                 .build();
         refreshTokenRepository.save(refreshToken);
 
