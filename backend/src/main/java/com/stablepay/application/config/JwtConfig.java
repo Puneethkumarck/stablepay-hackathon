@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -16,7 +17,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -32,6 +33,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @EnableConfigurationProperties({JwtProperties.class, GoogleAuthProps.class})
 public class JwtConfig {
+
+    private static final String GOOGLE_JWKS_URI = "https://www.googleapis.com/oauth2/v3/certs";
+    private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final Set<String> GOOGLE_ISSUERS =
+            Set.of("https://accounts.google.com", "accounts.google.com");
 
     private final JwtProperties jwtProperties;
     private final GoogleAuthProps googleAuthProps;
@@ -60,11 +66,11 @@ public class JwtConfig {
     @Bean("googleJwtDecoder")
     public JwtDecoder googleJwtDecoder() {
         var decoder = NimbusJwtDecoder
-                .withJwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
+                .withJwkSetUri(GOOGLE_JWKS_URI)
                 .build();
 
         OAuth2TokenValidator<Jwt> issuerValidator =
-                JwtValidators.createDefaultWithIssuer("https://accounts.google.com");
+                new JwtClaimValidator<String>(JwtClaimNames.ISS, GOOGLE_ISSUERS::contains);
 
         OAuth2TokenValidator<Jwt> audienceValidator =
                 new JwtClaimValidator<Collection<String>>(JwtClaimNames.AUD,
@@ -73,7 +79,8 @@ public class JwtConfig {
                             return googleAuthProps.clientIds().stream().anyMatch(audiences::contains);
                         });
 
-        var compositeValidator = new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator);
+        var compositeValidator = new DelegatingOAuth2TokenValidator<>(
+                new JwtTimestampValidator(), issuerValidator, audienceValidator);
         decoder.setJwtValidator(compositeValidator);
 
         return decoder;
@@ -81,6 +88,6 @@ public class JwtConfig {
 
     private SecretKeySpec hmacKey() {
         return new SecretKeySpec(
-                jwtProperties.secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+                jwtProperties.secret().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM);
     }
 }

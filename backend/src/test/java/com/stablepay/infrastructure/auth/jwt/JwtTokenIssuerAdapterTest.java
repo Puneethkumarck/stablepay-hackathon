@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.Map;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +20,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.stablepay.domain.auth.model.AuthSession;
 import com.stablepay.domain.auth.model.AuthTokenConfig;
 
 class JwtTokenIssuerAdapterTest {
@@ -53,20 +53,24 @@ class JwtTokenIssuerAdapterTest {
     }
 
     @Test
-    void shouldIssueValidAccessTokenWithCorrectClaims() {
+    void shouldIssueValidAuthSessionWithCorrectClaimsAndExpiry() {
         // given
-        var expectedClaims = Map.of(
-                "sub", (Object) SOME_AUTH_USER_ID.toString(),
-                "iat", FIXED_NOW,
-                "exp", FIXED_NOW.plus(SOME_ACCESS_TTL));
+        var expectedExpiresAt = FIXED_NOW.plus(SOME_ACCESS_TTL);
 
         // when
         var result = adapter.issue(SOME_AUTH_USER_ID);
 
         // then
         var decoded = decoder.decode(result.accessToken());
-        assertThat(decoded.getClaims())
-                .containsExactlyInAnyOrderEntriesOf(expectedClaims);
+        var expected = AuthSession.builder()
+                .accessToken(result.accessToken())
+                .refreshToken(result.refreshToken())
+                .accessExpiresAt(expectedExpiresAt)
+                .build();
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
+        assertThat(decoded.getSubject()).isEqualTo(SOME_AUTH_USER_ID.toString());
+        assertThat(decoded.getIssuedAt()).isEqualTo(FIXED_NOW);
+        assertThat(decoded.getExpiresAt()).isEqualTo(expectedExpiresAt);
     }
 
     @Test
@@ -77,18 +81,6 @@ class JwtTokenIssuerAdapterTest {
         var result = adapter.issue(SOME_AUTH_USER_ID);
 
         // then
-        assertThat(result.refreshToken()).startsWith("r1_");
-    }
-
-    @Test
-    void shouldSetAccessExpiresAtToNowPlusTtl() {
-        // given
-        var expectedExpiresAt = FIXED_NOW.plus(SOME_ACCESS_TTL);
-
-        // when
-        var result = adapter.issue(SOME_AUTH_USER_ID);
-
-        // then
-        assertThat(result.accessExpiresAt()).isEqualTo(expectedExpiresAt);
+        assertThat(result.refreshToken()).matches("r1_.*");
     }
 }

@@ -11,19 +11,18 @@ import com.stablepay.domain.auth.exception.UnsupportedAuthProviderException;
 import com.stablepay.domain.auth.model.SocialIdentity;
 import com.stablepay.domain.auth.port.SocialIdentityVerifier;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class GoogleIdTokenVerifierAdapter implements SocialIdentityVerifier {
 
     private static final String GOOGLE_PROVIDER = "google";
 
+    @Qualifier("googleJwtDecoder")
     private final JwtDecoder googleJwtDecoder;
-
-    public GoogleIdTokenVerifierAdapter(@Qualifier("googleJwtDecoder") JwtDecoder googleJwtDecoder) {
-        this.googleJwtDecoder = googleJwtDecoder;
-    }
 
     @Override
     public SocialIdentity verify(String provider, String idToken) {
@@ -53,7 +52,7 @@ public class GoogleIdTokenVerifierAdapter implements SocialIdentityVerifier {
                     .emailVerified(emailVerified)
                     .build();
         } catch (JwtException e) {
-            throw InvalidIdTokenException.of(e.getMessage());
+            throw InvalidIdTokenException.of(e.getMessage(), e);
         }
     }
 }
