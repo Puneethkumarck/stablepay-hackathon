@@ -195,6 +195,7 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:1.18.44")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-webmvc-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
     testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("org.testcontainers:postgresql:1.21.4")
@@ -202,5 +203,6 @@ dependencies {
 
     // Integration test dependencies
     "integrationTestImplementation"(testFixtures(project))
+    "integrationTestImplementation"("org.springframework.security:spring-security-test")
     "integrationTestImplementation"("org.wiremock:wiremock-standalone:3.13.2")
 }

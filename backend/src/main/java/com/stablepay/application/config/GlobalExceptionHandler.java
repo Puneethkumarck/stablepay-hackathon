@@ -14,6 +14,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.stablepay.application.dto.ErrorResponse;
+import com.stablepay.domain.auth.exception.EmailNotVerifiedException;
+import com.stablepay.domain.auth.exception.InvalidIdTokenException;
+import com.stablepay.domain.auth.exception.InvalidRefreshTokenException;
+import com.stablepay.domain.auth.exception.RefreshTokenExpiredException;
+import com.stablepay.domain.auth.exception.UnsupportedAuthProviderException;
 import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
@@ -45,6 +50,46 @@ public class GlobalExceptionHandler {
             "idx_funding_orders_one_active_per_wallet";
 
     private final Clock clock;
+
+    @ExceptionHandler(InvalidIdTokenException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleInvalidIdToken(
+            InvalidIdTokenException ex, HttpServletRequest request) {
+        log.warn("Invalid ID token: {}", ex.getMessage());
+        return buildResponse("SP-0032", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleEmailNotVerified(
+            EmailNotVerifiedException ex, HttpServletRequest request) {
+        log.warn("Email not verified: {}", ex.getMessage());
+        return buildResponse("SP-0033", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UnsupportedAuthProviderException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleUnsupportedAuthProvider(
+            UnsupportedAuthProviderException ex, HttpServletRequest request) {
+        log.warn("Unsupported auth provider: {}", ex.getMessage());
+        return buildResponse("SP-0034", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleInvalidRefreshToken(
+            InvalidRefreshTokenException ex, HttpServletRequest request) {
+        log.warn("Invalid refresh token: {}", ex.getMessage());
+        return buildResponse("SP-0035", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(RefreshTokenExpiredException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleRefreshTokenExpired(
+            RefreshTokenExpiredException ex, HttpServletRequest request) {
+        log.warn("Refresh token expired: {}", ex.getMessage());
+        return buildResponse("SP-0036", ex.getMessage(), request);
+    }
 
     @ExceptionHandler(WalletNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
