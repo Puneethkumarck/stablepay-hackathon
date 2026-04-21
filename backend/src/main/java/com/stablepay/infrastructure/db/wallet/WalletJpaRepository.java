@@ -1,6 +1,7 @@
 package com.stablepay.infrastructure.db.wallet;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
@@ -15,7 +16,7 @@ interface WalletJpaRepository extends JpaRepository<WalletEntity, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "4000")})
-    Optional<WalletEntity> findByUserId(String userId);
+    Optional<WalletEntity> findByUserId(UUID userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "4000")})

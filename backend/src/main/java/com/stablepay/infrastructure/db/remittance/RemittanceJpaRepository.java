@@ -9,5 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface RemittanceJpaRepository extends JpaRepository<RemittanceEntity, Long> {
     Optional<RemittanceEntity> findByRemittanceId(UUID remittanceId);
-    Page<RemittanceEntity> findBySenderId(String senderId, Pageable pageable);
+    Page<RemittanceEntity> findBySenderId(UUID senderId, Pageable pageable);
 }

@@ -1,6 +1,7 @@
 package com.stablepay.domain.wallet.handler;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,7 @@ public class CreateWalletHandler {
     private final WalletRepository walletRepository;
     private final MpcWalletClient mpcWalletClient;
 
-    public Wallet handle(String userId) {
+    public Wallet handle(UUID userId) {
         walletRepository.findByUserId(userId).ifPresent(existing -> {
             throw WalletAlreadyExistsException.forUserId(userId);
         });

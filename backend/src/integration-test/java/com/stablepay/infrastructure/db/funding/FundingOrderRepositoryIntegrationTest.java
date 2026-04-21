@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
@@ -34,12 +36,17 @@ class FundingOrderRepositoryIntegrationTest {
     private WalletRepository walletRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     private Long createWalletAndReturnId() {
         var unique = String.valueOf(System.nanoTime());
+        var userId = UUID.randomUUID();
+        userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
         var wallet = Wallet.builder()
-                .userId("funding-user-" + unique)
+                .userId(userId)
                 .solanaAddress("funding-addr-" + unique)
                 .publicKey(new byte[]{1})
                 .keyShareData(new byte[]{2})

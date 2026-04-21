@@ -186,3 +186,26 @@
 - Lock timeout (4s) bounds worst-case wait, preventing thread starvation.
 - `READ_COMMITTED` isolation is sufficient when combined with pessimistic locks.
 **Consequences:** Wallet reads that precede updates will block concurrent transactions. Acceptable for a single-corridor remittance system. Future sorted-lock-acquisition pattern may be needed if multi-wallet transfers are introduced.
+
+## ADR-022: Authentication & Authorization Strategy
+
+**Status:** Accepted
+**Context:** StablePay endpoints are currently unauthenticated — any caller can create wallets, send remittances, and view any user's data. Before the hackathon demo, we need to tie API access to a verified Google identity while keeping claim pages (recipient-facing) public and token-scoped.
+**Decision:** Google Social Login via OAuth2 + HS256 app-issued JWTs + opaque refresh token rotation.
+
+**Token architecture:**
+- Access token: HS256 JWT signed with `JWT_SECRET` env var, 15-minute TTL, minimal claims (`sub=userId UUID`, `iat`, `exp`). Verified by Spring OAuth2 Resource Server filter chain (`NimbusJwtDecoder.withSecretKey`).
+- Refresh token: 32-byte cryptographically random, prefixed `r1_`, SHA-256 hashed in DB. 30-day TTL. Rotated on use (old revoked, new issued). Single active chain per user.
+- Google idToken verification: the domain handler depends on an `IdTokenVerifier` port. The infrastructure adapter verifies Google tokens with `NimbusJwtDecoder.withJwkSetUri` against Google JWKS. This remains outside the resource-server filter chain.
+
+**Eager wallet provisioning:** First login provisions the MPC wallet via synchronous gRPC and persists the user + wallet in one database transaction after successful key generation. Because the MPC sidecar is an external system, this flow is not truly atomic across DB and MPC state; use idempotency keys/timeouts and reconcile orphaned sidecar keys if persistence fails. Temporal remains reserved for the remittance lifecycle (ADR-005).
+
+**Ownership model:** Controllers extract `@AuthenticationPrincipal AppUser(UUID id)` from JWT `sub` claim via `AppUserConverter`. Load-by-id handlers verify `resource.userId == authenticatedUser.id`. Return 404 (not 403) on mismatch to prevent user enumeration.
+
+**Rationale:**
+- HS256 over RS256: simpler for single-service hackathon. No JWKS endpoint to host. Secret rotation = env var change + rolling restart.
+- Refresh rotation: prevents token theft from being permanent. Single chain per user simplifies revocation.
+- Eager wallet: eliminates "user exists but wallet doesn't" partial state. Single roundtrip for the mobile app on first login.
+- 404 over 403: standard practice to prevent resource enumeration.
+
+**Consequences:** All authenticated endpoints depend on `JWT_SECRET` being set. Secret rotation invalidates all access tokens immediately; refresh tokens survive (re-issued on next `/refresh` call). Claim pages remain public and token-scoped (ADR-011 unchanged). No JWT denylist — access tokens valid until natural expiry (≤15 min) after logout.

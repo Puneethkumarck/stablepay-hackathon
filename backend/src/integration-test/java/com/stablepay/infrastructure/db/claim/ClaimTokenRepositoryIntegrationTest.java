@@ -3,7 +3,6 @@ package com.stablepay.infrastructure.db.claim;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_FX_RATE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_PHONE;
-import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -15,12 +14,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.claim.model.ClaimToken;
 import com.stablepay.domain.claim.port.ClaimTokenRepository;
 import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
 import com.stablepay.test.PgTest;
+import com.stablepay.testutil.AuthFixtures;
 
 @PgTest
 @Transactional
@@ -32,11 +33,15 @@ class ClaimTokenRepositoryIntegrationTest {
     @Autowired
     private RemittanceRepository remittanceRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private UUID createRemittanceAndReturnId() {
+        var senderId = AuthFixtures.createTestUser(userRepository);
         var remittanceId = UUID.randomUUID();
         var remittance = Remittance.builder()
                 .remittanceId(remittanceId)
-                .senderId(SOME_SENDER_ID)
+                .senderId(senderId)
                 .recipientPhone(SOME_RECIPIENT_PHONE)
                 .amountUsdc(SOME_AMOUNT_USDC)
                 .fxRate(SOME_FX_RATE)

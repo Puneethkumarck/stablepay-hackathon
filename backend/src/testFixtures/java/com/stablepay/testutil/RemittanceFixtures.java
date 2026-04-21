@@ -13,7 +13,7 @@ public final class RemittanceFixtures {
 
     public static final Long SOME_REMITTANCE_DB_ID = 1L;
     public static final UUID SOME_REMITTANCE_ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
-    public static final String SOME_SENDER_ID = "user-42";
+    public static final UUID SOME_SENDER_ID = UUID.fromString("00000000-0000-0000-0000-000000000042");
     public static final String SOME_RECIPIENT_PHONE = "+919876543210";
     public static final BigDecimal SOME_AMOUNT_USDC = BigDecimal.valueOf(100);
     public static final BigDecimal SOME_AMOUNT_INR = new BigDecimal("8325.00");

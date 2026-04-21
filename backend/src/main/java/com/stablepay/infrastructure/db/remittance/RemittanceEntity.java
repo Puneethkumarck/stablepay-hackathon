@@ -39,7 +39,7 @@ public class RemittanceEntity {
     private UUID remittanceId;
 
     @Column(name = "sender_id", nullable = false)
-    private String senderId;
+    private UUID senderId;
 
     @Column(name = "recipient_phone", nullable = false)
     private String recipientPhone;

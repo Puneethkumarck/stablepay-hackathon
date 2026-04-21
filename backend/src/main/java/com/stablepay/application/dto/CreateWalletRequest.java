@@ -1,10 +1,12 @@
 package com.stablepay.application.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import java.util.UUID;
+
+import jakarta.validation.constraints.NotNull;
 
 import lombok.Builder;
 
 @Builder(toBuilder = true)
 public record CreateWalletRequest(
-    @NotBlank String userId
+    @NotNull UUID userId
 ) {}

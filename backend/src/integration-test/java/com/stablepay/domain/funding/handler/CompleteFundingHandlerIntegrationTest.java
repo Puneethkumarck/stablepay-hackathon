@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.funding.model.FundingOrder;
 import com.stablepay.domain.funding.model.FundingStatus;
 import com.stablepay.domain.funding.port.FundingOrderRepository;
@@ -34,6 +36,9 @@ class CompleteFundingHandlerIntegrationTest {
     private FundingOrderRepository fundingOrderRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private TransactionTemplate transactionTemplate;
 
     private FundingOrder confirmedOrder;
@@ -42,8 +47,10 @@ class CompleteFundingHandlerIntegrationTest {
     void setUp() {
         var unique = String.valueOf(System.nanoTime());
         transactionTemplate.executeWithoutResult(status -> {
+            var userId = UUID.randomUUID();
+            userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
             var wallet = walletRepository.save(Wallet.builder()
-                    .userId("complete-user-" + unique)
+                    .userId(userId)
                     .solanaAddress("complete-addr-" + unique)
                     .publicKey(new byte[]{1})
                     .keyShareData(new byte[]{2})

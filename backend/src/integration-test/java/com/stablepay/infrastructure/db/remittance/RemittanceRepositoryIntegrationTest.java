@@ -4,7 +4,6 @@ import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_FX_RATE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_PHONE;
-import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
@@ -15,10 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
 import com.stablepay.test.PgTest;
+import com.stablepay.testutil.AuthFixtures;
 
 @PgTest
 @Transactional
@@ -27,7 +28,10 @@ class RemittanceRepositoryIntegrationTest {
     @Autowired
     private RemittanceRepository remittanceRepository;
 
-    private Remittance buildRemittance(UUID remittanceId, String senderId) {
+    @Autowired
+    private UserRepository userRepository;
+
+    private Remittance buildRemittance(UUID remittanceId, UUID senderId) {
         return Remittance.builder()
                 .remittanceId(remittanceId)
                 .senderId(senderId)
@@ -46,7 +50,8 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldSaveAndAssignId() {
             // given
-            var remittance = buildRemittance(UUID.randomUUID(), SOME_SENDER_ID);
+            var senderId = AuthFixtures.createTestUser(userRepository);
+            var remittance = buildRemittance(UUID.randomUUID(), senderId);
 
             // when
             var saved = remittanceRepository.save(remittance);
@@ -62,8 +67,9 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldPersistAllFieldsCorrectly() {
             // given
+            var senderId = AuthFixtures.createTestUser(userRepository);
             var remittanceId = UUID.randomUUID();
-            var remittance = buildRemittance(remittanceId, SOME_SENDER_ID)
+            var remittance = buildRemittance(remittanceId, senderId)
                     .toBuilder()
                     .escrowPda("EsCrOwPdA1234567890AbCdEfGh")
                     .claimTokenId("claim-token-123")
@@ -89,8 +95,9 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldFindRemittanceByUuid() {
             // given
+            var senderId = AuthFixtures.createTestUser(userRepository);
             var remittanceId = UUID.randomUUID();
-            var remittance = buildRemittance(remittanceId, SOME_SENDER_ID);
+            var remittance = buildRemittance(remittanceId, senderId);
             remittanceRepository.save(remittance);
 
             // when
@@ -99,7 +106,7 @@ class RemittanceRepositoryIntegrationTest {
             // then
             assertThat(found).isPresent();
             assertThat(found.get().remittanceId()).isEqualTo(remittanceId);
-            assertThat(found.get().senderId()).isEqualTo(SOME_SENDER_ID);
+            assertThat(found.get().senderId()).isEqualTo(senderId);
         }
 
         @Test
@@ -118,7 +125,7 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldReturnPagedResultsForSender() {
             // given
-            var senderId = "sender-" + System.nanoTime();
+            var senderId = AuthFixtures.createTestUser(userRepository);
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
@@ -136,7 +143,7 @@ class RemittanceRepositoryIntegrationTest {
         void shouldReturnEmptyPageWhenNoRemittancesForSender() {
             // when
             var page = remittanceRepository.findBySenderId(
-                    "nonexistent-sender", PageRequest.of(0, 10));
+                    UUID.randomUUID(), PageRequest.of(0, 10));
 
             // then
             assertThat(page.getContent()).isEmpty();
@@ -146,8 +153,8 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldNotReturnRemittancesFromOtherSenders() {
             // given
-            var senderId = "sender-a-" + System.nanoTime();
-            var otherSenderId = "sender-b-" + System.nanoTime();
+            var senderId = AuthFixtures.createTestUser(userRepository);
+            var otherSenderId = AuthFixtures.createTestUser(userRepository);
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), otherSenderId));
 
@@ -166,8 +173,9 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldPersistStatusUpdatesCorrectly() {
             // given
+            var senderId = AuthFixtures.createTestUser(userRepository);
             var remittanceId = UUID.randomUUID();
-            var remittance = buildRemittance(remittanceId, SOME_SENDER_ID);
+            var remittance = buildRemittance(remittanceId, senderId);
             var saved = remittanceRepository.save(remittance);
 
             // when

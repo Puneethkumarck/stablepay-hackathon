@@ -75,7 +75,7 @@ public class RemittanceController {
         @ApiResponse(responseCode = "200", description = "Remittances retrieved")
     })
     public Page<RemittanceResponse> listRemittances(
-            @RequestParam String senderId,
+            @RequestParam UUID senderId,
             Pageable pageable) {
         return listRemittancesQueryHandler.handle(senderId, pageable)
                 .map(remittanceApiMapper::toResponse);

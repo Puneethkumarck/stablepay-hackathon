@@ -38,7 +38,7 @@ public class CreateRemittanceHandler {
     private final ClaimTokenRepository claimTokenRepository;
     private final Optional<RemittanceWorkflowStarter> workflowStarter;
 
-    public Remittance handle(String senderId, String recipientPhone, BigDecimal amountUsdc) {
+    public Remittance handle(UUID senderId, String recipientPhone, BigDecimal amountUsdc) {
         var wallet = walletRepository.findByUserId(senderId)
                 .orElseThrow(() -> WalletNotFoundException.byUserId(senderId));
 

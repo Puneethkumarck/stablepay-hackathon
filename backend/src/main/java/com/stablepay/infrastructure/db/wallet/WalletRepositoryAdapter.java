@@ -2,6 +2,7 @@ package com.stablepay.infrastructure.db.wallet;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
@@ -40,7 +41,7 @@ class WalletRepositoryAdapter implements WalletRepository {
     }
 
     @Override
-    public Optional<Wallet> findByUserId(String userId) {
+    public Optional<Wallet> findByUserId(UUID userId) {
         return jpaRepository.findByUserId(userId).map(mapper::toDomain);
     }
 
