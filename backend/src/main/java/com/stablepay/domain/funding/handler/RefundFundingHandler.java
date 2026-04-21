@@ -37,11 +37,18 @@ public class RefundFundingHandler {
     private final TreasuryService treasuryService;
     private final PaymentGateway paymentGateway;
 
-    public FundingOrder handle(UUID fundingId) {
+    public FundingOrder handle(UUID fundingId, UUID authenticatedUserId) {
         requireNonNull(fundingId, "fundingId cannot be null");
 
         var order = fundingOrderRepository.findByFundingId(fundingId)
                 .orElseThrow(() -> FundingOrderNotFoundException.byFundingId(fundingId));
+
+        var ownerWallet = walletRepository.findById(order.walletId())
+                .orElseThrow(() -> WalletNotFoundException.byId(order.walletId()));
+
+        if (!ownerWallet.userId().equals(authenticatedUserId)) {
+            throw FundingOrderNotFoundException.byFundingId(fundingId);
+        }
 
         if (order.status() != FundingStatus.FUNDED) {
             throw RefundNotAllowedException.forStatus(order.status());

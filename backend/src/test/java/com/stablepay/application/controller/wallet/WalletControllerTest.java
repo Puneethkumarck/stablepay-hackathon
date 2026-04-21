@@ -7,6 +7,8 @@ import static com.stablepay.testutil.WalletFixtures.SOME_USER_ID;
 import static com.stablepay.testutil.WalletFixtures.SOME_WALLET_ID;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,13 +29,16 @@ import com.stablepay.application.controller.wallet.mapper.WalletApiMapper;
 import com.stablepay.application.dto.CreateWalletRequest;
 import com.stablepay.application.dto.WalletResponse;
 import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
+import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 import com.stablepay.domain.wallet.handler.CreateWalletHandler;
+import com.stablepay.domain.wallet.handler.GetWalletQueryHandler;
 import com.stablepay.testutil.TestClockConfig;
+import com.stablepay.testutil.TestSecurityConfig;
 
 import lombok.SneakyThrows;
 
 @WebMvcTest(WalletController.class)
-@Import(TestClockConfig.class)
+@Import({TestClockConfig.class, TestSecurityConfig.class})
 class WalletControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -43,6 +48,9 @@ class WalletControllerTest {
 
     @MockitoBean
     private CreateWalletHandler createWalletHandler;
+
+    @MockitoBean
+    private GetWalletQueryHandler getWalletQueryHandler;
 
     @MockitoBean
     private WalletApiMapper walletApiMapper;
@@ -61,7 +69,6 @@ class WalletControllerTest {
 
         var response = WalletResponse.builder()
                 .id(SOME_WALLET_ID)
-                .userId(SOME_USER_ID)
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
@@ -82,7 +89,6 @@ class WalletControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
-                .andExpect(jsonPath("$.userId").value(SOME_USER_ID.toString()))
                 .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS));
     }
 
@@ -111,7 +117,6 @@ class WalletControllerTest {
 
         var response = WalletResponse.builder()
                 .id(SOME_WALLET_ID)
-                .userId(SOME_USER_ID)
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
@@ -132,7 +137,7 @@ class WalletControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
-                .andExpect(jsonPath("$.userId").value(SOME_USER_ID.toString()));
+                .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS));
     }
 
     @Test
@@ -152,5 +157,44 @@ class WalletControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("SP-0008"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldGetMyWallet() {
+        // given
+        var wallet = walletBuilder().build();
+        var response = WalletResponse.builder()
+                .id(SOME_WALLET_ID)
+                .solanaAddress(SOME_SOLANA_ADDRESS)
+                .availableBalance(wallet.availableBalance())
+                .totalBalance(wallet.totalBalance())
+                .createdAt(SOME_CREATED_AT)
+                .updatedAt(SOME_UPDATED_AT)
+                .build();
+
+        given(getWalletQueryHandler.handle(SOME_USER_ID)).willReturn(wallet);
+        given(walletApiMapper.toResponse(wallet)).willReturn(response);
+
+        // when / then
+        mockMvc.perform(get("/api/wallets/me")
+                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
+                .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn404WhenMyWalletNotFound() {
+        // given
+        given(getWalletQueryHandler.handle(SOME_USER_ID))
+                .willThrow(WalletNotFoundException.byUserId(SOME_USER_ID));
+
+        // when / then
+        mockMvc.perform(get("/api/wallets/me")
+                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("SP-0006"));
     }
 }

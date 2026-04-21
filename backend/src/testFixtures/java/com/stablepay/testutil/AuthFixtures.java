@@ -2,9 +2,15 @@ package com.stablepay.testutil;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.UUID;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+
 import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.model.AuthPrincipal;
 import com.stablepay.domain.auth.model.AuthSession;
 import com.stablepay.domain.auth.model.LoginResult;
 import com.stablepay.domain.auth.model.RefreshToken;
@@ -37,6 +43,8 @@ public final class AuthFixtures {
     public static final String SOME_RAW_REFRESH_TOKEN = "r1_dGVzdC1yZWZyZXNoLXRva2Vu";
     public static final String SOME_ACCESS_TOKEN = "test-access-token";
     public static final Instant SOME_ACCESS_EXPIRES_AT = Instant.parse("2026-04-03T10:15:00Z");
+    public static final String SOME_SENDER_DISPLAY_NAME = "alice";
+    public static final UUID SOME_OTHER_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000077");
 
     public static AppUser.AppUserBuilder appUserBuilder() {
         return AppUser.builder()
@@ -81,5 +89,19 @@ public final class AuthFixtures {
         var userId = UUID.randomUUID();
         userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
         return userId;
+    }
+
+    public static Authentication authenticationFor(UUID userId) {
+        var jwt = Jwt.withTokenValue("test-token")
+                .header("alg", "none")
+                .subject(userId.toString())
+                .build();
+        var principal = AuthPrincipal.builder().id(userId).build();
+        return new JwtAuthenticationToken(jwt, Collections.emptyList(), principal.id().toString()) {
+            @Override
+            public Object getPrincipal() {
+                return principal;
+            }
+        };
     }
 }

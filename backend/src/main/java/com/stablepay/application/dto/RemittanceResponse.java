@@ -12,7 +12,6 @@ import lombok.Builder;
 public record RemittanceResponse(
     Long id,
     UUID remittanceId,
-    UUID senderId,
     String recipientPhone,
     BigDecimal amountUsdc,
     BigDecimal amountInr,

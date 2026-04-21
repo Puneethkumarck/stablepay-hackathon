@@ -27,7 +27,6 @@ class RemittanceApiMapperTest {
         var expected = RemittanceResponse.builder()
                 .id(remittance.id())
                 .remittanceId(remittance.remittanceId())
-                .senderId(remittance.senderId())
                 .recipientPhone(remittance.recipientPhone())
                 .amountUsdc(remittance.amountUsdc())
                 .amountInr(remittance.amountInr())

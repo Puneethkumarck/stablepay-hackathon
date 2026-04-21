@@ -5,6 +5,7 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,7 @@ import com.stablepay.application.controller.funding.mapper.FundingApiMapper;
 import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.application.dto.FundWalletRequest;
 import com.stablepay.application.dto.FundingOrderResponse;
+import com.stablepay.domain.auth.model.AuthPrincipal;
 import com.stablepay.domain.funding.handler.GetFundingOrderHandler;
 import com.stablepay.domain.funding.handler.InitiateFundingHandler;
 import com.stablepay.domain.funding.handler.RefundFundingHandler;
@@ -57,9 +59,10 @@ public class FundingController {
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public FundingOrderResponse initiateFunding(
+            @AuthenticationPrincipal AuthPrincipal principal,
             @PathVariable Long id,
             @Valid @RequestBody FundWalletRequest request) {
-        var result = initiateFundingHandler.handle(id, request.amount());
+        var result = initiateFundingHandler.handle(id, request.amount(), principal.id());
         return fundingApiMapper.toResponseWithClientSecret(result.order(), result.clientSecret());
     }
 
@@ -72,8 +75,10 @@ public class FundingController {
         @ApiResponse(responseCode = "404", description = "Funding order not found",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public FundingOrderResponse getFundingOrder(@PathVariable UUID fundingId) {
-        var order = getFundingOrderHandler.handle(fundingId);
+    public FundingOrderResponse getFundingOrder(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            @PathVariable UUID fundingId) {
+        var order = getFundingOrderHandler.handle(fundingId, principal.id());
         return fundingApiMapper.toResponse(order);
     }
 
@@ -92,8 +97,10 @@ public class FundingController {
         @ApiResponse(responseCode = "502", description = "Stripe refund failed",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public FundingOrderResponse refundFunding(@PathVariable UUID fundingId) {
-        var order = refundFundingHandler.handle(fundingId);
+    public FundingOrderResponse refundFunding(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            @PathVariable UUID fundingId) {
+        var order = refundFundingHandler.handle(fundingId, principal.id());
         return fundingApiMapper.toResponse(order);
     }
 }

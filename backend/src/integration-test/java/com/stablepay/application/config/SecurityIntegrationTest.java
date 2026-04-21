@@ -1,11 +1,14 @@
 package com.stablepay.application.config;
 
+import static com.stablepay.testutil.AuthFixtures.authenticationFor;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.UUID;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -79,7 +82,7 @@ class SecurityIntegrationTest {
 
             // when
             var result = mockMvc.perform(get("/api/fx/USD-INR")
-                    .with(jwt()));
+                    .with(authentication(authenticationFor(UUID.randomUUID()))));
 
             // then
             result.andExpect(status().isOk());

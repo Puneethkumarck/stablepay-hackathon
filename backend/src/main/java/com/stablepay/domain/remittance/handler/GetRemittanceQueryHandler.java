@@ -18,8 +18,14 @@ public class GetRemittanceQueryHandler {
 
     private final RemittanceRepository remittanceRepository;
 
-    public Remittance handle(UUID remittanceId) {
-        return remittanceRepository.findByRemittanceId(remittanceId)
+    public Remittance handle(UUID remittanceId, UUID authenticatedUserId) {
+        var remittance = remittanceRepository.findByRemittanceId(remittanceId)
                 .orElseThrow(() -> RemittanceNotFoundException.byId(remittanceId));
+
+        if (!remittance.senderId().equals(authenticatedUserId)) {
+            throw RemittanceNotFoundException.byId(remittanceId);
+        }
+
+        return remittance;
     }
 }

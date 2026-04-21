@@ -49,7 +49,6 @@ class AuthResponseMapperTest {
                         .build())
                 .wallet(WalletResponse.builder()
                         .id(wallet.id())
-                        .userId(wallet.userId())
                         .solanaAddress(SOME_SOLANA_ADDRESS)
                         .availableBalance(BigDecimal.ZERO)
                         .totalBalance(BigDecimal.ZERO)

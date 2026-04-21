@@ -1,8 +1,11 @@
 package com.stablepay.domain.claim.handler;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_SENDER_DISPLAY_NAME;
+import static com.stablepay.testutil.AuthFixtures.appUserBuilder;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_TOKEN;
 import static com.stablepay.testutil.ClaimTokenFixtures.claimTokenBuilder;
+import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -16,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
 import com.stablepay.domain.claim.model.ClaimDetails;
 import com.stablepay.domain.claim.port.ClaimTokenRepository;
@@ -31,17 +35,22 @@ class GetClaimQueryHandlerTest {
     @Mock
     private RemittanceRepository remittanceRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private GetClaimQueryHandler getClaimQueryHandler;
 
     @Test
-    void shouldReturnClaimDetailsForValidToken() {
+    void shouldReturnClaimDetailsWithSenderDisplayName() {
         // given
         var claimToken = claimTokenBuilder().build();
         var remittance = remittanceBuilder().build();
+        var appUser = appUserBuilder().build();
 
         given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
         given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+        given(userRepository.findById(SOME_SENDER_ID)).willReturn(Optional.of(appUser));
 
         // when
         var result = getClaimQueryHandler.handle(SOME_TOKEN);
@@ -50,6 +59,32 @@ class GetClaimQueryHandlerTest {
         var expected = ClaimDetails.builder()
                 .claimToken(claimToken)
                 .remittance(remittance)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
+                .build();
+
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+    }
+
+    @Test
+    void shouldReturnUnknownWhenSenderUserNotFound() {
+        // given
+        var claimToken = claimTokenBuilder().build();
+        var remittance = remittanceBuilder().build();
+
+        given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+        given(userRepository.findById(SOME_SENDER_ID)).willReturn(Optional.empty());
+
+        // when
+        var result = getClaimQueryHandler.handle(SOME_TOKEN);
+
+        // then
+        var expected = ClaimDetails.builder()
+                .claimToken(claimToken)
+                .remittance(remittance)
+                .senderDisplayName("Unknown")
                 .build();
 
         assertThat(result)

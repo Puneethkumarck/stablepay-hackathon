@@ -22,7 +22,6 @@ class WalletApiMapperTest {
         // then
         var expected = WalletResponse.builder()
                 .id(wallet.id())
-                .userId(wallet.userId())
                 .solanaAddress(wallet.solanaAddress())
                 .availableBalance(wallet.availableBalance())
                 .totalBalance(wallet.totalBalance())

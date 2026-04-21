@@ -1,10 +1,13 @@
 package com.stablepay.domain.claim.handler;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_SENDER_DISPLAY_NAME;
+import static com.stablepay.testutil.AuthFixtures.appUserBuilder;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_EXPIRED_AT;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_TOKEN;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_UPI_ID;
 import static com.stablepay.testutil.ClaimTokenFixtures.claimTokenBuilder;
+import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.claim.exception.ClaimAlreadyClaimedException;
 import com.stablepay.domain.claim.exception.ClaimTokenExpiredException;
 import com.stablepay.domain.claim.exception.ClaimTokenNotFoundException;
@@ -42,24 +46,29 @@ class SubmitClaimHandlerTest {
     @Mock
     private RemittanceClaimSignaler claimSignaler;
 
+    @Mock
+    private UserRepository userRepository;
+
     private SubmitClaimHandler submitClaimHandler;
 
     @BeforeEach
     void setUp() {
         submitClaimHandler = new SubmitClaimHandler(
-                claimTokenRepository, remittanceRepository, Optional.of(claimSignaler));
+                claimTokenRepository, remittanceRepository, Optional.of(claimSignaler), userRepository);
     }
 
     @Test
-    void shouldSubmitClaimSuccessfully() {
+    void shouldSubmitClaimWithSenderDisplayName() {
         // given
         var claimToken = claimTokenBuilder().build();
         var remittance = remittanceBuilder()
                 .status(RemittanceStatus.ESCROWED)
                 .build();
+        var appUser = appUserBuilder().build();
 
         given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
         given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+        given(userRepository.findById(SOME_SENDER_ID)).willReturn(Optional.of(appUser));
 
         var updatedClaim = claimToken.toBuilder().claimed(true).upiId(SOME_UPI_ID).build();
         given(claimTokenRepository.save(updatedClaim)).willReturn(updatedClaim);
@@ -71,6 +80,7 @@ class SubmitClaimHandlerTest {
         var expected = ClaimDetails.builder()
                 .claimToken(updatedClaim)
                 .remittance(remittance)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .build();
         assertThat(result)
                 .usingRecursiveComparison()
@@ -107,15 +117,17 @@ class SubmitClaimHandlerTest {
     void shouldSubmitClaimWithoutSignalerWhenNotConfigured() {
         // given
         var handler = new SubmitClaimHandler(
-                claimTokenRepository, remittanceRepository, Optional.empty());
+                claimTokenRepository, remittanceRepository, Optional.empty(), userRepository);
 
         var claimToken = claimTokenBuilder().build();
         var remittance = remittanceBuilder()
                 .status(RemittanceStatus.ESCROWED)
                 .build();
+        var appUser = appUserBuilder().build();
 
         given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
         given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+        given(userRepository.findById(SOME_SENDER_ID)).willReturn(Optional.of(appUser));
 
         var updatedClaim = claimToken.toBuilder().claimed(true).upiId(SOME_UPI_ID).build();
         given(claimTokenRepository.save(updatedClaim)).willReturn(updatedClaim);
@@ -127,6 +139,7 @@ class SubmitClaimHandlerTest {
         var expected = ClaimDetails.builder()
                 .claimToken(updatedClaim)
                 .remittance(remittance)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .build();
         assertThat(result)
                 .usingRecursiveComparison()
