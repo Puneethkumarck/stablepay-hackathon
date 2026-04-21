@@ -1,6 +1,7 @@
 package com.stablepay.application.config;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 
@@ -42,6 +43,7 @@ public class SecurityAuthenticationEntryPoint implements AuthenticationEntryPoin
                 .build();
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         OBJECT_MAPPER.writeValue(response.getOutputStream(), errorResponse);
     }
 }

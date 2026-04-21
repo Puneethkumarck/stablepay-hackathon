@@ -6,8 +6,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -18,6 +16,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.stablepay.application.dto.ErrorResponse;
 
+import lombok.Builder;
 import lombok.SneakyThrows;
 
 class SecurityAuthenticationEntryPointTest {
@@ -45,18 +44,28 @@ class SecurityAuthenticationEntryPointTest {
         entryPoint.commence(request, response, authException);
 
         // then
-        var expected = ErrorResponse.builder()
-                .errorCode("SP-0040")
-                .message("SP-0040: Authentication required")
-                .timestamp(FIXED_INSTANT)
-                .path("/api/fx/USD-INR")
+        var expected = EntryPointResult.builder()
+                .status(401)
+                .contentType("application/json;charset=UTF-8")
+                .body(ErrorResponse.builder()
+                        .errorCode("SP-0040")
+                        .message("SP-0040: Authentication required")
+                        .timestamp(FIXED_INSTANT)
+                        .path("/api/fx/USD-INR")
+                        .build())
                 .build();
-        var actual = objectMapper.readValue(response.getContentAsString(), ErrorResponse.class);
 
-        assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_UNAUTHORIZED);
-        assertThat(response.getContentType()).isEqualTo("application/json");
+        var actual = EntryPointResult.builder()
+                .status(response.getStatus())
+                .contentType(response.getContentType())
+                .body(objectMapper.readValue(response.getContentAsString(), ErrorResponse.class))
+                .build();
+
         assertThat(actual)
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
     }
+
+    @Builder
+    private record EntryPointResult(int status, String contentType, ErrorResponse body) {}
 }

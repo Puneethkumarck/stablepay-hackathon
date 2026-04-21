@@ -95,7 +95,7 @@ class SecurityIntegrationTest {
 
             // then
             result.andExpect(status().isUnauthorized())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.errorCode").value("SP-0040"))
                     .andExpect(jsonPath("$.timestamp").isNotEmpty());
         }
