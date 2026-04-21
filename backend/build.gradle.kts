@@ -57,7 +57,7 @@ spotless {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.9"
+        artifact = "com.google.protobuf:protoc:4.34.1"
     }
     plugins {
         create("grpc") {
