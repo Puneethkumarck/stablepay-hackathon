@@ -14,12 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.stablepay.domain.auth.model.AppUser;
 import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
 import com.stablepay.test.PgTest;
+import com.stablepay.testutil.AuthFixtures;
 
 @PgTest
 @Transactional
@@ -30,12 +30,6 @@ class RemittanceRepositoryIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
-
-    private UUID createUser() {
-        var userId = UUID.randomUUID();
-        userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
-        return userId;
-    }
 
     private Remittance buildRemittance(UUID remittanceId, UUID senderId) {
         return Remittance.builder()
@@ -56,7 +50,7 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldSaveAndAssignId() {
             // given
-            var senderId = createUser();
+            var senderId = AuthFixtures.createTestUser(userRepository);
             var remittance = buildRemittance(UUID.randomUUID(), senderId);
 
             // when
@@ -73,7 +67,7 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldPersistAllFieldsCorrectly() {
             // given
-            var senderId = createUser();
+            var senderId = AuthFixtures.createTestUser(userRepository);
             var remittanceId = UUID.randomUUID();
             var remittance = buildRemittance(remittanceId, senderId)
                     .toBuilder()
@@ -101,7 +95,7 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldFindRemittanceByUuid() {
             // given
-            var senderId = createUser();
+            var senderId = AuthFixtures.createTestUser(userRepository);
             var remittanceId = UUID.randomUUID();
             var remittance = buildRemittance(remittanceId, senderId);
             remittanceRepository.save(remittance);
@@ -131,7 +125,7 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldReturnPagedResultsForSender() {
             // given
-            var senderId = createUser();
+            var senderId = AuthFixtures.createTestUser(userRepository);
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
@@ -159,8 +153,8 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldNotReturnRemittancesFromOtherSenders() {
             // given
-            var senderId = createUser();
-            var otherSenderId = createUser();
+            var senderId = AuthFixtures.createTestUser(userRepository);
+            var otherSenderId = AuthFixtures.createTestUser(userRepository);
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), senderId));
             remittanceRepository.save(buildRemittance(UUID.randomUUID(), otherSenderId));
 
@@ -179,7 +173,7 @@ class RemittanceRepositoryIntegrationTest {
         @Test
         void shouldPersistStatusUpdatesCorrectly() {
             // given
-            var senderId = createUser();
+            var senderId = AuthFixtures.createTestUser(userRepository);
             var remittanceId = UUID.randomUUID();
             var remittance = buildRemittance(remittanceId, senderId);
             var saved = remittanceRepository.save(remittance);

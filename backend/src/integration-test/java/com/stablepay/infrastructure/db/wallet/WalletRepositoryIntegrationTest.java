@@ -18,11 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.stablepay.domain.auth.model.AppUser;
 import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.wallet.model.Wallet;
 import com.stablepay.domain.wallet.port.WalletRepository;
 import com.stablepay.test.PgTest;
+import com.stablepay.testutil.AuthFixtures;
 
 @PgTest
 @Transactional
@@ -38,9 +38,7 @@ class WalletRepositoryIntegrationTest {
     private EntityManager entityManager;
 
     private UUID createUser() {
-        var userId = UUID.randomUUID();
-        userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
-        return userId;
+        return AuthFixtures.createTestUser(userRepository);
     }
 
     @Test

@@ -9,8 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.UUID;
-
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +18,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablepay.application.dto.CreateWalletRequest;
-import com.stablepay.domain.auth.model.AppUser;
 import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.wallet.model.GeneratedKey;
 import com.stablepay.domain.wallet.port.MpcWalletClient;
 import com.stablepay.test.PgTest;
+import com.stablepay.testutil.AuthFixtures;
 
 import lombok.SneakyThrows;
 
@@ -43,12 +41,6 @@ class WalletApiIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    private UUID createUser() {
-        var userId = UUID.randomUUID();
-        userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
-        return userId;
-    }
-
     @Nested
     class CreateWallet {
 
@@ -56,7 +48,7 @@ class WalletApiIntegrationTest {
         @SneakyThrows
         void shouldCreateWalletAndReturnCreatedResponse() {
             // given
-            var userId = createUser();
+            var userId = AuthFixtures.createTestUser(userRepository);
             var solanaAddress = SOME_SOLANA_ADDRESS + System.nanoTime();
             var generatedKey = GeneratedKey.builder()
                     .solanaAddress(solanaAddress)
@@ -87,7 +79,7 @@ class WalletApiIntegrationTest {
         @SneakyThrows
         void shouldReturn409WhenWalletAlreadyExistsForUser() {
             // given
-            var userId = createUser();
+            var userId = AuthFixtures.createTestUser(userRepository);
             var generatedKey = GeneratedKey.builder()
                     .solanaAddress("addr-dup-" + System.nanoTime())
                     .publicKey(SOME_PUBLIC_KEY)

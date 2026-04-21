@@ -1,14 +1,14 @@
 package com.stablepay.infrastructure.db.user;
 
-import static com.stablepay.testutil.AuthFixtures.SOME_CREATED_AT;
+import static com.stablepay.testutil.AuthFixtures.SOME_AUTH_CREATED_AT;
+import static com.stablepay.testutil.AuthFixtures.SOME_AUTH_USER_ID;
 import static com.stablepay.testutil.AuthFixtures.SOME_EMAIL;
-import static com.stablepay.testutil.AuthFixtures.SOME_EXPIRES_AT;
 import static com.stablepay.testutil.AuthFixtures.SOME_PROVIDER;
+import static com.stablepay.testutil.AuthFixtures.SOME_REFRESH_EXPIRES_AT;
 import static com.stablepay.testutil.AuthFixtures.SOME_REFRESH_TOKEN_ID;
 import static com.stablepay.testutil.AuthFixtures.SOME_SOCIAL_EMAIL;
 import static com.stablepay.testutil.AuthFixtures.SOME_SUBJECT;
 import static com.stablepay.testutil.AuthFixtures.SOME_TOKEN_HASH;
-import static com.stablepay.testutil.AuthFixtures.SOME_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -29,31 +29,35 @@ class UserMapperTest {
     class AppUserMapping {
 
         @Test
-        void shouldMapDomainToEntityAndBack() {
+        void shouldMapDomainToEntity() {
             // given
             var domain = AppUser.builder()
-                    .id(SOME_USER_ID)
+                    .id(SOME_AUTH_USER_ID)
                     .email(SOME_EMAIL)
-                    .createdAt(SOME_CREATED_AT)
+                    .createdAt(SOME_AUTH_CREATED_AT)
                     .build();
 
             // when
             var entity = mapper.toEntity(domain);
-            var backToDomain = mapper.toDomain(entity);
 
             // then
-            assertThat(backToDomain)
+            var expectedEntity = UserEntity.builder()
+                    .id(SOME_AUTH_USER_ID)
+                    .email(SOME_EMAIL)
+                    .createdAt(SOME_AUTH_CREATED_AT)
+                    .build();
+            assertThat(entity)
                     .usingRecursiveComparison()
-                    .isEqualTo(domain);
+                    .isEqualTo(expectedEntity);
         }
 
         @Test
         void shouldMapEntityToDomainWithAllFields() {
             // given
             var entity = UserEntity.builder()
-                    .id(SOME_USER_ID)
+                    .id(SOME_AUTH_USER_ID)
                     .email(SOME_EMAIL)
-                    .createdAt(SOME_CREATED_AT)
+                    .createdAt(SOME_AUTH_CREATED_AT)
                     .updatedAt(Instant.parse("2026-04-03T12:00:00Z"))
                     .build();
 
@@ -62,9 +66,9 @@ class UserMapperTest {
 
             // then
             var expected = AppUser.builder()
-                    .id(SOME_USER_ID)
+                    .id(SOME_AUTH_USER_ID)
                     .email(SOME_EMAIL)
-                    .createdAt(SOME_CREATED_AT)
+                    .createdAt(SOME_AUTH_CREATED_AT)
                     .build();
 
             assertThat(domain)
@@ -77,16 +81,16 @@ class UserMapperTest {
     class SocialIdentityMapping {
 
         @Test
-        void shouldMapEntityToDomainDroppingInfraFields() {
+        void shouldMapEntityToDomainIncludingUserId() {
             // given
             var entity = SocialIdentityEntity.builder()
                     .id(UUID.randomUUID())
-                    .userId(SOME_USER_ID)
+                    .userId(SOME_AUTH_USER_ID)
                     .provider(SOME_PROVIDER)
                     .subject(SOME_SUBJECT)
                     .email(SOME_SOCIAL_EMAIL)
                     .emailVerified(true)
-                    .createdAt(SOME_CREATED_AT)
+                    .createdAt(SOME_AUTH_CREATED_AT)
                     .build();
 
             // when
@@ -94,6 +98,7 @@ class UserMapperTest {
 
             // then
             var expected = SocialIdentity.builder()
+                    .userId(SOME_AUTH_USER_ID)
                     .provider(SOME_PROVIDER)
                     .subject(SOME_SUBJECT)
                     .email(SOME_SOCIAL_EMAIL)
@@ -109,6 +114,7 @@ class UserMapperTest {
         void shouldMapDomainToEntityIgnoringInfraFields() {
             // given
             var domain = SocialIdentity.builder()
+                    .userId(SOME_AUTH_USER_ID)
                     .provider(SOME_PROVIDER)
                     .subject(SOME_SUBJECT)
                     .email(SOME_SOCIAL_EMAIL)
@@ -120,6 +126,7 @@ class UserMapperTest {
 
             // then
             var expectedEntity = SocialIdentityEntity.builder()
+                    .userId(SOME_AUTH_USER_ID)
                     .provider(SOME_PROVIDER)
                     .subject(SOME_SUBJECT)
                     .email(SOME_SOCIAL_EMAIL)
@@ -139,10 +146,10 @@ class UserMapperTest {
             // given
             var entity = RefreshTokenEntity.builder()
                     .id(SOME_REFRESH_TOKEN_ID)
-                    .userId(SOME_USER_ID)
+                    .userId(SOME_AUTH_USER_ID)
                     .tokenHash(SOME_TOKEN_HASH)
                     .issuedAt(Instant.parse("2026-04-03T10:00:00Z"))
-                    .expiresAt(SOME_EXPIRES_AT)
+                    .expiresAt(SOME_REFRESH_EXPIRES_AT)
                     .revokedAt(null)
                     .build();
 
@@ -152,9 +159,9 @@ class UserMapperTest {
             // then
             var expected = RefreshToken.builder()
                     .id(SOME_REFRESH_TOKEN_ID)
-                    .userId(SOME_USER_ID)
+                    .userId(SOME_AUTH_USER_ID)
                     .tokenHash(SOME_TOKEN_HASH)
-                    .expiresAt(SOME_EXPIRES_AT)
+                    .expiresAt(SOME_REFRESH_EXPIRES_AT)
                     .revokedAt(null)
                     .build();
 
@@ -168,9 +175,9 @@ class UserMapperTest {
             // given
             var domain = RefreshToken.builder()
                     .id(SOME_REFRESH_TOKEN_ID)
-                    .userId(SOME_USER_ID)
+                    .userId(SOME_AUTH_USER_ID)
                     .tokenHash(SOME_TOKEN_HASH)
-                    .expiresAt(SOME_EXPIRES_AT)
+                    .expiresAt(SOME_REFRESH_EXPIRES_AT)
                     .build();
 
             // when
@@ -179,9 +186,9 @@ class UserMapperTest {
             // then
             var expectedEntity = RefreshTokenEntity.builder()
                     .id(SOME_REFRESH_TOKEN_ID)
-                    .userId(SOME_USER_ID)
+                    .userId(SOME_AUTH_USER_ID)
                     .tokenHash(SOME_TOKEN_HASH)
-                    .expiresAt(SOME_EXPIRES_AT)
+                    .expiresAt(SOME_REFRESH_EXPIRES_AT)
                     .build();
             assertThat(entity)
                     .usingRecursiveComparison()

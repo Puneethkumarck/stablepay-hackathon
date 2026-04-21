@@ -17,7 +17,6 @@ public interface UserMapper {
     SocialIdentity toDomain(SocialIdentityEntity entity);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "userId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     SocialIdentityEntity toEntity(SocialIdentity domain);
 

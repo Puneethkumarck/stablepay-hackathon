@@ -24,10 +24,9 @@ class SocialIdentityRepositoryAdapter implements SocialIdentityRepository {
     }
 
     @Override
-    public SocialIdentity save(SocialIdentity identity, UUID userId) {
+    public SocialIdentity save(SocialIdentity identity) {
         var entity = mapper.toEntity(identity);
         entity.setId(UUID.randomUUID());
-        entity.setUserId(userId);
         entity.setCreatedAt(Instant.now());
         var saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);

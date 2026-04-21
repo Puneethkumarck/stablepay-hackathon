@@ -196,9 +196,9 @@
 **Token architecture:**
 - Access token: HS256 JWT signed with `JWT_SECRET` env var, 15-minute TTL, minimal claims (`sub=userId UUID`, `iat`, `exp`). Verified by Spring OAuth2 Resource Server filter chain (`NimbusJwtDecoder.withSecretKey`).
 - Refresh token: 32-byte cryptographically random, prefixed `r1_`, SHA-256 hashed in DB. 30-day TTL. Rotated on use (old revoked, new issued). Single active chain per user.
-- Google idToken verification: `NimbusJwtDecoder.withJwkSetUri` against Google JWKS, called manually from domain handler — NOT in filter chain.
+- Google idToken verification: the domain handler depends on an `IdTokenVerifier` port. The infrastructure adapter verifies Google tokens with `NimbusJwtDecoder.withJwkSetUri` against Google JWKS. This remains outside the resource-server filter chain.
 
-**Eager wallet provisioning:** First login creates user + MPC wallet atomically in a single `@Transactional` block. MPC sidecar failure rolls back the entire transaction — no partial user. `CreateWalletHandler` is called inline (synchronous gRPC), not via Temporal workflow. Temporal is only used for the remittance lifecycle (ADR-005).
+**Eager wallet provisioning:** First login provisions the MPC wallet via synchronous gRPC and persists the user + wallet in one database transaction after successful key generation. Because the MPC sidecar is an external system, this flow is not truly atomic across DB and MPC state; use idempotency keys/timeouts and reconcile orphaned sidecar keys if persistence fails. Temporal remains reserved for the remittance lifecycle (ADR-005).
 
 **Ownership model:** Controllers extract `@AuthenticationPrincipal AppUser(UUID id)` from JWT `sub` claim via `AppUserConverter`. Load-by-id handlers verify `resource.userId == authenticatedUser.id`. Return 404 (not 403) on mismatch to prevent user enumeration.
 

@@ -1,9 +1,9 @@
 package com.stablepay.infrastructure.db.user;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_AUTH_USER_ID;
 import static com.stablepay.testutil.AuthFixtures.SOME_PROVIDER;
 import static com.stablepay.testutil.AuthFixtures.SOME_SOCIAL_EMAIL;
 import static com.stablepay.testutil.AuthFixtures.SOME_SUBJECT;
-import static com.stablepay.testutil.AuthFixtures.SOME_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
@@ -42,7 +42,7 @@ class SocialIdentityRepositoryAdapterTest {
         // given
         var entity = SocialIdentityEntity.builder()
                 .id(UUID.randomUUID())
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
@@ -57,15 +57,15 @@ class SocialIdentityRepositoryAdapterTest {
 
         // then
         var expected = SocialIdentity.builder()
+                .userId(SOME_AUTH_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
                 .emailVerified(true)
                 .build();
-        assertThat(result).isPresent();
-        assertThat(result.get())
+        assertThat(result)
                 .usingRecursiveComparison()
-                .isEqualTo(expected);
+                .isEqualTo(Optional.of(expected));
     }
 
     @Test
@@ -85,6 +85,7 @@ class SocialIdentityRepositoryAdapterTest {
     void shouldSaveWithGeneratedIdAndUserId() {
         // given
         var identity = SocialIdentity.builder()
+                .userId(SOME_AUTH_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
@@ -92,7 +93,7 @@ class SocialIdentityRepositoryAdapterTest {
                 .build();
         var savedEntity = SocialIdentityEntity.builder()
                 .id(UUID.randomUUID())
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
@@ -102,12 +103,12 @@ class SocialIdentityRepositoryAdapterTest {
         given(jpaRepository.save(entityCaptor.capture())).willReturn(savedEntity);
 
         // when
-        var result = adapter.save(identity, SOME_USER_ID);
+        var result = adapter.save(identity);
 
         // then
         var captured = entityCaptor.getValue();
         var expectedEntity = SocialIdentityEntity.builder()
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
@@ -121,6 +122,7 @@ class SocialIdentityRepositoryAdapterTest {
         assertThat(captured.getCreatedAt()).isNotNull();
 
         var expected = SocialIdentity.builder()
+                .userId(SOME_AUTH_USER_ID)
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)

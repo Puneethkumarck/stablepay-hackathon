@@ -1,9 +1,9 @@
 package com.stablepay.infrastructure.db.user;
 
-import static com.stablepay.testutil.AuthFixtures.SOME_EXPIRES_AT;
+import static com.stablepay.testutil.AuthFixtures.SOME_AUTH_USER_ID;
+import static com.stablepay.testutil.AuthFixtures.SOME_REFRESH_EXPIRES_AT;
 import static com.stablepay.testutil.AuthFixtures.SOME_REFRESH_TOKEN_ID;
 import static com.stablepay.testutil.AuthFixtures.SOME_TOKEN_HASH;
-import static com.stablepay.testutil.AuthFixtures.SOME_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -42,10 +42,10 @@ class RefreshTokenRepositoryAdapterTest {
         // given
         var entity = RefreshTokenEntity.builder()
                 .id(SOME_REFRESH_TOKEN_ID)
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
                 .issuedAt(Instant.now())
-                .expiresAt(SOME_EXPIRES_AT)
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
                 .revokedAt(null)
                 .build();
         given(jpaRepository.findByTokenHash(SOME_TOKEN_HASH)).willReturn(Optional.of(entity));
@@ -56,15 +56,14 @@ class RefreshTokenRepositoryAdapterTest {
         // then
         var expected = RefreshToken.builder()
                 .id(SOME_REFRESH_TOKEN_ID)
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
-                .expiresAt(SOME_EXPIRES_AT)
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
                 .revokedAt(null)
                 .build();
-        assertThat(result).isPresent();
-        assertThat(result.get())
+        assertThat(result)
                 .usingRecursiveComparison()
-                .isEqualTo(expected);
+                .isEqualTo(Optional.of(expected));
     }
 
     @Test
@@ -84,16 +83,16 @@ class RefreshTokenRepositoryAdapterTest {
         // given
         var token = RefreshToken.builder()
                 .id(SOME_REFRESH_TOKEN_ID)
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
-                .expiresAt(SOME_EXPIRES_AT)
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
                 .build();
         var savedEntity = RefreshTokenEntity.builder()
                 .id(SOME_REFRESH_TOKEN_ID)
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
                 .issuedAt(Instant.now())
-                .expiresAt(SOME_EXPIRES_AT)
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
                 .build();
         given(jpaRepository.save(entityCaptor.capture())).willReturn(savedEntity);
 
@@ -104,9 +103,9 @@ class RefreshTokenRepositoryAdapterTest {
         var captured = entityCaptor.getValue();
         var expectedEntity = RefreshTokenEntity.builder()
                 .id(SOME_REFRESH_TOKEN_ID)
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
-                .expiresAt(SOME_EXPIRES_AT)
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
                 .build();
         assertThat(captured)
                 .usingRecursiveComparison()
@@ -116,9 +115,9 @@ class RefreshTokenRepositoryAdapterTest {
 
         var expected = RefreshToken.builder()
                 .id(SOME_REFRESH_TOKEN_ID)
-                .userId(SOME_USER_ID)
+                .userId(SOME_AUTH_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
-                .expiresAt(SOME_EXPIRES_AT)
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
                 .build();
         assertThat(result)
                 .usingRecursiveComparison()
@@ -127,10 +126,12 @@ class RefreshTokenRepositoryAdapterTest {
 
     @Test
     void shouldDelegateRevokeByUserId() {
+        // given
+
         // when
-        adapter.revokeByUserId(SOME_USER_ID);
+        adapter.revokeByUserId(SOME_AUTH_USER_ID);
 
         // then
-        then(jpaRepository).should().revokeByUserId(SOME_USER_ID);
+        then(jpaRepository).should().revokeByUserId(SOME_AUTH_USER_ID);
     }
 }

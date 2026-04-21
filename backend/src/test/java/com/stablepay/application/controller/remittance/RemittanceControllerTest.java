@@ -215,4 +215,19 @@ class RemittanceControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("SP-0003"));
     }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn400WhenSenderIdIsBlankString() {
+        // given
+        var json = """
+                {"senderId":"","recipientPhone":"+919876543210","amountUsdc":100}
+                """;
+
+        // when / then
+        mockMvc.perform(post("/api/remittances")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+    }
 }

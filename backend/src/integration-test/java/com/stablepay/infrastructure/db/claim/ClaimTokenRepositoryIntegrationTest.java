@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.stablepay.domain.auth.model.AppUser;
 import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.claim.model.ClaimToken;
 import com.stablepay.domain.claim.port.ClaimTokenRepository;
@@ -22,6 +21,7 @@ import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
 import com.stablepay.test.PgTest;
+import com.stablepay.testutil.AuthFixtures;
 
 @PgTest
 @Transactional
@@ -36,14 +36,8 @@ class ClaimTokenRepositoryIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    private UUID createUser() {
-        var userId = UUID.randomUUID();
-        userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
-        return userId;
-    }
-
     private UUID createRemittanceAndReturnId() {
-        var senderId = createUser();
+        var senderId = AuthFixtures.createTestUser(userRepository);
         var remittanceId = UUID.randomUUID();
         var remittance = Remittance.builder()
                 .remittanceId(remittanceId)

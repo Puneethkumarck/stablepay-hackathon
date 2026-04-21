@@ -27,9 +27,10 @@ class UserRepositoryAdapter implements UserRepository {
     public AppUser save(AppUser user) {
         var entity = mapper.toEntity(user);
         var now = Instant.now();
-        if (entity.getCreatedAt() == null) {
-            entity.setCreatedAt(now);
-        }
+        var createdAt = Optional.ofNullable(entity.getCreatedAt())
+                .or(() -> jpaRepository.findById(user.id()).map(UserEntity::getCreatedAt))
+                .orElse(now);
+        entity.setCreatedAt(createdAt);
         entity.setUpdatedAt(now);
         var saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
