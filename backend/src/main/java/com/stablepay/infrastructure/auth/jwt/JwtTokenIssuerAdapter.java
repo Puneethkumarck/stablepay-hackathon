@@ -1,5 +1,7 @@
 package com.stablepay.infrastructure.auth.jwt;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
@@ -16,9 +18,7 @@ import com.stablepay.domain.auth.model.AuthTokenConfig;
 import com.stablepay.domain.auth.port.AuthTokenIssuer;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtTokenIssuerAdapter implements AuthTokenIssuer {
@@ -30,6 +30,7 @@ public class JwtTokenIssuerAdapter implements AuthTokenIssuer {
 
     @Override
     public AuthSession issue(UUID userId) {
+        requireNonNull(userId, "userId cannot be null");
         var now = Instant.now(clock);
         var expiresAt = now.plus(authTokenConfig.accessTtl());
 

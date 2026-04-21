@@ -14,5 +14,11 @@ public record AuthTokenConfig(
     public AuthTokenConfig {
         requireNonNull(accessTtl, "accessTtl cannot be null");
         requireNonNull(refreshTtl, "refreshTtl cannot be null");
+        if (accessTtl.isNegative() || accessTtl.isZero()) {
+            throw new IllegalArgumentException("accessTtl must be positive");
+        }
+        if (refreshTtl.isNegative() || refreshTtl.isZero()) {
+            throw new IllegalArgumentException("refreshTtl must be positive");
+        }
     }
 }
