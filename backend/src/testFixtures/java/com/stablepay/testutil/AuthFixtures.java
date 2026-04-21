@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.model.AuthSession;
 import com.stablepay.domain.auth.model.RefreshToken;
 import com.stablepay.domain.auth.model.SocialIdentity;
 import com.stablepay.domain.auth.port.UserRepository;
@@ -31,6 +32,10 @@ public final class AuthFixtures {
     public static final String SOME_TOKEN_HASH = "sha256-abc123def456";
     public static final Instant SOME_REFRESH_EXPIRES_AT = Instant.parse("2026-05-03T10:00:00Z");
 
+    public static final String SOME_RAW_REFRESH_TOKEN = "r1_dGVzdC1yZWZyZXNoLXRva2Vu";
+    public static final String SOME_ACCESS_TOKEN = "test-access-token";
+    public static final Instant SOME_ACCESS_EXPIRES_AT = Instant.parse("2026-04-03T10:15:00Z");
+
     public static AppUser.AppUserBuilder appUserBuilder() {
         return AppUser.builder()
                 .id(SOME_AUTH_USER_ID)
@@ -53,6 +58,13 @@ public final class AuthFixtures {
                 .userId(SOME_AUTH_USER_ID)
                 .tokenHash(SOME_TOKEN_HASH)
                 .expiresAt(SOME_REFRESH_EXPIRES_AT);
+    }
+
+    public static AuthSession.AuthSessionBuilder authSessionBuilder() {
+        return AuthSession.builder()
+                .accessToken(SOME_ACCESS_TOKEN)
+                .refreshToken(SOME_RAW_REFRESH_TOKEN)
+                .accessExpiresAt(SOME_ACCESS_EXPIRES_AT);
     }
 
     public static UUID createTestUser(UserRepository userRepository) {
