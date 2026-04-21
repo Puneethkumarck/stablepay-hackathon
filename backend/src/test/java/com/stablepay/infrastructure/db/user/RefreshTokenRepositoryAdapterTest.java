@@ -67,6 +67,35 @@ class RefreshTokenRepositoryAdapterTest {
     }
 
     @Test
+    void shouldFindByHashForUpdateAndMapToDomain() {
+        // given
+        var entity = RefreshTokenEntity.builder()
+                .id(SOME_REFRESH_TOKEN_ID)
+                .userId(SOME_AUTH_USER_ID)
+                .tokenHash(SOME_TOKEN_HASH)
+                .issuedAt(Instant.now())
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
+                .revokedAt(null)
+                .build();
+        given(jpaRepository.findByTokenHashForUpdate(SOME_TOKEN_HASH)).willReturn(Optional.of(entity));
+
+        // when
+        var result = adapter.findByHashForUpdate(SOME_TOKEN_HASH);
+
+        // then
+        var expected = RefreshToken.builder()
+                .id(SOME_REFRESH_TOKEN_ID)
+                .userId(SOME_AUTH_USER_ID)
+                .tokenHash(SOME_TOKEN_HASH)
+                .expiresAt(SOME_REFRESH_EXPIRES_AT)
+                .revokedAt(null)
+                .build();
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(Optional.of(expected));
+    }
+
+    @Test
     void shouldReturnEmptyWhenHashNotFound() {
         // given
         given(jpaRepository.findByTokenHash(SOME_TOKEN_HASH)).willReturn(Optional.empty());
