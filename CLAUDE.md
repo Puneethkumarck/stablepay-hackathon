@@ -74,7 +74,7 @@ docker compose down                # stop infrastructure
 | Component | Version / Library |
 |---|---|
 | Java | 25 (LTS, Eclipse Temurin) |
-| Spring Boot | 4.0.3 |
+| Spring Boot | 4.0.5 |
 | HTTP Server | Tomcat (Spring MVC) |
 | HTTP Layer | Spring MVC — controllers return standard types |
 | Database | JPA + Hibernate + PostgreSQL 16 |

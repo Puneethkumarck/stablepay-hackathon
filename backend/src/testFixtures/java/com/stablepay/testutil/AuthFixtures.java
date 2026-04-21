@@ -1,5 +1,6 @@
 package com.stablepay.testutil;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -11,6 +12,10 @@ import com.stablepay.domain.auth.port.UserRepository;
 public final class AuthFixtures {
 
     private AuthFixtures() {}
+
+    public static final String SOME_JWT_SECRET = "test-jwt-secret-must-be-at-least-32-bytes-long!!";
+    public static final Duration SOME_ACCESS_TTL = Duration.ofMinutes(15);
+    public static final Duration SOME_REFRESH_TTL = Duration.ofDays(30);
 
     public static final UUID SOME_AUTH_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000042");
     public static final String SOME_EMAIL = "alice@example.com";
