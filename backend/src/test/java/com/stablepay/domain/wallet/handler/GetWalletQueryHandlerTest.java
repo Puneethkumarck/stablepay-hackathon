@@ -1,5 +1,6 @@
 package com.stablepay.domain.wallet.handler;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_OTHER_USER_ID;
 import static com.stablepay.testutil.WalletFixtures.SOME_USER_ID;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -7,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,13 +45,12 @@ class GetWalletQueryHandlerTest {
     @Test
     void shouldThrowWalletNotFoundWhenNoWallet() {
         // given
-        var unknownUserId = UUID.fromString("00000000-0000-0000-0000-000000000099");
-        given(walletRepository.findByUserId(unknownUserId)).willReturn(Optional.empty());
+        given(walletRepository.findByUserId(SOME_OTHER_USER_ID)).willReturn(Optional.empty());
 
         // when / then
-        assertThatThrownBy(() -> getWalletQueryHandler.handle(unknownUserId))
+        assertThatThrownBy(() -> getWalletQueryHandler.handle(SOME_OTHER_USER_ID))
                 .isInstanceOf(WalletNotFoundException.class)
                 .hasMessageContaining("SP-0006")
-                .hasMessageContaining(unknownUserId.toString());
+                .hasMessageContaining(SOME_OTHER_USER_ID.toString());
     }
 }

@@ -43,16 +43,19 @@ public class RefundFundingHandler {
         var order = fundingOrderRepository.findByFundingId(fundingId)
                 .orElseThrow(() -> FundingOrderNotFoundException.byFundingId(fundingId));
 
+        var ownerWallet = walletRepository.findById(order.walletId())
+                .orElseThrow(() -> WalletNotFoundException.byId(order.walletId()));
+
+        if (!ownerWallet.userId().equals(authenticatedUserId)) {
+            throw FundingOrderNotFoundException.byFundingId(fundingId);
+        }
+
         if (order.status() != FundingStatus.FUNDED) {
             throw RefundNotAllowedException.forStatus(order.status());
         }
 
         var wallet = walletRepository.findByIdForUpdate(order.walletId())
                 .orElseThrow(() -> WalletNotFoundException.byId(order.walletId()));
-
-        if (!wallet.userId().equals(authenticatedUserId)) {
-            throw FundingOrderNotFoundException.byFundingId(fundingId);
-        }
 
         var amount = order.amountUsdc();
         assertSufficientBalance(wallet, amount);

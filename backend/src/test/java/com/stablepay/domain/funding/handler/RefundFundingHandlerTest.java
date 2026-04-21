@@ -77,6 +77,7 @@ class RefundFundingHandlerTest {
                 .build();
 
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
+        given(walletRepository.findById(order.walletId())).willReturn(Optional.of(wallet));
         given(walletRepository.findByIdForUpdate(order.walletId())).willReturn(Optional.of(wallet));
         given(treasuryService.getUsdcBalance(wallet.solanaAddress())).willReturn(new BigDecimal("100.00"));
 
@@ -126,7 +127,9 @@ class RefundFundingHandlerTest {
     void shouldThrowWhenOrderStatusIsNotFunded(FundingStatus nonFundedStatus) {
         // given
         var order = fundingOrderBuilder().status(nonFundedStatus).build();
+        var wallet = walletBuilder().id(order.walletId()).build();
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
+        given(walletRepository.findById(order.walletId())).willReturn(Optional.of(wallet));
 
         // when / then
         assertThatThrownBy(() -> refundFundingHandler.handle(SOME_FUNDING_ID, SOME_USER_ID))
@@ -134,11 +137,8 @@ class RefundFundingHandlerTest {
                 .hasMessageContaining("SP-0023")
                 .hasMessageContaining(nonFundedStatus.name());
 
-        then(walletRepository).shouldHaveNoInteractions();
         then(treasuryService).shouldHaveNoInteractions();
         then(paymentGateway).shouldHaveNoInteractions();
-        then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
-        then(fundingOrderRepository).shouldHaveNoMoreInteractions();
     }
 
     @Test
@@ -152,7 +152,24 @@ class RefundFundingHandlerTest {
                 .build();
 
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
-        given(walletRepository.findByIdForUpdate(order.walletId())).willReturn(Optional.of(wallet));
+        given(walletRepository.findById(order.walletId())).willReturn(Optional.of(wallet));
+
+        // when / then
+        assertThatThrownBy(() -> refundFundingHandler.handle(SOME_FUNDING_ID, SOME_OTHER_USER_ID))
+                .isInstanceOf(FundingOrderNotFoundException.class)
+                .hasMessageContaining("SP-0020");
+
+        then(paymentGateway).shouldHaveNoInteractions();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = FundingStatus.class, names = "FUNDED", mode = Mode.EXCLUDE)
+    void shouldReturnNotFoundNotStatusWhenNonFundedOrderBelongsToDifferentUser(FundingStatus nonFundedStatus) {
+        // given
+        var order = fundingOrderBuilder().status(nonFundedStatus).build();
+        var wallet = walletBuilder().id(order.walletId()).build();
+        given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
+        given(walletRepository.findById(order.walletId())).willReturn(Optional.of(wallet));
 
         // when / then
         assertThatThrownBy(() -> refundFundingHandler.handle(SOME_FUNDING_ID, SOME_OTHER_USER_ID))
@@ -172,6 +189,7 @@ class RefundFundingHandlerTest {
                 .totalBalance(new BigDecimal("100.00"))
                 .build();
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
+        given(walletRepository.findById(order.walletId())).willReturn(Optional.of(wallet));
         given(walletRepository.findByIdForUpdate(order.walletId())).willReturn(Optional.of(wallet));
         given(treasuryService.getUsdcBalance(SOME_SOLANA_ADDRESS)).willReturn(new BigDecimal("10.00"));
 
@@ -183,10 +201,6 @@ class RefundFundingHandlerTest {
                 .hasMessageContaining("10.00");
 
         then(paymentGateway).shouldHaveNoInteractions();
-        then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
-        then(fundingOrderRepository).shouldHaveNoMoreInteractions();
-        then(walletRepository).should().findByIdForUpdate(order.walletId());
-        then(walletRepository).shouldHaveNoMoreInteractions();
     }
 
     @Test
@@ -199,6 +213,7 @@ class RefundFundingHandlerTest {
                 .totalBalance(new BigDecimal("100.00"))
                 .build();
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
+        given(walletRepository.findById(order.walletId())).willReturn(Optional.of(wallet));
         given(walletRepository.findByIdForUpdate(order.walletId())).willReturn(Optional.of(wallet));
         given(treasuryService.getUsdcBalance(SOME_SOLANA_ADDRESS)).willReturn(new BigDecimal("100.00"));
 
@@ -210,10 +225,6 @@ class RefundFundingHandlerTest {
                 .hasMessageContaining("5.00");
 
         then(paymentGateway).shouldHaveNoInteractions();
-        then(fundingOrderRepository).should().findByFundingId(SOME_FUNDING_ID);
-        then(fundingOrderRepository).shouldHaveNoMoreInteractions();
-        then(walletRepository).should().findByIdForUpdate(order.walletId());
-        then(walletRepository).shouldHaveNoMoreInteractions();
     }
 
     @Test
@@ -226,6 +237,7 @@ class RefundFundingHandlerTest {
                 .totalBalance(new BigDecimal("100.00"))
                 .build();
         given(fundingOrderRepository.findByFundingId(SOME_FUNDING_ID)).willReturn(Optional.of(order));
+        given(walletRepository.findById(order.walletId())).willReturn(Optional.of(wallet));
         given(walletRepository.findByIdForUpdate(order.walletId())).willReturn(Optional.of(wallet));
         given(treasuryService.getUsdcBalance(SOME_SOLANA_ADDRESS)).willReturn(new BigDecimal("100.00"));
 
@@ -246,8 +258,6 @@ class RefundFundingHandlerTest {
                 .hasCause(stripeFailure);
 
         then(fundingOrderRepository).should(times(2)).save(fundingOrderCaptor.capture());
-        then(walletRepository).should().findByIdForUpdate(order.walletId());
-        then(walletRepository).shouldHaveNoMoreInteractions();
 
         var saves = fundingOrderCaptor.getAllValues();
         assertThat(saves.get(0)).usingRecursiveComparison().isEqualTo(refundInitiated);

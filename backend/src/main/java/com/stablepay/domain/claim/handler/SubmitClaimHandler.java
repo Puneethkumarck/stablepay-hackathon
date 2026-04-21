@@ -51,6 +51,10 @@ public class SubmitClaimHandler {
             throw InvalidRemittanceStateException.forClaim(remittance.status());
         }
 
+        var senderDisplayName = userRepository.findById(remittance.senderId())
+                .map(user -> user.email().split("@")[0])
+                .orElse("Unknown");
+
         var updatedClaim = claimToken.toBuilder()
                 .claimed(true)
                 .upiId(upiId)
@@ -62,10 +66,6 @@ public class SubmitClaimHandler {
 
         claimSignaler.ifPresent(signaler ->
                 signaler.signalClaim(claimToken.remittanceId(), token, upiId));
-
-        var senderDisplayName = userRepository.findById(remittance.senderId())
-                .map(user -> user.email().split("@")[0])
-                .orElse("Unknown");
 
         return ClaimDetails.builder()
                 .claimToken(savedClaim)

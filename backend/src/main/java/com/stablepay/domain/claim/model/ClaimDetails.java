@@ -15,5 +15,6 @@ public record ClaimDetails(
     public ClaimDetails {
         requireNonNull(claimToken, "claimToken cannot be null");
         requireNonNull(remittance, "remittance cannot be null");
+        requireNonNull(senderDisplayName, "senderDisplayName cannot be null");
     }
 }

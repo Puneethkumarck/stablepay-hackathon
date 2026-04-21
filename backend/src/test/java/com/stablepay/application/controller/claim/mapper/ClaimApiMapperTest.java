@@ -1,5 +1,6 @@
 package com.stablepay.application.controller.claim.mapper;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_SENDER_DISPLAY_NAME;
 import static com.stablepay.testutil.ClaimTokenFixtures.SOME_EXPIRES_AT;
 import static com.stablepay.testutil.ClaimTokenFixtures.claimTokenBuilder;
 import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
@@ -27,6 +28,7 @@ class ClaimApiMapperTest {
         var claimDetails = ClaimDetails.builder()
                 .claimToken(claimToken)
                 .remittance(remittance)
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .build();
 
         // when
@@ -35,6 +37,7 @@ class ClaimApiMapperTest {
         // then
         var expected = ClaimResponse.builder()
                 .remittanceId(remittance.remittanceId())
+                .senderDisplayName(SOME_SENDER_DISPLAY_NAME)
                 .amountUsdc(remittance.amountUsdc())
                 .amountInr(remittance.amountInr())
                 .fxRate(remittance.fxRate())
