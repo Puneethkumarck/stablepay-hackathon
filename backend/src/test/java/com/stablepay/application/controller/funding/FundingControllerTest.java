@@ -1,14 +1,14 @@
 package com.stablepay.application.controller.funding;
 
+import static com.stablepay.testutil.AuthFixtures.SOME_OTHER_USER_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_AMOUNT_USDC;
-import static com.stablepay.testutil.FundingOrderFixtures.SOME_CREATED_AT;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_FUNDING_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_STRIPE_PAYMENT_INTENT_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.SOME_WALLET_ID;
 import static com.stablepay.testutil.FundingOrderFixtures.fundingOrderBuilder;
+import static com.stablepay.testutil.SecurityTestBase.asUser;
 import static com.stablepay.testutil.WalletFixtures.SOME_USER_ID;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,13 +23,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.controller.funding.mapper.FundingApiMapper;
+import com.stablepay.application.controller.funding.mapper.FundingApiMapperImpl;
 import com.stablepay.application.dto.FundWalletRequest;
-import com.stablepay.application.dto.FundingOrderResponse;
 import com.stablepay.domain.funding.exception.FundingAlreadyInProgressException;
 import com.stablepay.domain.funding.exception.FundingFailedException;
 import com.stablepay.domain.funding.exception.FundingOrderNotFoundException;
@@ -48,7 +48,7 @@ import com.stablepay.testutil.TestSecurityConfig;
 import lombok.SneakyThrows;
 
 @WebMvcTest(FundingController.class)
-@Import({TestClockConfig.class, TestSecurityConfig.class})
+@Import({TestClockConfig.class, TestSecurityConfig.class, FundingApiMapperImpl.class})
 class FundingControllerTest {
 
     private static final String SOME_CLIENT_SECRET = "pi_3MnTest_secret_abc";
@@ -67,11 +67,8 @@ class FundingControllerTest {
     @MockitoBean
     private RefundFundingHandler refundFundingHandler;
 
-    @MockitoBean
+    @MockitoSpyBean
     private FundingApiMapper fundingApiMapper;
-
-    @MockitoBean
-    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
 
     @Test
     @SneakyThrows
@@ -83,25 +80,13 @@ class FundingControllerTest {
                 .clientSecret(SOME_CLIENT_SECRET)
                 .build();
 
-        var responseWithSecret = FundingOrderResponse.builder()
-                .fundingId(SOME_FUNDING_ID)
-                .walletId(SOME_WALLET_ID)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .status(FundingStatus.PAYMENT_CONFIRMED)
-                .stripePaymentIntentId(SOME_STRIPE_PAYMENT_INTENT_ID)
-                .stripeClientSecret(SOME_CLIENT_SECRET)
-                .createdAt(SOME_CREATED_AT)
-                .build();
-
         given(initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC, SOME_USER_ID)).willReturn(result);
-        given(fundingApiMapper.toResponseWithClientSecret(order, SOME_CLIENT_SECRET))
-                .willReturn(responseWithSecret);
 
         var request = FundWalletRequest.builder().amount(SOME_AMOUNT_USDC).build();
 
         // when / then
         mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID)))
+                        .with(asUser(SOME_USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -124,7 +109,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID)))
+                        .with(asUser(SOME_USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -142,7 +127,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID)))
+                        .with(asUser(SOME_USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -160,7 +145,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID)))
+                        .with(asUser(SOME_USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadGateway())
@@ -175,7 +160,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID)))
+                        .with(asUser(SOME_USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -190,7 +175,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID)))
+                        .with(asUser(SOME_USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -205,7 +190,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID)))
+                        .with(asUser(SOME_USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -217,21 +202,12 @@ class FundingControllerTest {
     void shouldReturnFundingOrderStatusWithoutClientSecret() {
         // given
         var order = fundingOrderBuilder().status(FundingStatus.FUNDED).build();
-        var response = FundingOrderResponse.builder()
-                .fundingId(SOME_FUNDING_ID)
-                .walletId(SOME_WALLET_ID)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .status(FundingStatus.FUNDED)
-                .stripePaymentIntentId(SOME_STRIPE_PAYMENT_INTENT_ID)
-                .createdAt(SOME_CREATED_AT)
-                .build();
 
         given(getFundingOrderHandler.handle(SOME_FUNDING_ID, SOME_USER_ID)).willReturn(order);
-        given(fundingApiMapper.toResponse(order)).willReturn(response);
 
         // when / then
         mockMvc.perform(get("/api/funding-orders/{fundingId}", SOME_FUNDING_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                        .with(asUser(SOME_USER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fundingId").value(SOME_FUNDING_ID.toString()))
                 .andExpect(jsonPath("$.status").value("FUNDED"))
@@ -249,7 +225,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(get("/api/funding-orders/{fundingId}", missingId)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                        .with(asUser(SOME_USER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("SP-0020"));
     }
@@ -259,21 +235,12 @@ class FundingControllerTest {
     void shouldRefundFundedOrderAndReturnUpdatedStatus() {
         // given
         var order = fundingOrderBuilder().status(FundingStatus.REFUNDED).build();
-        var response = FundingOrderResponse.builder()
-                .fundingId(SOME_FUNDING_ID)
-                .walletId(SOME_WALLET_ID)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .status(FundingStatus.REFUNDED)
-                .stripePaymentIntentId(SOME_STRIPE_PAYMENT_INTENT_ID)
-                .createdAt(SOME_CREATED_AT)
-                .build();
 
         given(refundFundingHandler.handle(SOME_FUNDING_ID, SOME_USER_ID)).willReturn(order);
-        given(fundingApiMapper.toResponse(order)).willReturn(response);
 
         // when / then
         mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                        .with(asUser(SOME_USER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fundingId").value(SOME_FUNDING_ID.toString()))
                 .andExpect(jsonPath("$.status").value("REFUNDED"))
@@ -289,7 +256,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                        .with(asUser(SOME_USER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("SP-0020"));
     }
@@ -303,7 +270,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                        .with(asUser(SOME_USER_ID)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("SP-0023"));
     }
@@ -318,7 +285,7 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                        .with(asUser(SOME_USER_ID)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("SP-0025"));
     }
@@ -333,8 +300,76 @@ class FundingControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_USER_ID))))
+                        .with(asUser(SOME_USER_ID)))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.errorCode").value("SP-0024"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WhenNoBearerOnFund() {
+        // given
+        var request = FundWalletRequest.builder().amount(SOME_AMOUNT_USDC).build();
+
+        // when / then
+        mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WhenNoBearerOnGetFundingOrder() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/api/funding-orders/{fundingId}", SOME_FUNDING_ID))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WhenNoBearerOnRefund() {
+        // given
+
+        // when / then
+        mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn404WhenFundingWalletBelongsToDifferentUser() {
+        // given
+        given(initiateFundingHandler.handle(SOME_WALLET_ID, SOME_AMOUNT_USDC, SOME_OTHER_USER_ID))
+                .willThrow(WalletNotFoundException.byId(SOME_WALLET_ID));
+
+        var request = FundWalletRequest.builder().amount(SOME_AMOUNT_USDC).build();
+
+        // when / then
+        mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
+                        .with(asUser(SOME_OTHER_USER_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("SP-0006"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn404WhenFundingOrderBelongsToDifferentUser() {
+        // given
+        given(getFundingOrderHandler.handle(SOME_FUNDING_ID, SOME_OTHER_USER_ID))
+                .willThrow(FundingOrderNotFoundException.byFundingId(SOME_FUNDING_ID));
+
+        // when / then
+        mockMvc.perform(get("/api/funding-orders/{fundingId}", SOME_FUNDING_ID)
+                        .with(asUser(SOME_OTHER_USER_ID)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("SP-0020"));
     }
 }

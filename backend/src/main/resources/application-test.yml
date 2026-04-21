@@ -13,6 +13,14 @@ spring:
       ddl-auto: validate
 
 stablepay:
+  jwt:
+    secret: test-jwt-secret-must-be-at-least-32-bytes-long!!
+    access-ttl: PT15M
+    refresh-ttl: P30D
+  auth:
+    google:
+      client-ids:
+        - test-google-client-id.apps.googleusercontent.com
   mpc:
     enabled: false
   stripe:

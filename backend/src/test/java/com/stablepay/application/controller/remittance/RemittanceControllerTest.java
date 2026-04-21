@@ -1,17 +1,14 @@
 package com.stablepay.application.controller.remittance;
 
-import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_INR;
+import static com.stablepay.testutil.AuthFixtures.SOME_OTHER_USER_ID;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
-import static com.stablepay.testutil.RemittanceFixtures.SOME_CREATED_AT;
-import static com.stablepay.testutil.RemittanceFixtures.SOME_FX_RATE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_PHONE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_DB_ID;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
-import static com.stablepay.testutil.RemittanceFixtures.SOME_UPDATED_AT;
 import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
+import static com.stablepay.testutil.SecurityTestBase.asUser;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,18 +26,17 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.controller.remittance.mapper.RemittanceApiMapper;
+import com.stablepay.application.controller.remittance.mapper.RemittanceApiMapperImpl;
 import com.stablepay.application.dto.CreateRemittanceRequest;
-import com.stablepay.application.dto.RemittanceResponse;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.handler.CreateRemittanceHandler;
 import com.stablepay.domain.remittance.handler.GetRemittanceQueryHandler;
 import com.stablepay.domain.remittance.handler.ListRemittancesQueryHandler;
-import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 import com.stablepay.testutil.TestClockConfig;
 import com.stablepay.testutil.TestSecurityConfig;
@@ -48,7 +44,7 @@ import com.stablepay.testutil.TestSecurityConfig;
 import lombok.SneakyThrows;
 
 @WebMvcTest(RemittanceController.class)
-@Import({TestClockConfig.class, TestSecurityConfig.class})
+@Import({TestClockConfig.class, TestSecurityConfig.class, RemittanceApiMapperImpl.class})
 class RemittanceControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -65,33 +61,17 @@ class RemittanceControllerTest {
     @MockitoBean
     private ListRemittancesQueryHandler listRemittancesQueryHandler;
 
-    @MockitoBean
+    @MockitoSpyBean
     private RemittanceApiMapper remittanceApiMapper;
-
-    @MockitoBean
-    private SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
 
     @Test
     @SneakyThrows
     void shouldCreateRemittance() {
         // given
         var domain = remittanceBuilder().build();
-        var response = RemittanceResponse.builder()
-                .id(SOME_REMITTANCE_DB_ID)
-                .remittanceId(SOME_REMITTANCE_ID)
-                .recipientPhone(SOME_RECIPIENT_PHONE)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .amountInr(SOME_AMOUNT_INR)
-                .fxRate(SOME_FX_RATE)
-                .status(RemittanceStatus.INITIATED)
-                .smsNotificationFailed(false)
-                .createdAt(SOME_CREATED_AT)
-                .updatedAt(SOME_UPDATED_AT)
-                .build();
 
         given(createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
                 .willReturn(domain);
-        given(remittanceApiMapper.toResponse(domain)).willReturn(response);
 
         var request = CreateRemittanceRequest.builder()
                 .recipientPhone(SOME_RECIPIENT_PHONE)
@@ -100,7 +80,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/remittances")
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_SENDER_ID)))
+                        .with(asUser(SOME_SENDER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -115,24 +95,12 @@ class RemittanceControllerTest {
     void shouldGetRemittanceById() {
         // given
         var domain = remittanceBuilder().build();
-        var response = RemittanceResponse.builder()
-                .id(SOME_REMITTANCE_DB_ID)
-                .remittanceId(SOME_REMITTANCE_ID)
-                .recipientPhone(SOME_RECIPIENT_PHONE)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .fxRate(SOME_FX_RATE)
-                .status(RemittanceStatus.INITIATED)
-                .smsNotificationFailed(false)
-                .createdAt(SOME_CREATED_AT)
-                .updatedAt(SOME_UPDATED_AT)
-                .build();
 
         given(getRemittanceQueryHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID)).willReturn(domain);
-        given(remittanceApiMapper.toResponse(domain)).willReturn(response);
 
         // when / then
         mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_SENDER_ID))))
+                        .with(asUser(SOME_SENDER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remittanceId").value(SOME_REMITTANCE_ID.toString()));
     }
@@ -145,18 +113,11 @@ class RemittanceControllerTest {
         var domain = remittanceBuilder().build();
         var page = new PageImpl<>(List.of(domain), pageable, 1);
 
-        var response = RemittanceResponse.builder()
-                .id(SOME_REMITTANCE_DB_ID)
-                .remittanceId(SOME_REMITTANCE_ID)
-                .status(RemittanceStatus.INITIATED)
-                .build();
-
         given(listRemittancesQueryHandler.handle(SOME_SENDER_ID, pageable)).willReturn(page);
-        given(remittanceApiMapper.toResponse(domain)).willReturn(response);
 
         // when / then
         mockMvc.perform(get("/api/remittances")
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_SENDER_ID)))
+                        .with(asUser(SOME_SENDER_ID))
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
@@ -174,7 +135,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(get("/api/remittances/{remittanceId}", unknownId)
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_SENDER_ID))))
+                        .with(asUser(SOME_SENDER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("SP-0010"));
     }
@@ -193,7 +154,7 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/remittances")
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_SENDER_ID)))
+                        .with(asUser(SOME_SENDER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -211,10 +172,63 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(post("/api/remittances")
-                        .with(authentication(TestSecurityConfig.authenticationFor(SOME_SENDER_ID)))
+                        .with(asUser(SOME_SENDER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("SP-0003"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WhenNoBearerOnCreate() {
+        // given
+        var request = CreateRemittanceRequest.builder()
+                .recipientPhone(SOME_RECIPIENT_PHONE)
+                .amountUsdc(SOME_AMOUNT_USDC)
+                .build();
+
+        // when / then
+        mockMvc.perform(post("/api/remittances")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WhenNoBearerOnGet() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn401WhenNoBearerOnList() {
+        // given
+
+        // when / then
+        mockMvc.perform(get("/api/remittances"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn404WhenRemittanceBelongsToDifferentUser() {
+        // given
+        given(getRemittanceQueryHandler.handle(SOME_REMITTANCE_ID, SOME_OTHER_USER_ID))
+                .willThrow(RemittanceNotFoundException.byId(SOME_REMITTANCE_ID));
+
+        // when / then
+        mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID)
+                        .with(asUser(SOME_OTHER_USER_ID)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("SP-0010"));
     }
 }

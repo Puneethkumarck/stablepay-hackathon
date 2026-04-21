@@ -7,6 +7,7 @@ import static com.stablepay.testutil.AuthFixtures.SOME_ID_TOKEN;
 import static com.stablepay.testutil.AuthFixtures.SOME_PROVIDER;
 import static com.stablepay.testutil.AuthFixtures.SOME_RAW_REFRESH_TOKEN;
 import static com.stablepay.testutil.AuthFixtures.authSessionBuilder;
+import static com.stablepay.testutil.SecurityTestBase.asUser;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -23,36 +24,30 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stablepay.application.config.AppUserConverter;
-import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
-import com.stablepay.application.config.SecurityConfig;
 import com.stablepay.application.controller.auth.mapper.AuthResponseMapper;
-import com.stablepay.application.dto.AuthResponse;
+import com.stablepay.application.controller.auth.mapper.AuthResponseMapperImpl;
 import com.stablepay.application.dto.RefreshTokenRequest;
 import com.stablepay.application.dto.SocialLoginRequest;
-import com.stablepay.application.dto.UserResponse;
-import com.stablepay.application.dto.WalletResponse;
 import com.stablepay.domain.auth.exception.InvalidIdTokenException;
 import com.stablepay.domain.auth.exception.InvalidRefreshTokenException;
 import com.stablepay.domain.auth.exception.UnsupportedAuthProviderException;
 import com.stablepay.domain.auth.handler.LogoutHandler;
 import com.stablepay.domain.auth.handler.RefreshTokenHandler;
 import com.stablepay.domain.auth.handler.SocialLoginHandler;
-import com.stablepay.domain.auth.model.AuthPrincipal;
 import com.stablepay.domain.auth.model.AuthTokenConfig;
 import com.stablepay.testutil.AuthFixtures;
 import com.stablepay.testutil.TestClockConfig;
+import com.stablepay.testutil.TestSecurityConfig;
 
 import lombok.SneakyThrows;
 
 @WebMvcTest(AuthController.class)
-@Import({TestClockConfig.class, SecurityConfig.class, SecurityAuthenticationEntryPoint.class})
+@Import({TestClockConfig.class, TestSecurityConfig.class, AuthResponseMapperImpl.class})
 class AuthControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -70,17 +65,11 @@ class AuthControllerTest {
     @MockitoBean
     private LogoutHandler logoutHandler;
 
-    @MockitoBean
+    @MockitoSpyBean
     private AuthResponseMapper authResponseMapper;
 
     @MockitoBean
     private AuthTokenConfig authTokenConfig;
-
-    @MockitoBean
-    private AppUserConverter appUserConverter;
-
-    @MockitoBean
-    private JwtDecoder appJwtDecoder;
 
     @Nested
     class SocialLogin {
@@ -96,18 +85,9 @@ class AuthControllerTest {
             var loginResult = AuthFixtures.loginResultBuilder(wallet)
                     .newUser(true)
                     .build();
-            var authResponse = AuthResponse.builder()
-                    .accessToken(SOME_ACCESS_TOKEN)
-                    .refreshToken(SOME_RAW_REFRESH_TOKEN)
-                    .tokenType("Bearer")
-                    .expiresIn(EXPIRES_IN_SECONDS)
-                    .user(UserResponse.builder().id(SOME_AUTH_USER_ID).email(SOME_EMAIL).build())
-                    .wallet(WalletResponse.builder().build())
-                    .build();
 
             given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", null)).willReturn(loginResult);
             given(authTokenConfig.accessTtl()).willReturn(Duration.ofMinutes(15));
-            given(authResponseMapper.toResponse(loginResult, EXPIRES_IN_SECONDS)).willReturn(authResponse);
 
             var request = SocialLoginRequest.builder()
                     .provider(SOME_PROVIDER)
@@ -123,7 +103,9 @@ class AuthControllerTest {
             result.andExpect(status().isCreated())
                     .andExpect(jsonPath("$.accessToken").value(SOME_ACCESS_TOKEN))
                     .andExpect(jsonPath("$.tokenType").value("Bearer"))
-                    .andExpect(jsonPath("$.expiresIn").value(EXPIRES_IN_SECONDS));
+                    .andExpect(jsonPath("$.expiresIn").value(EXPIRES_IN_SECONDS))
+                    .andExpect(jsonPath("$.user.id").value(SOME_AUTH_USER_ID.toString()))
+                    .andExpect(jsonPath("$.user.email").value(SOME_EMAIL));
         }
 
         @Test
@@ -137,16 +119,9 @@ class AuthControllerTest {
             var loginResult = AuthFixtures.loginResultBuilder(wallet)
                     .newUser(false)
                     .build();
-            var authResponse = AuthResponse.builder()
-                    .accessToken(SOME_ACCESS_TOKEN)
-                    .refreshToken(SOME_RAW_REFRESH_TOKEN)
-                    .tokenType("Bearer")
-                    .expiresIn(EXPIRES_IN_SECONDS)
-                    .build();
 
             given(socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN, "127.0.0.1", null)).willReturn(loginResult);
             given(authTokenConfig.accessTtl()).willReturn(Duration.ofMinutes(15));
-            given(authResponseMapper.toResponse(loginResult, EXPIRES_IN_SECONDS)).willReturn(authResponse);
 
             var request = SocialLoginRequest.builder()
                     .provider(SOME_PROVIDER)
@@ -234,16 +209,9 @@ class AuthControllerTest {
         void shouldReturn200WithNewTokens() {
             // given
             var session = authSessionBuilder().build();
-            var authResponse = AuthResponse.builder()
-                    .accessToken(SOME_ACCESS_TOKEN)
-                    .refreshToken(SOME_RAW_REFRESH_TOKEN)
-                    .tokenType("Bearer")
-                    .expiresIn(EXPIRES_IN_SECONDS)
-                    .build();
 
             given(refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN, "127.0.0.1", null)).willReturn(session);
             given(authTokenConfig.accessTtl()).willReturn(Duration.ofMinutes(15));
-            given(authResponseMapper.toRefreshResponse(session, EXPIRES_IN_SECONDS)).willReturn(authResponse);
 
             var request = RefreshTokenRequest.builder()
                     .refreshToken(SOME_RAW_REFRESH_TOKEN)
@@ -257,7 +225,8 @@ class AuthControllerTest {
             // then
             result.andExpect(status().isOk())
                     .andExpect(jsonPath("$.accessToken").value(SOME_ACCESS_TOKEN))
-                    .andExpect(jsonPath("$.tokenType").value("Bearer"));
+                    .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                    .andExpect(jsonPath("$.refreshToken").value(SOME_RAW_REFRESH_TOKEN));
         }
 
         @Test
@@ -307,22 +276,10 @@ class AuthControllerTest {
         @SneakyThrows
         void shouldReturn204OnSuccessfulLogout() {
             // given
-            var principal = AuthPrincipal.builder().id(SOME_AUTH_USER_ID).build();
-            var jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("test-token")
-                    .header("alg", "HS256")
-                    .subject(SOME_AUTH_USER_ID.toString())
-                    .build();
-            var authentication = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(
-                    jwt, java.util.Collections.emptyList(), SOME_AUTH_USER_ID.toString()) {
-                @Override
-                public Object getPrincipal() {
-                    return principal;
-                }
-            };
 
             // when
             var result = mockMvc.perform(post("/api/auth/logout")
-                            .with(SecurityMockMvcRequestPostProcessors.authentication(authentication)));
+                            .with(asUser(SOME_AUTH_USER_ID)));
 
             // then
             result.andExpect(status().isNoContent());

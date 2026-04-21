@@ -18,6 +18,7 @@ import com.stablepay.domain.auth.model.SocialIdentity;
 import com.stablepay.domain.auth.port.UserRepository;
 import com.stablepay.domain.wallet.model.Wallet;
 
+
 public final class AuthFixtures {
 
     private AuthFixtures() {}
