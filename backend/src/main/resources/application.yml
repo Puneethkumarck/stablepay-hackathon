@@ -38,6 +38,14 @@ server:
   port: 8080
 
 stablepay:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-at-least-32-characters-long!!}
+    access-ttl: PT15M
+    refresh-ttl: P30D
+  auth:
+    google:
+      client-ids:
+        - ${GOOGLE_ANDROID_CLIENT_ID:placeholder-client-id}
   disbursement:
     provider: ${STABLEPAY_DISBURSEMENT_PROVIDER:logging}
   razorpay:
