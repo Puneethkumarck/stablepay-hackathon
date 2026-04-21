@@ -2,6 +2,7 @@ package com.stablepay.application.config;
 
 import static com.stablepay.testutil.AuthFixtures.SOME_AUTH_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 import org.junit.jupiter.api.Test;
@@ -35,5 +36,16 @@ class AppUserConverterTest {
         assertThat(result.getPrincipal())
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
+    }
+
+    @Test
+    void shouldThrowWhenSubjectIsNotValidUuid() {
+        // given
+        given(jwt.getSubject()).willReturn("not-a-uuid");
+
+        // when
+        // then
+        assertThatThrownBy(() -> converter.convert(jwt))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

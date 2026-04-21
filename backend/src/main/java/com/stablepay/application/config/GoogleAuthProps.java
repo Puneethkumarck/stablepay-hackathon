@@ -4,6 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -15,7 +16,7 @@ import lombok.Builder;
 @Validated
 @Builder(toBuilder = true)
 public record GoogleAuthProps(
-    @NotEmpty List<String> clientIds
+    @NotEmpty List<@NotBlank String> clientIds
 ) {
     public GoogleAuthProps {
         requireNonNull(clientIds, "clientIds cannot be null");

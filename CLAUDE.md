@@ -98,7 +98,7 @@ docker compose down                # stop infrastructure
 stablepay-hackathon/
 ├── programs/
 │   └── stablepay-escrow/         # Anchor program (Rust)
-├── backend/                       # Spring Boot 4.0.3 (Java 25, Spring MVC + JPA)
+├── backend/                       # Spring Boot 4.0.5 (Java 25, Spring MVC + JPA)
 │   ├── src/main/java/com/stablepay/
 │   │   ├── application/           # Controllers, config
 │   │   ├── domain/                # Models, ports, services

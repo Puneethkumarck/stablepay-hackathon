@@ -24,6 +24,8 @@ public final class AuthFixtures {
     public static final String SOME_PROVIDER = "google";
     public static final String SOME_SUBJECT = "google-sub-12345";
     public static final String SOME_SOCIAL_EMAIL = "alice@gmail.com";
+    public static final String SOME_ID_TOKEN = "some-google-id-token";
+    public static final String SOME_GOOGLE_CLIENT_ID = "test-google-client-id.apps.googleusercontent.com";
 
     public static final UUID SOME_REFRESH_TOKEN_ID = UUID.fromString("00000000-0000-0000-0000-000000000099");
     public static final String SOME_TOKEN_HASH = "sha256-abc123def456";
