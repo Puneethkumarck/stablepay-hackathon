@@ -23,11 +23,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stablepay.application.config.AppUserConverter;
 import com.stablepay.application.config.SecurityConfig;
 import com.stablepay.application.controller.auth.mapper.AuthResponseMapper;
 import com.stablepay.application.dto.AuthResponse;
@@ -73,6 +75,12 @@ class AuthControllerTest {
     @MockitoBean
     private AuthTokenConfig authTokenConfig;
 
+    @MockitoBean
+    private AppUserConverter appUserConverter;
+
+    @MockitoBean
+    private JwtDecoder appJwtDecoder;
+
     @Nested
     class SocialLogin {
 
@@ -105,11 +113,13 @@ class AuthControllerTest {
                     .idToken(SOME_ID_TOKEN)
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/social")
+            // when
+            var result = mockMvc.perform(post("/api/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isCreated())
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isCreated())
                     .andExpect(jsonPath("$.accessToken").value(SOME_ACCESS_TOKEN))
                     .andExpect(jsonPath("$.tokenType").value("Bearer"))
                     .andExpect(jsonPath("$.expiresIn").value(EXPIRES_IN_SECONDS));
@@ -142,11 +152,13 @@ class AuthControllerTest {
                     .idToken(SOME_ID_TOKEN)
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/social")
+            // when
+            var result = mockMvc.perform(post("/api/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isOk());
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isOk());
         }
 
         @Test
@@ -161,11 +173,13 @@ class AuthControllerTest {
                     .idToken(SOME_ID_TOKEN)
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/social")
+            // when
+            var result = mockMvc.perform(post("/api/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isUnauthorized())
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.errorCode").value("SP-0032"));
         }
 
@@ -181,11 +195,13 @@ class AuthControllerTest {
                     .idToken(SOME_ID_TOKEN)
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/social")
+            // when
+            var result = mockMvc.perform(post("/api/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isBadRequest())
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("SP-0034"));
         }
 
@@ -198,11 +214,13 @@ class AuthControllerTest {
                     .idToken("")
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/social")
+            // when
+            var result = mockMvc.perform(post("/api/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isBadRequest())
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("SP-0003"));
         }
     }
@@ -230,11 +248,13 @@ class AuthControllerTest {
                     .refreshToken(SOME_RAW_REFRESH_TOKEN)
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/refresh")
+            // when
+            var result = mockMvc.perform(post("/api/auth/refresh")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isOk())
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isOk())
                     .andExpect(jsonPath("$.accessToken").value(SOME_ACCESS_TOKEN))
                     .andExpect(jsonPath("$.tokenType").value("Bearer"));
         }
@@ -250,11 +270,13 @@ class AuthControllerTest {
                     .refreshToken(SOME_RAW_REFRESH_TOKEN)
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/refresh")
+            // when
+            var result = mockMvc.perform(post("/api/auth/refresh")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isUnauthorized())
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.errorCode").value("SP-0035"));
         }
 
@@ -266,11 +288,13 @@ class AuthControllerTest {
                     .refreshToken("")
                     .build();
 
-            // when / then
-            mockMvc.perform(post("/api/auth/refresh")
+            // when
+            var result = mockMvc.perform(post("/api/auth/refresh")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(OBJECT_MAPPER.writeValueAsString(request)))
-                    .andExpect(status().isBadRequest())
+                            .content(OBJECT_MAPPER.writeValueAsString(request)));
+
+            // then
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value("SP-0003"));
         }
     }
@@ -295,12 +319,25 @@ class AuthControllerTest {
                 }
             };
 
-            // when / then
-            mockMvc.perform(post("/api/auth/logout")
-                            .with(SecurityMockMvcRequestPostProcessors.authentication(authentication)))
-                    .andExpect(status().isNoContent());
+            // when
+            var result = mockMvc.perform(post("/api/auth/logout")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(authentication)));
 
+            // then
+            result.andExpect(status().isNoContent());
             then(logoutHandler).should().handle(SOME_AUTH_USER_ID);
+        }
+
+        @Test
+        @SneakyThrows
+        void shouldReturn401WhenNotAuthenticated() {
+            // given
+
+            // when
+            var result = mockMvc.perform(post("/api/auth/logout"));
+
+            // then
+            result.andExpect(status().isUnauthorized());
         }
     }
 }

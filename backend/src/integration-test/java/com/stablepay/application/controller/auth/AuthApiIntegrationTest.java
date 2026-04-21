@@ -119,7 +119,7 @@ class AuthApiIntegrationTest {
                     .content(OBJECT_MAPPER.writeValueAsString(request)))
                     .andExpect(status().isCreated());
 
-            // when — second login with same identity
+            // when
             var result = mockMvc.perform(post("/api/auth/social")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(OBJECT_MAPPER.writeValueAsString(request)));
@@ -159,7 +159,7 @@ class AuthApiIntegrationTest {
         @Test
         @SneakyThrows
         void shouldReturn200WithNewTokensOnRefresh() {
-            // given — create a user via social login first
+            // given
             var identity = AuthFixtures.socialIdentityBuilder()
                     .email("refresh-" + System.nanoTime() + "@gmail.com")
                     .subject("google-sub-refresh-" + System.nanoTime())
@@ -215,7 +215,7 @@ class AuthApiIntegrationTest {
         @Test
         @SneakyThrows
         void shouldReturn204OnLogout() {
-            // given — create a user via social login first
+            // given
             var identity = AuthFixtures.socialIdentityBuilder()
                     .email("logout-" + System.nanoTime() + "@gmail.com")
                     .subject("google-sub-logout-" + System.nanoTime())
@@ -262,6 +262,18 @@ class AuthApiIntegrationTest {
 
             // then
             result.andExpect(status().isNoContent());
+        }
+
+        @Test
+        @SneakyThrows
+        void shouldReturn401WhenNotAuthenticated() {
+            // given
+
+            // when
+            var result = mockMvc.perform(post("/api/auth/logout"));
+
+            // then
+            result.andExpect(status().isUnauthorized());
         }
     }
 }

@@ -203,6 +203,5 @@ dependencies {
 
     // Integration test dependencies
     "integrationTestImplementation"(testFixtures(project))
-    "integrationTestImplementation"("org.springframework.security:spring-security-test")
     "integrationTestImplementation"("org.wiremock:wiremock-standalone:3.13.2")
 }

@@ -179,7 +179,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @SneakyThrows
     void shouldReturn401WithEnrichedResponseForInvalidIdToken() {
-        // given — stub endpoint throws InvalidIdTokenException
+        // given
 
         // when / then
         mockMvc.perform(get("/test/invalid-id-token"))
@@ -193,7 +193,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @SneakyThrows
     void shouldReturn401WithEnrichedResponseForEmailNotVerified() {
-        // given — stub endpoint throws EmailNotVerifiedException
+        // given
 
         // when / then
         mockMvc.perform(get("/test/email-not-verified"))
@@ -207,7 +207,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @SneakyThrows
     void shouldReturn400WithEnrichedResponseForUnsupportedAuthProvider() {
-        // given — stub endpoint throws UnsupportedAuthProviderException
+        // given
 
         // when / then
         mockMvc.perform(get("/test/unsupported-auth-provider"))
@@ -221,7 +221,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @SneakyThrows
     void shouldReturn401WithEnrichedResponseForInvalidRefreshToken() {
-        // given — stub endpoint throws InvalidRefreshTokenException
+        // given
 
         // when / then
         mockMvc.perform(get("/test/invalid-refresh-token"))
@@ -235,7 +235,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @SneakyThrows
     void shouldReturn401WithEnrichedResponseForRefreshTokenExpired() {
-        // given — stub endpoint throws RefreshTokenExpiredException
+        // given
 
         // when / then
         mockMvc.perform(get("/test/refresh-token-expired"))
