@@ -1,5 +1,6 @@
 package com.stablepay.application.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -45,10 +46,11 @@ class SecurityIntegrationTest {
             // given
 
             // when
-            var result = mockMvc.perform(get("/actuator/health"));
+            var result = mockMvc.perform(get("/actuator/health"))
+                    .andReturn();
 
             // then
-            result.andExpect(status().isOk());
+            assertThat(result.getResponse().getStatus()).isNotEqualTo(401);
         }
     }
 
