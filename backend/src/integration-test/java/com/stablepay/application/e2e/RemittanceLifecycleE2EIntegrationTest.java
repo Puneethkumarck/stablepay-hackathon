@@ -1,8 +1,9 @@
 package com.stablepay.application.e2e;
 
+import static com.stablepay.testutil.AuthFixtures.authenticationFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -115,7 +116,6 @@ class RemittanceLifecycleE2EIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.userId").value(E2E_USER_ID.toString()))
                 .andExpect(jsonPath("$.solanaAddress").value(E2E_SOLANA_ADDRESS))
                 .andExpect(jsonPath("$.availableBalance").value(0))
                 .andReturn();
@@ -139,7 +139,7 @@ class RemittanceLifecycleE2EIntegrationTest {
     @SneakyThrows
     private void checkFxRate() {
         // when / then
-        mockMvc.perform(get("/api/fx/USD-INR").with(jwt()))
+        mockMvc.perform(get("/api/fx/USD-INR").with(authentication(authenticationFor(E2E_USER_ID))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rate").isNumber())
                 .andExpect(jsonPath("$.source").isString())
@@ -152,20 +152,18 @@ class RemittanceLifecycleE2EIntegrationTest {
         // given
         var body = """
                 {
-                    "senderId": "%s",
                     "recipientPhone": "+919876543210",
                     "amountUsdc": 25.00
                 }
-                """.formatted(E2E_USER_ID);
+                """;
 
         // when
         var result = mockMvc.perform(post("/api/remittances")
-                        .with(jwt())
+                        .with(authentication(authenticationFor(E2E_USER_ID)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.remittanceId").isString())
-                .andExpect(jsonPath("$.senderId").value(E2E_USER_ID.toString()))
                 .andExpect(jsonPath("$.recipientPhone").value("+919876543210"))
                 .andExpect(jsonPath("$.amountUsdc").value(25.00))
                 .andExpect(jsonPath("$.amountInr").isNumber())
@@ -186,7 +184,7 @@ class RemittanceLifecycleE2EIntegrationTest {
     @SneakyThrows
     private void getRemittance(String remittanceId, String expectedStatus) {
         // when / then
-        mockMvc.perform(get("/api/remittances/{remittanceId}", remittanceId).with(jwt()))
+        mockMvc.perform(get("/api/remittances/{remittanceId}", remittanceId).with(authentication(authenticationFor(E2E_USER_ID))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remittanceId").value(remittanceId))
                 .andExpect(jsonPath("$.status").value(expectedStatus));
@@ -223,14 +221,12 @@ class RemittanceLifecycleE2EIntegrationTest {
     private void listRemittances() {
         // when / then
         mockMvc.perform(get("/api/remittances")
-                        .with(jwt())
-                        .param("senderId", E2E_USER_ID.toString())
+                        .with(authentication(authenticationFor(E2E_USER_ID)))
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].senderId").value(E2E_USER_ID.toString()))
                 .andExpect(jsonPath("$.content[0].amountUsdc").value(25.00))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }

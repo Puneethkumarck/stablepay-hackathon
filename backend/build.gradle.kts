@@ -201,6 +201,10 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.21.4")
     testImplementation("io.temporal:temporal-testing:1.34.0")
 
+    // Test fixtures dependencies
+    testFixturesImplementation("org.springframework.security:spring-security-oauth2-jose")
+    testFixturesImplementation("org.springframework.security:spring-security-oauth2-resource-server")
+
     // Integration test dependencies
     "integrationTestImplementation"(testFixtures(project))
     "integrationTestImplementation"("org.wiremock:wiremock-standalone:3.13.2")

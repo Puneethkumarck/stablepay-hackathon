@@ -2,9 +2,15 @@ package com.stablepay.testutil;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.UUID;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+
 import com.stablepay.domain.auth.model.AppUser;
+import com.stablepay.domain.auth.model.AuthPrincipal;
 import com.stablepay.domain.auth.model.AuthSession;
 import com.stablepay.domain.auth.model.LoginResult;
 import com.stablepay.domain.auth.model.RefreshToken;
@@ -83,5 +89,19 @@ public final class AuthFixtures {
         var userId = UUID.randomUUID();
         userRepository.save(AppUser.builder().id(userId).email(userId + "@test.com").build());
         return userId;
+    }
+
+    public static Authentication authenticationFor(UUID userId) {
+        var jwt = Jwt.withTokenValue("test-token")
+                .header("alg", "none")
+                .subject(userId.toString())
+                .build();
+        var principal = AuthPrincipal.builder().id(userId).build();
+        return new JwtAuthenticationToken(jwt, Collections.emptyList(), principal.id().toString()) {
+            @Override
+            public Object getPrincipal() {
+                return principal;
+            }
+        };
     }
 }

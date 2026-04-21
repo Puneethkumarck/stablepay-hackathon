@@ -68,7 +68,6 @@ class WalletApiIntegrationTest {
             // then
             result.andExpect(status().isCreated())
                     .andExpect(jsonPath("$.id").isNumber())
-                    .andExpect(jsonPath("$.userId").value(userId.toString()))
                     .andExpect(jsonPath("$.solanaAddress").value(solanaAddress))
                     .andExpect(jsonPath("$.availableBalance").value(0))
                     .andExpect(jsonPath("$.totalBalance").value(0))
