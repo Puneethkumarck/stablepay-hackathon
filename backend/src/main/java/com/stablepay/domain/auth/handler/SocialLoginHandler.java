@@ -73,6 +73,8 @@ public class SocialLoginHandler {
         var session = authTokenIssuer.issue(appUser.id());
         var tokenHash = tokenHasher.hash(session.refreshToken());
 
+        refreshTokenRepository.revokeByUserId(appUser.id());
+
         var refreshToken = RefreshToken.builder()
                 .id(UUID.randomUUID())
                 .userId(appUser.id())

@@ -35,14 +35,14 @@ public class RefreshTokenHandler {
         var now = Instant.now(clock);
         var tokenHash = tokenHasher.hash(rawRefreshToken);
 
-        var token = refreshTokenRepository.findByHash(tokenHash)
+        var token = refreshTokenRepository.findByHashForUpdate(tokenHash)
                 .orElseThrow(() -> InvalidRefreshTokenException.of("not found"));
 
         if (token.revokedAt() != null) {
             throw InvalidRefreshTokenException.of("revoked");
         }
 
-        if (now.isAfter(token.expiresAt())) {
+        if (!now.isBefore(token.expiresAt())) {
             throw RefreshTokenExpiredException.forToken(token.id());
         }
 

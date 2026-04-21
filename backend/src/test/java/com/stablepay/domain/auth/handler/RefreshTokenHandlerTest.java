@@ -6,8 +6,10 @@ import static com.stablepay.testutil.AuthFixtures.SOME_REFRESH_TOKEN_ID;
 import static com.stablepay.testutil.AuthFixtures.SOME_TOKEN_HASH;
 import static com.stablepay.testutil.AuthFixtures.refreshTokenBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -70,7 +72,7 @@ class RefreshTokenHandlerTest {
         given(tokenHasher.hash(SOME_RAW_REFRESH_TOKEN)).willReturn(SOME_TOKEN_HASH);
 
         var existingToken = refreshTokenBuilder().build();
-        given(refreshTokenRepository.findByHash(SOME_TOKEN_HASH))
+        given(refreshTokenRepository.findByHashForUpdate(SOME_TOKEN_HASH))
                 .willReturn(Optional.of(existingToken));
 
         var revokedToken = existingToken.toBuilder().revokedAt(NOW).build();
@@ -91,16 +93,23 @@ class RefreshTokenHandlerTest {
         assertThat(result)
                 .usingRecursiveComparison()
                 .isEqualTo(newSession);
+        then(refreshTokenRepository).should().save(argThat(rt ->
+                rt.tokenHash().equals(SOME_NEW_TOKEN_HASH)
+                        && rt.userId().equals(SOME_AUTH_USER_ID)
+                        && rt.expiresAt().equals(NOW.plus(Duration.ofDays(30)))));
     }
 
     @Test
     void shouldThrowWhenTokenNotFound() {
         // given
         given(tokenHasher.hash(SOME_RAW_REFRESH_TOKEN)).willReturn(SOME_TOKEN_HASH);
-        given(refreshTokenRepository.findByHash(SOME_TOKEN_HASH)).willReturn(Optional.empty());
+        given(refreshTokenRepository.findByHashForUpdate(SOME_TOKEN_HASH)).willReturn(Optional.empty());
 
-        // when / then
-        assertThatThrownBy(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN))
+        // when
+        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN));
+
+        // then
+        assertThat(thrown)
                 .isInstanceOf(InvalidRefreshTokenException.class)
                 .hasMessageContaining("not found");
     }
@@ -113,11 +122,14 @@ class RefreshTokenHandlerTest {
         var revokedToken = refreshTokenBuilder()
                 .revokedAt(NOW.minus(Duration.ofHours(1)))
                 .build();
-        given(refreshTokenRepository.findByHash(SOME_TOKEN_HASH))
+        given(refreshTokenRepository.findByHashForUpdate(SOME_TOKEN_HASH))
                 .willReturn(Optional.of(revokedToken));
 
-        // when / then
-        assertThatThrownBy(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN))
+        // when
+        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN));
+
+        // then
+        assertThat(thrown)
                 .isInstanceOf(InvalidRefreshTokenException.class)
                 .hasMessageContaining("revoked");
     }
@@ -130,11 +142,14 @@ class RefreshTokenHandlerTest {
         var expiredToken = refreshTokenBuilder()
                 .expiresAt(NOW.minus(Duration.ofHours(1)))
                 .build();
-        given(refreshTokenRepository.findByHash(SOME_TOKEN_HASH))
+        given(refreshTokenRepository.findByHashForUpdate(SOME_TOKEN_HASH))
                 .willReturn(Optional.of(expiredToken));
 
-        // when / then
-        assertThatThrownBy(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN))
+        // when
+        var thrown = catchThrowable(() -> refreshTokenHandler.handle(SOME_RAW_REFRESH_TOKEN));
+
+        // then
+        assertThat(thrown)
                 .isInstanceOf(RefreshTokenExpiredException.class)
                 .hasMessageContaining(SOME_REFRESH_TOKEN_ID.toString());
     }

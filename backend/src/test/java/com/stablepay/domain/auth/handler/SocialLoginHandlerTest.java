@@ -13,9 +13,10 @@ import static com.stablepay.testutil.AuthFixtures.authSessionBuilder;
 import static com.stablepay.testutil.AuthFixtures.socialIdentityBuilder;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -129,12 +130,17 @@ class SocialLoginHandlerTest {
         assertThat(result)
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
+        then(refreshTokenRepository).should().revokeByUserId(SOME_AUTH_USER_ID);
+        then(refreshTokenRepository).should().save(argThat(rt ->
+                rt.userId().equals(SOME_AUTH_USER_ID)
+                        && rt.tokenHash().equals(SOME_TOKEN_HASH)
+                        && rt.expiresAt().equals(SOME_AUTH_CREATED_AT.plus(Duration.ofDays(30)))));
     }
 
     @Test
     void shouldReturnExistingUserOnReturningLogin() {
         // given
-        var identity = socialIdentityBuilder().build();
+        var identity = socialIdentityBuilder().userId(null).build();
         given(socialIdentityVerifier.verify(SOME_PROVIDER, SOME_ID_TOKEN)).willReturn(identity);
 
         var existingIdentity = socialIdentityBuilder().build();
@@ -165,6 +171,11 @@ class SocialLoginHandlerTest {
         assertThat(result)
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
+        then(refreshTokenRepository).should().revokeByUserId(SOME_AUTH_USER_ID);
+        then(refreshTokenRepository).should().save(argThat(rt ->
+                rt.userId().equals(SOME_AUTH_USER_ID)
+                        && rt.tokenHash().equals(SOME_TOKEN_HASH)
+                        && rt.expiresAt().equals(SOME_AUTH_CREATED_AT.plus(Duration.ofDays(30)))));
     }
 
     @Test
@@ -173,8 +184,11 @@ class SocialLoginHandlerTest {
         given(socialIdentityVerifier.verify(SOME_PROVIDER, SOME_ID_TOKEN))
                 .willThrow(EmailNotVerifiedException.forEmail(SOME_SOCIAL_EMAIL));
 
-        // when / then
-        assertThatThrownBy(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN))
+        // when
+        var thrown = catchThrowable(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN));
+
+        // then
+        assertThat(thrown)
                 .isInstanceOf(EmailNotVerifiedException.class);
     }
 
@@ -198,8 +212,11 @@ class SocialLoginHandlerTest {
         given(createWalletHandler.handle(SOME_AUTH_USER_ID))
                 .willThrow(new RuntimeException("MPC sidecar unavailable"));
 
-        // when / then
-        assertThatThrownBy(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN))
+        // when
+        var thrown = catchThrowable(() -> socialLoginHandler.handle(SOME_PROVIDER, SOME_ID_TOKEN));
+
+        // then
+        assertThat(thrown)
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("MPC sidecar unavailable");
     }
