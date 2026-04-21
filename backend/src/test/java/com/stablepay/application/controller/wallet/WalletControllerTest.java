@@ -117,7 +117,6 @@ class WalletControllerTest {
 
         var response = WalletResponse.builder()
                 .id(SOME_WALLET_ID)
-                .userId(SOME_USER_ID)
                 .solanaAddress(SOME_SOLANA_ADDRESS)
                 .availableBalance(BigDecimal.ZERO)
                 .totalBalance(BigDecimal.ZERO)
@@ -138,7 +137,7 @@ class WalletControllerTest {
                         .content(OBJECT_MAPPER.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
-                .andExpect(jsonPath("$.userId").value(SOME_USER_ID.toString()));
+                .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS));
     }
 
     @Test
