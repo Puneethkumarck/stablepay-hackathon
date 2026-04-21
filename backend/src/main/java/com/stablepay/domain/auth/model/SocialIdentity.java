@@ -15,7 +15,6 @@ public record SocialIdentity(
     boolean emailVerified
 ) {
     public SocialIdentity {
-        requireNonNull(userId, "userId cannot be null");
         requireNonNull(provider, "provider cannot be null");
         requireNonNull(subject, "subject cannot be null");
         requireNonNull(email, "email cannot be null");
