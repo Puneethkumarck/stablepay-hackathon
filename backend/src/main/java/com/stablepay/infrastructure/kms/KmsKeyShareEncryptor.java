@@ -2,6 +2,7 @@ package com.stablepay.infrastructure.kms;
 
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -9,6 +10,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import com.stablepay.domain.wallet.exception.KeyShareEncryptionException;
 import com.stablepay.domain.wallet.model.DecryptedKeyMaterial;
 import com.stablepay.domain.wallet.model.EncryptedKeyMaterial;
 import com.stablepay.domain.wallet.port.KeyShareEncryptor;
@@ -28,6 +30,9 @@ public class KmsKeyShareEncryptor implements KeyShareEncryptor {
     private static final String AES_GCM = "AES/GCM/NoPadding";
     private static final int GCM_IV_LENGTH = 12;
     private static final int GCM_TAG_LENGTH = 128;
+    private static final Map<String, String> ENCRYPTION_CONTEXT = Map.of(
+            "purpose", "wallet-key-share"
+    );
 
     private final KmsClient kmsClient;
     private final KmsProperties kmsProperties;
@@ -38,6 +43,7 @@ public class KmsKeyShareEncryptor implements KeyShareEncryptor {
         var generateRequest = GenerateDataKeyRequest.builder()
                 .keyId(kmsProperties.keyArn())
                 .keySpec(DataKeySpec.AES_256)
+                .encryptionContext(ENCRYPTION_CONTEXT)
                 .build();
         var dataKeyResponse = kmsClient.generateDataKey(generateRequest);
 
@@ -68,6 +74,7 @@ public class KmsKeyShareEncryptor implements KeyShareEncryptor {
                                          byte[] encDek, byte[] iv, byte[] peerIv) {
         var decryptRequest = DecryptRequest.builder()
                 .ciphertextBlob(SdkBytes.fromByteArray(encDek))
+                .encryptionContext(ENCRYPTION_CONTEXT)
                 .build();
         byte[] plaintextDek = kmsClient.decrypt(decryptRequest).plaintext().asByteArray();
 

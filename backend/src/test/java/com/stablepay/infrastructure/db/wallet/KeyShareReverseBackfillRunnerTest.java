@@ -5,13 +5,18 @@ import static org.mockito.BDDMockito.given;
 
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stablepay.domain.wallet.model.DecryptedKeyMaterial;
 import com.stablepay.domain.wallet.port.KeyShareEncryptor;
@@ -37,8 +42,24 @@ class KeyShareReverseBackfillRunnerTest {
     @Captor
     private ArgumentCaptor<WalletEntity> entityCaptor;
 
-    @InjectMocks
     private KeyShareReverseBackfillRunner runner;
+
+    @BeforeEach
+    void setUp() {
+        var transactionTemplate = new TransactionTemplate(new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                return new SimpleTransactionStatus();
+            }
+
+            @Override
+            public void commit(TransactionStatus status) {}
+
+            @Override
+            public void rollback(TransactionStatus status) {}
+        });
+        runner = new KeyShareReverseBackfillRunner(walletJpaRepository, keyShareEncryptor, transactionTemplate);
+    }
 
     @Test
     void shouldDecryptAndNullEncryptionColumnsForWalletsWithNonNullDek() {
@@ -60,16 +81,23 @@ class KeyShareReverseBackfillRunnerTest {
                 ENCRYPTED_KEY_SHARE, ENCRYPTED_PEER_KEY_SHARE,
                 ENCRYPTED_DEK, KEY_SHARE_IV, PEER_KEY_SHARE_IV))
                 .willReturn(decryptedMaterial);
+        var savedKeyShareData = new byte[1][];
+        var savedPeerKeyShareData = new byte[1][];
         given(walletJpaRepository.save(entityCaptor.capture()))
-                .willAnswer(invocation -> invocation.getArgument(0));
+                .willAnswer(invocation -> {
+                    var saved = invocation.getArgument(0, WalletEntity.class);
+                    savedKeyShareData[0] = saved.getKeyShareData().clone();
+                    savedPeerKeyShareData[0] = saved.getPeerKeyShareData().clone();
+                    return saved;
+                });
 
         // when
         runner.reverseWallet(WALLET_ID_1);
 
         // then
+        assertThat(savedKeyShareData[0]).isEqualTo(PLAINTEXT_KEY_SHARE);
+        assertThat(savedPeerKeyShareData[0]).isEqualTo(PLAINTEXT_PEER_KEY_SHARE);
         var saved = entityCaptor.getValue();
-        assertThat(saved.getKeyShareData()).isEqualTo(PLAINTEXT_KEY_SHARE);
-        assertThat(saved.getPeerKeyShareData()).isEqualTo(PLAINTEXT_PEER_KEY_SHARE);
         assertThat(saved.getKeyShareDek()).isNull();
         assertThat(saved.getKeyShareIv()).isNull();
         assertThat(saved.getPeerKeyShareIv()).isNull();
@@ -97,14 +125,21 @@ class KeyShareReverseBackfillRunnerTest {
                 ENCRYPTED_KEY_SHARE, ENCRYPTED_PEER_KEY_SHARE,
                 ENCRYPTED_DEK, KEY_SHARE_IV, PEER_KEY_SHARE_IV))
                 .willReturn(decryptedMaterial);
+        var keyShareRef = new byte[1][];
+        var peerKeyShareRef = new byte[1][];
         given(walletJpaRepository.save(entityCaptor.capture()))
-                .willAnswer(invocation -> invocation.getArgument(0));
+                .willAnswer(invocation -> {
+                    var saved = invocation.getArgument(0, WalletEntity.class);
+                    keyShareRef[0] = saved.getKeyShareData();
+                    peerKeyShareRef[0] = saved.getPeerKeyShareData();
+                    return saved;
+                });
 
         // when
         runner.reverseWallet(WALLET_ID_1);
 
         // then
-        assertThat(plaintextKey).containsOnly(0);
-        assertThat(plaintextPeer).containsOnly(0);
+        assertThat(keyShareRef[0]).containsOnly(0);
+        assertThat(peerKeyShareRef[0]).containsOnly(0);
     }
 }

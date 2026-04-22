@@ -1,4 +1,4 @@
-package com.stablepay.infrastructure.kms;
+package com.stablepay.domain.wallet.exception;
 
 public class KeyShareEncryptionException extends RuntimeException {
 

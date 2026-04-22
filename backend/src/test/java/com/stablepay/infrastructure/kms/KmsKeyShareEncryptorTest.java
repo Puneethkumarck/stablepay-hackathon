@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.stablepay.domain.wallet.exception.KeyShareEncryptionException;
 
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.KmsClient;
@@ -26,6 +30,9 @@ class KmsKeyShareEncryptorTest {
     private static final byte[] PEER_KEY_SHARE = {11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     private static final byte[] PLAINTEXT_DEK = new byte[32];
     private static final byte[] ENCRYPTED_DEK = {99, 98, 97, 96, 95};
+    private static final Map<String, String> ENCRYPTION_CONTEXT = Map.of(
+            "purpose", "wallet-key-share"
+    );
 
     static {
         for (int i = 0; i < PLAINTEXT_DEK.length; i++) {
@@ -48,6 +55,7 @@ class KmsKeyShareEncryptorTest {
         var generateRequest = GenerateDataKeyRequest.builder()
                 .keyId(KEY_ARN)
                 .keySpec(DataKeySpec.AES_256)
+                .encryptionContext(ENCRYPTION_CONTEXT)
                 .build();
         var generateResponse = GenerateDataKeyResponse.builder()
                 .plaintext(SdkBytes.fromByteArray(PLAINTEXT_DEK.clone()))
@@ -67,6 +75,7 @@ class KmsKeyShareEncryptorTest {
         // given — decrypt
         var decryptRequest = DecryptRequest.builder()
                 .ciphertextBlob(SdkBytes.fromByteArray(ENCRYPTED_DEK))
+                .encryptionContext(ENCRYPTION_CONTEXT)
                 .build();
         var decryptResponse = DecryptResponse.builder()
                 .plaintext(SdkBytes.fromByteArray(PLAINTEXT_DEK.clone()))
@@ -89,6 +98,7 @@ class KmsKeyShareEncryptorTest {
         var generateRequest = GenerateDataKeyRequest.builder()
                 .keyId(KEY_ARN)
                 .keySpec(DataKeySpec.AES_256)
+                .encryptionContext(ENCRYPTION_CONTEXT)
                 .build();
         var generateResponse = GenerateDataKeyResponse.builder()
                 .plaintext(SdkBytes.fromByteArray(PLAINTEXT_DEK.clone()))
@@ -112,6 +122,7 @@ class KmsKeyShareEncryptorTest {
         var generateRequest = GenerateDataKeyRequest.builder()
                 .keyId(KEY_ARN)
                 .keySpec(DataKeySpec.AES_256)
+                .encryptionContext(ENCRYPTION_CONTEXT)
                 .build();
         var generateResponse = GenerateDataKeyResponse.builder()
                 .plaintext(SdkBytes.fromByteArray(PLAINTEXT_DEK.clone()))
@@ -127,6 +138,7 @@ class KmsKeyShareEncryptorTest {
 
         var decryptRequest = DecryptRequest.builder()
                 .ciphertextBlob(SdkBytes.fromByteArray(ENCRYPTED_DEK))
+                .encryptionContext(ENCRYPTION_CONTEXT)
                 .build();
         var decryptResponse = DecryptResponse.builder()
                 .plaintext(SdkBytes.fromByteArray(PLAINTEXT_DEK.clone()))

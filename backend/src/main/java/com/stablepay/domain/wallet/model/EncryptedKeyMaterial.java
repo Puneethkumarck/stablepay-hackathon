@@ -9,4 +9,12 @@ public record EncryptedKeyMaterial(
     byte[] encryptedDek,
     byte[] keyShareIv,
     byte[] peerKeyShareIv
-) {}
+) {
+    public EncryptedKeyMaterial {
+        encryptedKeyShareData = encryptedKeyShareData != null ? encryptedKeyShareData.clone() : null;
+        encryptedPeerKeyShareData = encryptedPeerKeyShareData != null ? encryptedPeerKeyShareData.clone() : null;
+        encryptedDek = encryptedDek != null ? encryptedDek.clone() : null;
+        keyShareIv = keyShareIv != null ? keyShareIv.clone() : null;
+        peerKeyShareIv = peerKeyShareIv != null ? peerKeyShareIv.clone() : null;
+    }
+}

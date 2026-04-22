@@ -77,7 +77,7 @@ stablepay:
     test-payment-method: ${STRIPE_TEST_PAYMENT_METHOD:pm_card_visa}
     currency: ${STRIPE_CURRENCY:usd}
   kms:
-    enabled: ${KMS_ENABLED}
+    enabled: ${KMS_ENABLED:false}
     key-arn: ${KMS_KEY_ARN:}
     endpoint: ${KMS_ENDPOINT:}
     region: ${KMS_REGION:us-east-1}

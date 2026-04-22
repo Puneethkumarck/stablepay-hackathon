@@ -30,8 +30,10 @@ public class KmsConfig {
 
     @PostConstruct
     void validateEndpoint() {
-        if (environment.matchesProfiles("production") && StringUtils.hasText(kmsProperties.endpoint())) {
-            throw new IllegalStateException("KMS endpoint override is not allowed in production profile");
+        if (StringUtils.hasText(kmsProperties.endpoint())
+                && !environment.matchesProfiles("local", "test", "integration-test")) {
+            throw new IllegalStateException(
+                    "KMS endpoint override is only allowed in local/test/integration-test profiles");
         }
     }
 

@@ -6,7 +6,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stablepay.domain.wallet.port.KeyShareEncryptor;
 
@@ -21,6 +21,7 @@ class KeyShareReverseBackfillRunner implements ApplicationRunner {
 
     private final WalletJpaRepository walletJpaRepository;
     private final KeyShareEncryptor keyShareEncryptor;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -41,27 +42,28 @@ class KeyShareReverseBackfillRunner implements ApplicationRunner {
         log.info("Reverse backfill complete: {}/{} wallets reversed", success, walletIds.size());
     }
 
-    @Transactional
     void reverseWallet(Long walletId) {
-        var entity = walletJpaRepository.findById(walletId).orElseThrow();
+        transactionTemplate.executeWithoutResult(status -> {
+            var entity = walletJpaRepository.findById(walletId).orElseThrow();
 
-        var decrypted = keyShareEncryptor.decrypt(
-                entity.getKeyShareData(), entity.getPeerKeyShareData(),
-                entity.getKeyShareDek(), entity.getKeyShareIv(), entity.getPeerKeyShareIv());
+            var decrypted = keyShareEncryptor.decrypt(
+                    entity.getKeyShareData(), entity.getPeerKeyShareData(),
+                    entity.getKeyShareDek(), entity.getKeyShareIv(), entity.getPeerKeyShareIv());
 
-        byte[] keyShareData = decrypted.keyShareData();
-        byte[] peerKeyShareData = decrypted.peerKeyShareData();
+            byte[] keyShareData = decrypted.keyShareData();
+            byte[] peerKeyShareData = decrypted.peerKeyShareData();
 
-        try {
-            entity.setKeyShareData(keyShareData);
-            entity.setPeerKeyShareData(peerKeyShareData);
-            entity.setKeyShareDek(null);
-            entity.setKeyShareIv(null);
-            entity.setPeerKeyShareIv(null);
-            walletJpaRepository.save(entity);
-        } finally {
-            Arrays.fill(keyShareData, (byte) 0);
-            Arrays.fill(peerKeyShareData, (byte) 0);
-        }
+            try {
+                entity.setKeyShareData(keyShareData);
+                entity.setPeerKeyShareData(peerKeyShareData);
+                entity.setKeyShareDek(null);
+                entity.setKeyShareIv(null);
+                entity.setPeerKeyShareIv(null);
+                walletJpaRepository.save(entity);
+            } finally {
+                Arrays.fill(keyShareData, (byte) 0);
+                Arrays.fill(peerKeyShareData, (byte) 0);
+            }
+        });
     }
 }

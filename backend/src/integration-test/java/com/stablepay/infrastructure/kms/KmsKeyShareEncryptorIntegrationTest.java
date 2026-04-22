@@ -17,6 +17,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stablepay.domain.auth.port.UserRepository;
+import com.stablepay.domain.wallet.exception.KeyShareEncryptionException;
 import com.stablepay.domain.wallet.model.Wallet;
 import com.stablepay.domain.wallet.port.KeyShareEncryptor;
 import com.stablepay.domain.wallet.port.WalletRepository;

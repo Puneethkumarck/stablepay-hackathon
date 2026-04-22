@@ -6,4 +6,9 @@ import lombok.Builder;
 public record DecryptedKeyMaterial(
     byte[] keyShareData,
     byte[] peerKeyShareData
-) {}
+) {
+    public DecryptedKeyMaterial {
+        keyShareData = keyShareData != null ? keyShareData.clone() : null;
+        peerKeyShareData = peerKeyShareData != null ? peerKeyShareData.clone() : null;
+    }
+}

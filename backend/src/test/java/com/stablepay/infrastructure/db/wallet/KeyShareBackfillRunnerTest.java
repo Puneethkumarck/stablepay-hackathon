@@ -7,13 +7,18 @@ import static org.mockito.BDDMockito.then;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stablepay.domain.wallet.model.EncryptedKeyMaterial;
 import com.stablepay.domain.wallet.port.KeyShareEncryptor;
@@ -40,8 +45,24 @@ class KeyShareBackfillRunnerTest {
     @Captor
     private ArgumentCaptor<WalletEntity> entityCaptor;
 
-    @InjectMocks
     private KeyShareBackfillRunner runner;
+
+    @BeforeEach
+    void setUp() {
+        var transactionTemplate = new TransactionTemplate(new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                return new SimpleTransactionStatus();
+            }
+
+            @Override
+            public void commit(TransactionStatus status) {}
+
+            @Override
+            public void rollback(TransactionStatus status) {}
+        });
+        runner = new KeyShareBackfillRunner(walletJpaRepository, keyShareEncryptor, transactionTemplate);
+    }
 
     @Test
     void shouldEncryptKeySharesForWalletsWithNullDek() {
