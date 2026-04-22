@@ -259,12 +259,34 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.failed()).isTrue();
-        assertThat(result.steps().get(0).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(1).step()).isEqualTo(RemittanceStatus.ESCROWED);
-        assertThat(result.steps().get(1).status()).isEqualTo(TimelineStepStatus.FAILED);
-        assertThat(result.steps().get(2).status()).isEqualTo(TimelineStepStatus.PENDING);
-        assertThat(result.steps().get(3).status()).isEqualTo(TimelineStepStatus.PENDING);
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.FAILED)
+                                .message("Failed to secure funds on-chain")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("Recipient claimed")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(true)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -285,12 +307,35 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.failed()).isTrue();
-        assertThat(result.steps().get(0).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(1).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(2).step()).isEqualTo(RemittanceStatus.CLAIMED);
-        assertThat(result.steps().get(2).status()).isEqualTo(TimelineStepStatus.FAILED);
-        assertThat(result.steps().get(3).status()).isEqualTo(TimelineStepStatus.PENDING);
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Funds secured on-chain")
+                                .completedAt(T2)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.FAILED)
+                                .message("Claim failed")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(true)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -312,12 +357,36 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.failed()).isTrue();
-        assertThat(result.steps().get(0).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(1).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(2).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(3).step()).isEqualTo(RemittanceStatus.DELIVERED);
-        assertThat(result.steps().get(3).status()).isEqualTo(TimelineStepStatus.FAILED);
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Funds secured on-chain")
+                                .completedAt(T2)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Recipient claimed")
+                                .completedAt(T3)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.FAILED)
+                                .message("Failed to deposit INR")
+                                .build()
+                ))
+                .failed(true)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -338,12 +407,35 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.failed()).isTrue();
-        assertThat(result.steps().get(0).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(1).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(2).status()).isEqualTo(TimelineStepStatus.PENDING);
-        assertThat(result.steps().get(3).status()).isEqualTo(TimelineStepStatus.PENDING);
-        assertThat(result.steps()).noneMatch(s -> s.status() == TimelineStepStatus.FAILED);
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Funds secured on-chain")
+                                .completedAt(T2)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("Recipient claimed")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(true)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -363,10 +455,34 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.failed()).isTrue();
-        assertThat(result.steps().get(0).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(1).status()).isEqualTo(TimelineStepStatus.PENDING);
-        assertThat(result.steps()).noneMatch(s -> s.status() == TimelineStepStatus.FAILED);
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("Funds secured on-chain")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("Recipient claimed")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(true)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -387,12 +503,35 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.failed()).isTrue();
-        assertThat(result.steps().get(0).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(1).status()).isEqualTo(TimelineStepStatus.COMPLETED);
-        assertThat(result.steps().get(2).status()).isEqualTo(TimelineStepStatus.PENDING);
-        assertThat(result.steps().get(3).status()).isEqualTo(TimelineStepStatus.PENDING);
-        assertThat(result.steps()).noneMatch(s -> s.status() == TimelineStepStatus.FAILED);
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Funds secured on-chain")
+                                .completedAt(T2)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("Recipient claimed")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(true)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -416,9 +555,35 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.steps().get(2).step()).isEqualTo(RemittanceStatus.CLAIMED);
-        assertThat(result.steps().get(2).status()).isEqualTo(TimelineStepStatus.CURRENT);
-        assertThat(result.steps().get(2).message()).isEqualTo("SMS sent, waiting for recipient");
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Funds secured on-chain")
+                                .completedAt(T2)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.CURRENT)
+                                .message("SMS sent, waiting for recipient")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(false)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -442,10 +607,35 @@ class GetRemittanceTimelineHandlerTest {
         var result = getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID);
 
         // then
-        assertThat(result.steps().get(2).step()).isEqualTo(RemittanceStatus.CLAIMED);
-        assertThat(result.steps().get(2).status()).isEqualTo(TimelineStepStatus.CURRENT);
-        assertThat(result.steps().get(2).message())
-                .isEqualTo("Claim link available, waiting for recipient");
+        var expected = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .completedAt(T1)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Funds secured on-chain")
+                                .completedAt(T2)
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.CURRENT)
+                                .message("Claim link available, waiting for recipient")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(false)
+                .build();
+
+        assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test

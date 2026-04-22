@@ -4,7 +4,7 @@ import java.util.List;
 
 import lombok.Builder;
 
-@Builder
+@Builder(toBuilder = true)
 public record RemittanceTimeline(
     List<RemittanceTimelineStep> steps,
     boolean failed

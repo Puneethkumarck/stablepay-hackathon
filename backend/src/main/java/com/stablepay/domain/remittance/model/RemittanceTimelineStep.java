@@ -4,7 +4,7 @@ import java.time.Instant;
 
 import lombok.Builder;
 
-@Builder
+@Builder(toBuilder = true)
 public record RemittanceTimelineStep(
     RemittanceStatus step,
     TimelineStepStatus status,

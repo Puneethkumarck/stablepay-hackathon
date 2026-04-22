@@ -7,7 +7,7 @@ import com.stablepay.domain.remittance.model.TimelineStepStatus;
 
 import lombok.Builder;
 
-@Builder
+@Builder(toBuilder = true)
 public record TimelineStep(
     RemittanceStatus step,
     TimelineStepStatus status,

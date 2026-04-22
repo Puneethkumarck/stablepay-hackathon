@@ -122,6 +122,35 @@ class RemittanceStatusEventRepositoryIntegrationTest {
         }
 
         @Test
+        void shouldOrderByIdWhenCreatedAtIsTied() {
+            // given
+            var sameTimestamp = Instant.parse("2026-04-03T10:00:00Z");
+
+            var saved1 = remittanceStatusEventRepository.save(RemittanceStatusEvent.builder()
+                    .remittanceId(remittanceId)
+                    .status(RemittanceStatus.INITIATED)
+                    .message("First event")
+                    .createdAt(sameTimestamp)
+                    .build());
+
+            var saved2 = remittanceStatusEventRepository.save(RemittanceStatusEvent.builder()
+                    .remittanceId(remittanceId)
+                    .status(RemittanceStatus.ESCROWED)
+                    .message("Second event")
+                    .createdAt(sameTimestamp)
+                    .build());
+
+            // when
+            var events = remittanceStatusEventRepository.findByRemittanceId(remittanceId);
+
+            // then
+            assertThat(events).hasSize(2);
+            assertThat(events.get(0).id()).isEqualTo(saved1.id());
+            assertThat(events.get(1).id()).isEqualTo(saved2.id());
+            assertThat(events.get(0).id()).isLessThan(events.get(1).id());
+        }
+
+        @Test
         void shouldReturnEmptyListWhenNoEventsExist() {
             // given
             var otherRemittanceId = UUID.randomUUID();

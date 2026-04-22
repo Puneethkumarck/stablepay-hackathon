@@ -48,7 +48,7 @@ public class GetRemittanceTimelineHandler {
             RemittanceStatus.DISBURSEMENT_FAILED, RemittanceStatus.DELIVERED
     );
 
-    private static final Map<RemittanceStatus, String> COMPLETED_MESSAGES = Map.of(
+    private static final Map<RemittanceStatus, String> STEP_LABELS = Map.of(
             RemittanceStatus.INITIATED, "Payment received",
             RemittanceStatus.ESCROWED, "Funds secured on-chain",
             RemittanceStatus.CLAIMED, "Recipient claimed",
@@ -61,11 +61,10 @@ public class GetRemittanceTimelineHandler {
             RemittanceStatus.DELIVERED, "Depositing INR to recipient's bank..."
     );
 
-    private static final Map<RemittanceStatus, String> PENDING_MESSAGES = Map.of(
-            RemittanceStatus.INITIATED, "Payment received",
-            RemittanceStatus.ESCROWED, "Funds secured on-chain",
-            RemittanceStatus.CLAIMED, "Recipient claimed",
-            RemittanceStatus.DELIVERED, "INR deposited to recipient's bank"
+    private static final Map<RemittanceStatus, String> FAILED_MESSAGES = Map.of(
+            RemittanceStatus.ESCROWED, "Failed to secure funds on-chain",
+            RemittanceStatus.CLAIMED, "Claim failed",
+            RemittanceStatus.DELIVERED, "Failed to deposit INR"
     );
 
     private final GetRemittanceQueryHandler getRemittanceQueryHandler;
@@ -88,7 +87,12 @@ public class GetRemittanceTimelineHandler {
         var isFailed = FAILURE_STATES.contains(status) || TERMINAL_NON_DELIVERY.contains(status);
         var failedStep = FAILURE_TO_STEP.get(status);
 
-        var foundCurrent = new boolean[]{false};
+        var currentStep = isFailed
+                ? null
+                : HAPPY_PATH_STEPS.stream()
+                        .filter(s -> eventMap.get(s) == null)
+                        .findFirst()
+                        .orElse(null);
 
         var steps = HAPPY_PATH_STEPS.stream()
                 .map(step -> {
@@ -98,13 +102,12 @@ public class GetRemittanceTimelineHandler {
                         return RemittanceTimelineStep.builder()
                                 .step(step)
                                 .status(TimelineStepStatus.COMPLETED)
-                                .message(COMPLETED_MESSAGES.get(step))
+                                .message(STEP_LABELS.get(step))
                                 .completedAt(event.createdAt())
                                 .build();
                     }
 
-                    if (!isFailed && !foundCurrent[0]) {
-                        foundCurrent[0] = true;
+                    if (step == currentStep) {
                         var message = step == RemittanceStatus.CLAIMED
                                 ? claimedCurrentMessage(remittance.smsNotificationFailed())
                                 : CURRENT_MESSAGES.get(step);
@@ -115,18 +118,18 @@ public class GetRemittanceTimelineHandler {
                                 .build();
                     }
 
-                    if (step.equals(failedStep)) {
+                    if (step == failedStep) {
                         return RemittanceTimelineStep.builder()
                                 .step(step)
                                 .status(TimelineStepStatus.FAILED)
-                                .message(PENDING_MESSAGES.get(step))
+                                .message(FAILED_MESSAGES.get(step))
                                 .build();
                     }
 
                     return RemittanceTimelineStep.builder()
                             .step(step)
                             .status(TimelineStepStatus.PENDING)
-                            .message(PENDING_MESSAGES.get(step))
+                            .message(STEP_LABELS.get(step))
                             .build();
                 })
                 .toList();
