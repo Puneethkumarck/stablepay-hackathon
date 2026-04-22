@@ -27,3 +27,5 @@ test-ledger/
 docs/specs/2026-04-18-001-upi-payout-integration-spec.md
 docs/specs/2026-04-18-001-upi-payout-issues.md
 docs/specs/2026-04-18-002-claim-authority-hardening-spec.md
+docs/NANO_BANANA_PROMPT.md
+docs/ARCHITECTURE_IMAGE_PROMPT.md
