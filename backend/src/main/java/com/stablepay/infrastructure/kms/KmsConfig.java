@@ -13,6 +13,8 @@ import org.springframework.util.StringUtils;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 
@@ -41,6 +43,8 @@ public class KmsConfig {
         if (StringUtils.hasText(kmsProperties.endpoint())) {
             log.info("Using custom KMS endpoint: {}", kmsProperties.endpoint());
             builder.endpointOverride(URI.create(kmsProperties.endpoint()));
+            builder.credentialsProvider(StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create("test", "test")));
         }
 
         log.info("KMS client initialized for key ARN: {}...{}",

@@ -202,6 +202,7 @@ dependencies {
     testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
     testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("org.testcontainers:postgresql:1.21.4")
+    testImplementation("org.testcontainers:localstack:1.21.4")
     testImplementation("io.temporal:temporal-testing:1.34.0")
 
     // Test fixtures dependencies

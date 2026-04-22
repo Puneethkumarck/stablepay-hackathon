@@ -81,13 +81,16 @@ class WalletRepositoryAdapter implements WalletRepository {
     }
 
     private Wallet decryptAndMap(WalletEntity entity) {
+        var wallet = mapper.toDomain(entity);
         if (entity.getKeyShareDek() != null) {
             var decrypted = keyShareEncryptor.decrypt(
                     entity.getKeyShareData(), entity.getPeerKeyShareData(),
                     entity.getKeyShareDek(), entity.getKeyShareIv(), entity.getPeerKeyShareIv());
-            entity.setKeyShareData(decrypted.keyShareData());
-            entity.setPeerKeyShareData(decrypted.peerKeyShareData());
+            return wallet.toBuilder()
+                    .keyShareData(decrypted.keyShareData())
+                    .peerKeyShareData(decrypted.peerKeyShareData())
+                    .build();
         }
-        return mapper.toDomain(entity);
+        return wallet;
     }
 }
