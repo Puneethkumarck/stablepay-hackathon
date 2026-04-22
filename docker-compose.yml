@@ -60,6 +60,21 @@ services:
       retries: 10
       start_period: 10s
 
+  localstack:
+    image: localstack/localstack:4.0
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: kms
+    volumes:
+      - ./localstack/init/ready.d:/etc/localstack/init/ready.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal kms list-keys || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   mpc-sidecar-0:
     build:
       context: ./mpc-sidecar
@@ -132,6 +147,10 @@ services:
       RAZORPAY_ACCOUNT_NUMBER: ${RAZORPAY_ACCOUNT_NUMBER:-}
       RAZORPAY_BASE_URL: ${RAZORPAY_BASE_URL:-http://wiremock:8080}
       RAZORPAY_REQUEST_TIMEOUT: ${RAZORPAY_REQUEST_TIMEOUT:-PT10S}
+      KMS_ENABLED: ${KMS_ENABLED:-false}
+      KMS_KEY_ARN: ${KMS_KEY_ARN:-}
+      KMS_ENDPOINT: ${KMS_ENDPOINT:-}
+      KMS_REGION: ${KMS_REGION:-us-east-1}
       TWILIO_ENABLED: ${TWILIO_ENABLED:-false}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}

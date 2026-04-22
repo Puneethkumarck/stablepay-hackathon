@@ -76,6 +76,11 @@ stablepay:
     auto-confirm: ${STRIPE_AUTO_CONFIRM:false}
     test-payment-method: ${STRIPE_TEST_PAYMENT_METHOD:pm_card_visa}
     currency: ${STRIPE_CURRENCY:usd}
+  kms:
+    enabled: ${KMS_ENABLED}
+    key-arn: ${KMS_KEY_ARN:}
+    endpoint: ${KMS_ENDPOINT:}
+    region: ${KMS_REGION:us-east-1}
   twilio:
     enabled: ${TWILIO_ENABLED:false}
     account-sid: ${TWILIO_ACCOUNT_SID:}

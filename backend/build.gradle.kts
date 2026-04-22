@@ -190,6 +190,9 @@ dependencies {
     // Stripe
     implementation("com.stripe:stripe-java:28.2.0")
 
+    // AWS KMS
+    implementation("software.amazon.awssdk:kms:2.34.0")
+
     // Test
     testCompileOnly("org.projectlombok:lombok:1.18.44")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.44")

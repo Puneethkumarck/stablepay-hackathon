@@ -13,6 +13,8 @@ spring:
       ddl-auto: validate
 
 stablepay:
+  kms:
+    enabled: false
   jwt:
     secret: test-jwt-secret-must-be-at-least-32-bytes-long!!
     access-ttl: PT15M
