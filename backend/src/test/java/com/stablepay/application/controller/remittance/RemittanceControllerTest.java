@@ -17,8 +17,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -179,43 +183,24 @@ class RemittanceControllerTest {
                 .andExpect(jsonPath("$.errorCode").value("SP-0003"));
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("authenticatedEndpoints")
     @SneakyThrows
-    void shouldReturn401WhenNoBearerOnCreate() {
+    void shouldReturn401WhenNoBearer(String method, String path) {
         // given
-        var request = CreateRemittanceRequest.builder()
-                .recipientPhone(SOME_RECIPIENT_PHONE)
-                .amountUsdc(SOME_AMOUNT_USDC)
-                .build();
+        var requestBuilder = "POST".equals(method) ? post(path) : get(path);
 
         // when / then
-        mockMvc.perform(post("/api/remittances")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(OBJECT_MAPPER.writeValueAsString(request)))
+        mockMvc.perform(requestBuilder)
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value("SP-0040"));
     }
 
-    @Test
-    @SneakyThrows
-    void shouldReturn401WhenNoBearerOnGet() {
-        // given
-
-        // when / then
-        mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
-    }
-
-    @Test
-    @SneakyThrows
-    void shouldReturn401WhenNoBearerOnList() {
-        // given
-
-        // when / then
-        mockMvc.perform(get("/api/remittances"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    static Stream<Arguments> authenticatedEndpoints() {
+        return Stream.of(
+                Arguments.of("POST", "/api/remittances"),
+                Arguments.of("GET", "/api/remittances/" + SOME_REMITTANCE_ID),
+                Arguments.of("GET", "/api/remittances"));
     }
 
     @Test

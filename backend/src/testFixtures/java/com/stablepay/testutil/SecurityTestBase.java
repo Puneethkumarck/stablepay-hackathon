@@ -1,6 +1,7 @@
 package com.stablepay.testutil;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -26,14 +27,22 @@ public final class SecurityTestBase {
             AuthFixtures.SOME_JWT_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
 
     public static RequestPostProcessor asUser(UUID userId) {
+        return asUser(userId, Clock.systemUTC());
+    }
+
+    public static RequestPostProcessor asUser(UUID userId, Clock clock) {
         return (MockHttpServletRequest request) -> {
-            request.addHeader("Authorization", "Bearer " + signedJwt(userId));
+            request.addHeader("Authorization", "Bearer " + signedJwt(userId, clock));
             return request;
         };
     }
 
     public static String signedJwt(UUID userId) {
-        var now = Instant.now();
+        return signedJwt(userId, Clock.systemUTC());
+    }
+
+    public static String signedJwt(UUID userId, Clock clock) {
+        var now = Instant.now(clock);
         var claims = new JWTClaimsSet.Builder()
                 .subject(userId.toString())
                 .issueTime(Date.from(now))

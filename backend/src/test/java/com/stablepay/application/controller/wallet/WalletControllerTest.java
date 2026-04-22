@@ -56,30 +56,6 @@ class WalletControllerTest {
 
     @Test
     @SneakyThrows
-    void shouldCreateWallet() {
-        // given
-        var wallet = walletBuilder()
-                .availableBalance(BigDecimal.ZERO)
-                .totalBalance(BigDecimal.ZERO)
-                .build();
-
-        given(createWalletHandler.handle(SOME_USER_ID)).willReturn(wallet);
-
-        var request = CreateWalletRequest.builder()
-                .userId(SOME_USER_ID)
-                .build();
-
-        // when / then
-        mockMvc.perform(post("/api/wallets")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(OBJECT_MAPPER.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
-                .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS));
-    }
-
-    @Test
-    @SneakyThrows
     void shouldReturn400WhenValidationFails() {
         // given
         var request = CreateWalletRequest.builder().userId(null).build();

@@ -16,8 +16,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -305,40 +309,24 @@ class FundingControllerTest {
                 .andExpect(jsonPath("$.errorCode").value("SP-0024"));
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("authenticatedEndpoints")
     @SneakyThrows
-    void shouldReturn401WhenNoBearerOnFund() {
+    void shouldReturn401WhenNoBearer(String method, String path) {
         // given
-        var request = FundWalletRequest.builder().amount(SOME_AMOUNT_USDC).build();
+        var requestBuilder = "POST".equals(method) ? post(path) : get(path);
 
         // when / then
-        mockMvc.perform(post("/api/wallets/{id}/fund", SOME_WALLET_ID)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(OBJECT_MAPPER.writeValueAsString(request)))
+        mockMvc.perform(requestBuilder)
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value("SP-0040"));
     }
 
-    @Test
-    @SneakyThrows
-    void shouldReturn401WhenNoBearerOnGetFundingOrder() {
-        // given
-
-        // when / then
-        mockMvc.perform(get("/api/funding-orders/{fundingId}", SOME_FUNDING_ID))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
-    }
-
-    @Test
-    @SneakyThrows
-    void shouldReturn401WhenNoBearerOnRefund() {
-        // given
-
-        // when / then
-        mockMvc.perform(post("/api/funding-orders/{fundingId}/refund", SOME_FUNDING_ID))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.errorCode").value("SP-0040"));
+    static Stream<Arguments> authenticatedEndpoints() {
+        return Stream.of(
+                Arguments.of("POST", "/api/wallets/" + SOME_WALLET_ID + "/fund"),
+                Arguments.of("GET", "/api/funding-orders/" + SOME_FUNDING_ID),
+                Arguments.of("POST", "/api/funding-orders/" + SOME_FUNDING_ID + "/refund"));
     }
 
     @Test
