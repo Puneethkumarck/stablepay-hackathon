@@ -204,7 +204,7 @@ dependencies {
     // Test fixtures dependencies
     testFixturesImplementation("org.springframework.security:spring-security-oauth2-jose")
     testFixturesImplementation("org.springframework.security:spring-security-oauth2-resource-server")
-    testFixturesImplementation("org.springframework:spring-test")
+    testFixturesApi("org.springframework:spring-test")
     testFixturesImplementation("jakarta.servlet:jakarta.servlet-api")
 
     // Integration test dependencies

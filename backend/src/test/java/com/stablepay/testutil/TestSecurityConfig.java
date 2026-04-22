@@ -14,7 +14,7 @@ import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
 import com.stablepay.application.config.SecurityConfig;
 
 @TestConfiguration
-@Import({SecurityConfig.class, AppUserConverter.class, SecurityAuthenticationEntryPoint.class})
+@Import({TestClockConfig.class, SecurityConfig.class, AppUserConverter.class, SecurityAuthenticationEntryPoint.class})
 public class TestSecurityConfig {
 
     @Bean
