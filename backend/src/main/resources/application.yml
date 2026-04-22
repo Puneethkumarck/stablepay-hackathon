@@ -81,6 +81,8 @@ stablepay:
     key-arn: ${KMS_KEY_ARN:}
     endpoint: ${KMS_ENDPOINT:}
     region: ${KMS_REGION:us-east-1}
+    backfill-key-shares: ${KMS_BACKFILL_KEY_SHARES:false}
+    reverse-backfill-key-shares: ${KMS_REVERSE_BACKFILL_KEY_SHARES:false}
   twilio:
     enabled: ${TWILIO_ENABLED:false}
     account-sid: ${TWILIO_ACCOUNT_SID:}

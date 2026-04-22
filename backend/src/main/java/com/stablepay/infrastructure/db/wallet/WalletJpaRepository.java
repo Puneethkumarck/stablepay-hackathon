@@ -1,5 +1,6 @@
 package com.stablepay.infrastructure.db.wallet;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,4 +25,10 @@ interface WalletJpaRepository extends JpaRepository<WalletEntity, Long> {
     Optional<WalletEntity> findByIdForUpdate(@Param("id") Long id);
 
     Optional<WalletEntity> findBySolanaAddress(String solanaAddress);
+
+    @Query("select w.id from WalletEntity w where w.keyShareDek is null")
+    List<Long> findIdsWithNullDek();
+
+    @Query("select w.id from WalletEntity w where w.keyShareDek is not null")
+    List<Long> findIdsWithNonNullDek();
 }
