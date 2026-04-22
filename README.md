@@ -20,30 +20,9 @@ StablePay is a consumer-facing remittance application for the **USD → INR** co
 
 ## The Problem We're Solving
 
-```
-Traditional Cross-Border Payment (USD → INR)
+![Traditional vs StablePay — Cross-border payment comparison](docs/images/stablepay-vs-traditional-remittance.png)
 
-  US Sender           Correspondent       Correspondent       Indian
-   Bank          →      Bank #1      →      Bank #2      →   Recipient
-                                                               Bank
-  ─────────────────────────────────────────────────────────────────────
-  Day 0                Day 1-2             Day 2-3            Day 3-5
-
-  Cost: 3-5% in fees + hidden FX spreads
-  Time: 1-3 business days
-```
-
-```
-StablePay (USD → INR) — E2E verified: 10/10 customers, 22-60s per remittance
-
-  Google Login     StablePay API      Solana Escrow       Recipient
-  (MPC Wallet) →  (Temporal WF)  →   (USDC PDA)     →   (SMS Claim)
-  ─────────────────────────────────────────────────────────────────────
-  0 sec            ~30 sec           ~1 min              Claim anytime
-
-  Cost: < $0.01 on-chain fees
-  Time: Sub-minute settlement, 48h claim window
-```
+**Verified on-chain:** Each remittance costs **$0.002** total (3 transactions × 0.000005 SOL). E2E tested with 10/10 customers completing in 22–60 seconds.
 
 ---
 
