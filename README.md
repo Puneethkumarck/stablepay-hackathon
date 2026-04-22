@@ -10,6 +10,8 @@
 
 > **Instant cross-border remittances on Solana. No seed phrases. No app for recipients. Guaranteed delivery.**
 
+![StablePay — Instant cross-border remittances on Solana](docs/images/hero-banner.png)
+
 StablePay is a consumer-facing remittance application for the **USD → INR** corridor, built on USDC/Solana. It combines MPC wallet abstraction, a custom Anchor escrow program, and Temporal durable workflows to deliver a seamless sender-to-recipient experience — the recipient claims funds via an SMS link, no crypto knowledge required.
 
 > Built for the [Colosseum Frontier Hackathon](https://www.colosseum.org/) (April 6 – May 11, 2026)
@@ -32,10 +34,10 @@ Traditional Cross-Border Payment (USD → INR)
 ```
 
 ```
-StablePay (USD → INR)
+StablePay (USD → INR) — E2E verified: 10/10 customers, 22-60s per remittance
 
-  Sender App      StablePay API      Solana Escrow       Recipient
-  (Wallet)   →   (Temporal WF)  →   (USDC PDA)     →   (SMS Claim)
+  Google Login     StablePay API      Solana Escrow       Recipient
+  (MPC Wallet) →  (Temporal WF)  →   (USDC PDA)     →   (SMS Claim)
   ─────────────────────────────────────────────────────────────────────
   0 sec            ~30 sec           ~1 min              Claim anytime
 
@@ -47,6 +49,8 @@ StablePay (USD → INR)
 
 ## Architecture Overview
 
+![StablePay Platform Architecture](docs/images/platform-architecture.png)
+
 ```mermaid
 graph TB
     subgraph "Application Layer"
@@ -57,6 +61,7 @@ graph TB
         A4["/api/claims"]
         A5["/api/funding-orders"]
         A6["/webhooks/stripe"]
+        A7["/api/auth"]
     end
 
     subgraph "Domain Layer — Zero Framework Dependencies"
@@ -75,6 +80,7 @@ graph TB
         K[Twilio SMS]
         L[Razorpay UPI Disbursement]
         S[Stripe Payments]
+        T[Google OAuth + JWT Auth]
     end
 
     subgraph "External Systems"
@@ -96,6 +102,7 @@ graph TB
     D --> K
     D --> L
     D --> S
+    D --> T
     G --> M
     H --> N
     I --> O
@@ -110,6 +117,8 @@ graph TB
 
 ## The Payment Lifecycle: Step by Step
 
+![StablePay Payment Lifecycle](docs/images/payment-lifecycle.png)
+
 ```mermaid
 sequenceDiagram
     participant Sender as Sender (Mobile/API)
@@ -123,15 +132,17 @@ sequenceDiagram
     participant Recipient as Recipient (Web)
     participant Razorpay as Razorpay UPI
 
-    Note over Sender,API: Use Case 1 — Create MPC Wallet
-    Sender->>API: POST /api/wallets {userId}
-    API->>MPC: gRPC GenerateKey (DKG ceremony)
+    Note over Sender,API: Use Case 0 — Social Login (Google)
+    Sender->>API: POST /api/auth/social {provider: "GOOGLE", idToken}
+    API->>API: Verify Google ID token (JWKS)
+    API->>DB: Upsert user + social_identity
+    API->>MPC: gRPC GenerateKey (DKG ceremony — first login only)
     MPC-->>API: solanaAddress + publicKey + keyShareData
-    API->>DB: INSERT wallet
-    API-->>Sender: 201 {solanaAddress, balance: 0}
+    API->>DB: INSERT wallet (first login only)
+    API-->>Sender: 201/200 {accessToken, refreshToken, user, wallet}
 
-    Note over Sender,Stripe: Use Case 2 — Fund Wallet (Stripe On-Ramp)
-    Sender->>API: POST /api/wallets/{id}/fund {amount}
+    Note over Sender,Stripe: Use Case 1 — Fund Wallet (Stripe On-Ramp)
+    Sender->>API: POST /api/wallets/{id}/fund {amount} + Bearer token
     API->>Stripe: Create PaymentIntent
     Stripe-->>API: clientSecret + paymentIntentId
     API->>DB: INSERT funding_order (PAYMENT_CONFIRMED)
@@ -141,13 +152,13 @@ sequenceDiagram
     Temporal->>Solana: Transfer SOL (rent) + create ATA + transfer USDC
     Temporal->>DB: UPDATE funding_order → FUNDED
 
-    Note over Sender,API: Use Case 3 — Get FX Rate
+    Note over Sender,API: Use Case 2 — Get FX Rate
     Sender->>API: GET /api/fx/USD-INR
     API->>API: Check Redis cache
     API-->>Sender: {rate: 84.50, source, expiresAt}
 
-    Note over Sender,Razorpay: Use Case 4 — Send Remittance
-    Sender->>API: POST /api/remittances {senderId, phone, amount}
+    Note over Sender,Razorpay: Use Case 3 — Send Remittance
+    Sender->>API: POST /api/remittances {phone, amount} + Bearer token
     API->>DB: Reserve sender balance
     API->>API: Lock FX rate, calculate INR
     API->>DB: INSERT remittance (INITIATED)
@@ -172,7 +183,7 @@ sequenceDiagram
     Note over Temporal,Recipient: Workflow Phase 3 — Wait
     Temporal->>Temporal: Await claim signal (48h timeout)
 
-    Note over Recipient,Razorpay: Use Case 5 — Claim Funds
+    Note over Recipient,Razorpay: Use Case 4 — Claim Funds
     Recipient->>API: GET /api/claims/{token}
     API-->>Recipient: {amountUsdc, amountInr, fxRate}
     Recipient->>API: POST /api/claims/{token} {upiId}
@@ -191,60 +202,84 @@ sequenceDiagram
 
 ---
 
-## Use Case 1: Create MPC Wallet
+## Use Case 0: Social Login + Wallet Creation
 
-> **No seed phrases.** A 2-of-2 threshold key generation ceremony produces an Ed25519 Solana wallet. The full private key never exists in memory.
+> **Google sign-in, instant wallet.** On first login the backend verifies the Google ID token, creates a user record, and runs a 2-of-2 MPC DKG ceremony to produce an Ed25519 Solana wallet. No seed phrases. Returning users get their existing wallet.
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Controller as WalletController
-    participant Handler as CreateWalletHandler
-    participant Repo as WalletRepository
+    participant Controller as AuthController
+    participant Handler as SocialLoginHandler
+    participant Google as GoogleIdTokenVerifier
+    participant UserRepo as UserRepository
+    participant WalletHandler as CreateWalletHandler
     participant MPC as MpcWalletGrpcClient
     participant Sidecar0 as MPC Sidecar 0
     participant Sidecar1 as MPC Sidecar 1
+    participant JWT as JwtTokenIssuer
 
-    Client->>Controller: POST /api/wallets {userId: "user-123"}
+    Client->>Controller: POST /api/auth/social {provider: "GOOGLE", idToken}
+    Controller->>Handler: handle("GOOGLE", idToken, ip, userAgent)
+    Handler->>Google: verify(idToken)
+    Google-->>Handler: {sub, email, email_verified}
 
-    Controller->>Handler: handle("user-123")
-    Handler->>Repo: findByUserId("user-123")
-    Repo-->>Handler: Optional.empty()
+    alt New user
+        Handler->>UserRepo: save(User{id: UUID, email})
+        Handler->>WalletHandler: handle(userId)
+        WalletHandler->>MPC: generateKey()
+        MPC->>Sidecar0: gRPC GenerateKey (ceremonyId, threshold=1, parties=2)
+        Sidecar0->>Sidecar1: P2P DKG round messages (port 7000↔7001)
+        Sidecar1->>Sidecar0: P2P DKG round messages
+        Note over Sidecar0,Sidecar1: Ed25519 DKG ceremony completes
+        Sidecar0-->>MPC: {solanaAddress, publicKey, keyShareData}
+        MPC-->>WalletHandler: GeneratedKey
+    else Returning user
+        Handler->>UserRepo: findBySocialIdentity(provider, sub)
+        UserRepo-->>Handler: existing User + Wallet
+    end
 
-    Handler->>MPC: generateKey()
-    MPC->>Sidecar0: gRPC GenerateKey (ceremonyId, threshold=1, parties=2)
-    Sidecar0->>Sidecar1: P2P DKG round messages (port 7000↔7001)
-    Sidecar1->>Sidecar0: P2P DKG round messages
-    Note over Sidecar0,Sidecar1: Ed25519 DKG ceremony completes
-    Sidecar0-->>MPC: {solanaAddress, publicKey, keyShareData}
-    MPC-->>Handler: GeneratedKey
-
-    Handler->>Handler: Build Wallet(userId, solanaAddress, balance=0)
-    Handler->>Repo: save(wallet)
-    Repo-->>Handler: Wallet with generated id
-
-    Handler-->>Controller: Wallet
-    Controller-->>Client: 201 Created
+    Handler->>JWT: issue(userId)
+    JWT-->>Handler: accessToken + refreshToken
+    Handler-->>Controller: LoginResult
+    Controller-->>Client: 201 Created (new) / 200 OK (returning)
 ```
 
 ```
-POST /api/wallets
+POST /api/auth/social
 Content-Type: application/json
 
-{ "userId": "user-123" }
+{ "provider": "GOOGLE", "idToken": "<google-id-token>" }
 ```
 
 ```json
 {
-  "id": 1,
-  "userId": "user-123",
-  "solanaAddress": "7xK...abc",
-  "availableBalance": 0.000000,
-  "totalBalance": 0.000000,
-  "createdAt": "2026-04-13T10:00:00Z",
-  "updatedAt": "2026-04-13T10:00:00Z"
+  "accessToken": "<jwt>",
+  "refreshToken": "<opaque-token>",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "user": {
+    "id": "7d4718ba-a6f3-485c-b89b-77afa2caf206",
+    "email": "user@gmail.com"
+  },
+  "wallet": {
+    "id": 16,
+    "solanaAddress": "CrsMdkbkAQRz7srMgeTe9sanoiHkeQBCKnhhVR9DAd18",
+    "availableBalance": 0,
+    "totalBalance": 0,
+    "createdAt": "2026-04-22T06:52:59.379393834Z",
+    "updatedAt": "2026-04-22T06:52:59.379393834Z"
+  }
 }
 ```
+
+### Additional Auth Endpoints
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `POST /api/auth/refresh` | Public | Rotate refresh token, issue new access token |
+| `POST /api/auth/logout` | Bearer JWT | Revoke all refresh tokens (204 No Content) |
+| `GET /api/wallets/me` | Bearer JWT | Get authenticated user's wallet |
 
 ### What Happens Inside the MPC Sidecars
 
@@ -286,7 +321,7 @@ Content-Type: application/json
 
 ---
 
-## Use Case 2: Fund Wallet (Stripe On-Ramp)
+## Use Case 1: Fund Wallet (Stripe On-Ramp)
 
 > **Real Stripe integration.** The sender pays via Stripe (card), which triggers a webhook. A Temporal workflow then transfers SOL (for rent/fees), creates an Associated Token Account, and transfers USDC from the treasury to the sender's MPC wallet on-chain.
 
@@ -366,7 +401,7 @@ REFUND_INITIATED → REFUNDED    (refund completed)
 
 ---
 
-## Use Case 3: Get FX Rate
+## Use Case 2: Get FX Rate
 
 > **Real-time rates with fallback.** FX rates come from ExchangeRate-API with Redis caching (5-minute TTL). If the API is unreachable, a hardcoded fallback rate of 84.50 is used.
 
@@ -420,7 +455,7 @@ GET /api/fx/USD-INR
 
 ---
 
-## Use Case 4: Send Remittance
+## Use Case 3: Send Remittance
 
 > **The core flow.** Reserves the sender's balance, locks the FX rate, generates a claim token, and starts a Temporal durable workflow that orchestrates the entire escrow-to-delivery lifecycle.
 
@@ -435,10 +470,10 @@ sequenceDiagram
     participant Temporal as TemporalWorkflowStarter
     participant DB as PostgreSQL
 
-    Client->>Handler: handle("user-123", "+919876543210", 100.00)
+    Client->>Handler: handle(principalId, "+919876543210", 100.00)
 
     Note over Handler,DB: Step 1 — Reserve Balance
-    Handler->>WalletRepo: findByUserId("user-123")
+    Handler->>WalletRepo: findByUserId(principalId)
     WalletRepo-->>Handler: Wallet{available: 100.00}
     Handler->>Handler: wallet.reserveBalance(100.00)
     Note over Handler: available: 100→0, total: 100 (unchanged)
@@ -469,26 +504,30 @@ sequenceDiagram
 
 ```
 POST /api/remittances
+Authorization: Bearer <jwt>
 Content-Type: application/json
 
 {
-  "senderId": "user-123",
   "recipientPhone": "+919876543210",
-  "amountUsdc": 100.00
+  "amountUsdc": 1.00
 }
 ```
 
 ```json
 {
-  "remittanceId": "550e8400-e29b-41d4-a716-446655440000",
-  "senderId": "user-123",
+  "id": 10,
+  "remittanceId": "8ce317d2-639e-4054-bcae-204706dc2c9a",
   "recipientPhone": "+919876543210",
-  "amountUsdc": 100.000000,
-  "amountInr": 8450.00,
-  "fxRate": 84.500000,
+  "amountUsdc": 1.0,
+  "amountInr": 93.61,
+  "fxRate": 93.605785,
   "status": "INITIATED",
-  "claimTokenId": "a1b2c3d4-token-uuid",
-  "smsNotificationFailed": false
+  "escrowPda": null,
+  "claimTokenId": "82a56560-ad6f-4b97-a26d-12c36b722f58",
+  "smsNotificationFailed": false,
+  "createdAt": "2026-04-22T06:53:15.632889681Z",
+  "updatedAt": "2026-04-22T06:53:15.646040707Z",
+  "expiresAt": null
 }
 ```
 
@@ -606,7 +645,7 @@ Once escrow is released on-chain, the USDC is gone. If the INR disbursement fail
 
 ---
 
-## Use Case 5: Claim Funds (Recipient)
+## Use Case 4: Claim Funds (Recipient)
 
 > **No app required.** The recipient opens an SMS link, sees how much they'll receive in INR, enters their UPI ID, and submits. The Temporal workflow wakes up and completes the delivery.
 
@@ -717,6 +756,8 @@ Content-Type: application/json
 
 ## On-Chain Escrow Program
 
+![StablePay Solana Escrow Architecture](docs/images/solana-escrow.png)
+
 **Program ID:** `7C2zsbhgDnxQuC1Nd2rzXQfsfnKazQWFpoUJNqS8zWij`
 
 Custom Anchor program managing USDC escrow on Solana devnet.
@@ -767,415 +808,11 @@ pub struct Escrow {
 
 ---
 
-## 🏦 Solana Accounting Model: Where Every Dollar Goes
+## Solana Accounting Model
 
-> A visual walkthrough of every wallet, PDA, and token account involved in a $25 remittance — from program deployment to the recipient receiving INR in their bank.
+For a detailed visual walkthrough of every wallet, PDA, and token account involved in a remittance — from program deployment through escrow deposit, claim, and INR disbursement — see **[Solana Accounting Model](docs/SOLANA_ACCOUNTING_MODEL.md)**.
 
-### 🗝️ The Players
-
-On Solana, there are different kinds of accounts. Here's what each one is, with a real-world analogy:
-
-| | Solana Concept | Real-World Analogy | What It Does |
-|---|---|---|---|
-| 🔑 | **Wallet** (System Account) | Your **physical wallet** with cash | Holds SOL for tx fees. Has a private key you sign with. Cannot hold tokens directly — needs a Token Account for that. |
-| 🪙 | **Token Account** (ATA) | A **bank account** for one specific currency | Holds USDC (or any SPL token) on behalf of a wallet. One per currency — you have a separate USDC account, BONK account, etc. Address auto-derived from your wallet + token type. |
-| 📦 | **PDA** (Program Derived Address) | A **locked safety deposit box** at the bank | No one has the key — only the program's rules can open it. "Release funds when the authority says OK." Used for escrow vaults and trustless custody. |
-| 🏭 | **Mint** | The **US Treasury** / central bank that prints money | Defines a token type (like USDC). Has a "mint authority" — the only entity that can create new tokens. Circle is the mint authority for real USDC. |
-| ⚙️ | **Program** | The **rulebook** at an escrow company | Code deployed once to Solana, reused forever by all transactions. "Hold the buyer's money. Release when conditions met. Refund if timeout." Our escrow program handles every remittance with the same rules. |
-
-```
-Think of the whole system like this:
-
-  👤 You (wallet)  ──►  🏦 Your bank account (ATA)  ──►  📦 Escrow company (PDA)
-      │                         │                              │
-      has SOL                   has USDC                       has locked USDC
-      (cash for fees)           (your balance)                 (held until rules say release)
-      │                         │                              │
-      signs with                managed by                     controlled by
-      private key               Token Program                  Escrow Program
-```
-
-Now the actual wallets involved in StablePay:
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                        STABLEPAY WALLETS                                 │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  🏛️ DEPLOYER WALLET (one-time setup)                                    │
-│  ├─ Address: 58gFSCTW...                                                 │
-│  ├─ Role: Deploys the escrow program to Solana (one-time operation)      │
-│  ├─ Becomes the "upgrade authority" — can update the program later       │
-│  ├─ Pays ~2 SOL for program storage rent                                 │
-│  ├─ In production: would be a multisig for security                      │
-│  └─ ⚠️ NOT involved in any remittance transaction after deployment       │
-│                                                                          │
-│  👤 SENDER MPC WALLET (one per user)                                     │
-│  ├─ Address: DQoGcVse...  (Ed25519 — no one holds the full private key) │
-│  ├─ Created via MPC DKG — key split across 2 sidecars                    │
-│  ├─ SOL balance: pays for deposit tx fees + account rent                 │
-│  └─ Token Account (ATA): GuDuFKeX... — holds the user's USDC            │
-│                                                                          │
-│  🔐 CLAIM AUTHORITY (one per StablePay deployment)                       │
-│  ├─ Address: 3LZh792t...  (backend-controlled keypair)                   │
-│  ├─ The ONLY key that can release USDC from escrow (via claim)           │
-│  ├─ Stored as CLAIM_AUTHORITY_PRIVATE_KEY in .env                        │
-│  ├─ Token Account (ATA): 2KKehH5e... — receives USDC when claims happen │
-│  ├─ Pays tx fees for claim/refund operations                             │
-│  └─ In production: would be a multisig or HSM-backed key                 │
-│                                                                          │
-│  📦 ESCROW PDA + 🏦 VAULT PDA (one pair per remittance)                  │
-│  ├─ Escrow: stores metadata (sender, amount, deadline, status)           │
-│  ├─ Vault: SPL Token Account that holds the locked USDC                  │
-│  ├─ Both created on deposit, both closed on claim/refund                 │
-│  ├─ Rent SOL always returned to sender when accounts close               │
-│  └─ No private key exists — only the escrow program can move funds       │
-│                                                                          │
-│  🏭 USDC MINT                                                            │
-│  ├─ Devnet: Circle's USDC (4zMMC9sr...) or test mint (CAUBK3cr...)      │
-│  ├─ Mint authority: whoever created the mint (Circle, or us for tests)   │
-│  └─ We use a test mint for E2E testing because we can't mint real USDC   │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-### 📖 The Story of a $25 Remittance
-
-#### Act 0: 🚀 Program Deployment (one-time — NOT per transaction)
-
-> The escrow program is deployed **once** to Solana. It's like publishing a smart contract. Every remittance reuses the same program code — only the data accounts (escrow + vault) are created per transaction.
-
-```
-  🏛️ Deployer Wallet                        Solana Network
-  58gFSCTW...
-  ┌─────────────┐     anchor deploy         ┌─────────────────────────┐
-  │ SOL: 5.0    │──────────────────────────►│ ⚙️ Program Account       │
-  │             │     ~2 SOL for rent       │ 7C2zsbhg...             │
-  │ Upgrade     │                           │ Code: deposit, claim,   │
-  │ Authority 🔑│                           │       refund, cancel    │
-  └─────────────┘                           │ Size: ~285 KB           │
-                                            │ Owner: BPF Loader       │
-       After deployment:                    └─────────────────────────┘
-       Deployer SOL: 5.0 → 3.0
-       Program lives on-chain permanently    ✅ Deployed once, used forever
-       Deployer is NOT involved in any
-       remittance transaction after this
-```
-
-**In production:**
-- Deploy once to mainnet (costs ~2 SOL ≈ $300 at current prices)
-- Transfer upgrade authority to a multisig
-- Program is immutable after authority is revoked (optional)
-
-#### Act 1: 🔑 Wallet Creation (MPC DKG)
-
-> A sender signs up and gets a Solana wallet. But unlike MetaMask, **no one ever sees a seed phrase**. The private key is split across two MPC sidecars using a Distributed Key Generation ceremony.
-
-```
-  Backend                MPC Sidecar 0          MPC Sidecar 1
-  ┌──────────┐          ┌──────────┐          ┌──────────┐
-  │ POST     │─ gRPC ──►│ Party 0  │◄════════►│ Party 1  │
-  │ /api/    │          │ partyId=0│  P2P DKG │ partyId=1│
-  │ wallets  │          │          │  rounds   │          │
-  └──────────┘          └────┬─────┘  7000↔7001└────┬─────┘
-                             │                      │
-                             ▼                      ▼
-                        Key Share 0            Key Share 1
-                        (primary)              (peer)
-                             │                      │
-                             └──────┬───────────────┘
-                                    ▼
-                            ┌──────────────┐
-                            │  PostgreSQL   │
-                            │  wallets table│
-                            │              │
-                            │ key_share_data│ ◄── Party 0's share
-                            │ peer_key_     │
-                            │ share_data    │ ◄── Party 1's share
-                            │ solana_address│ ◄── DQoGcVse...
-                            └──────────────┘
-
-  🔒 The full Ed25519 private key NEVER exists anywhere
-  🔒 Each sidecar only sees its own share during the ceremony
-  🔒 Key shares persist in DB — survive app restarts
-  🔒 Both sidecars needed to sign (2-of-2 threshold)
-```
-
-**What's created on Solana:** Nothing! A Solana "wallet" is just a keypair. The address `DQoGcVse...` exists mathematically but has no on-chain account yet. It becomes a real account when someone sends SOL to it.
-
-#### Act 2: 💰 Funding the Wallet
-
-> Before the sender can make a remittance, their MPC wallet needs SOL (for transaction fees) and USDC (the stablecoin to send). The sender pays via Stripe (card payment), which triggers a Temporal workflow that transfers SOL and USDC from a pre-funded treasury on Solana devnet.
-
-```
-  🏛️ Deployer / Treasury               👤 Sender MPC Wallet
-  58gFSCTW...                           DQoGcVse...
-
-  Step 1: Send SOL for tx fees
-  ┌─────────────┐                       ┌─────────────┐
-  │ SOL: 5.0    │───── 1 SOL ─────────►│ SOL: 1.0    │
-  └─────────────┘                       └─────────────┘
-  (This creates the sender's system account on-chain!)
-
-
-  Step 2: Create sender's USDC token account (ATA)
-  ┌────────────────────────────────────────────────────────────────┐
-  │  spl-token create-account USDC_MINT --owner DQoGcVse...       │
-  │                                                                │
-  │  Derives ATA address: GuDuFKeX... = PDA([DQoGcVse, TOKEN, MINT])│
-  │  Creates a new SPL Token Account on-chain                      │
-  │  Owner: DQoGcVse... (the MPC wallet)                           │
-  │  Mint: USDC                                                    │
-  │  Balance: 0                                                    │
-  └────────────────────────────────────────────────────────────────┘
-
-
-  Step 3: Mint/transfer USDC to sender
-  🏭 USDC Mint                          Sender ATA (GuDuFKeX...)
-  ┌─────────────┐                       ┌─────────────┐
-  │ Mint Auth:  │──── 100 USDC ────────►│ USDC: 100   │
-  │ (deployer   │   (mint or transfer)  │ Owner: DQo..│
-  │  for test)  │                       │ Mint: USDC  │
-  └─────────────┘                       └─────────────┘
-
-  Mint authority can create tokens out of thin air (test only!)
-  In production: USDC comes from Circle via Stripe on-ramp
-```
-
-**After funding:**
-
-| Account | SOL | USDC | Notes |
-|---------|-----|------|-------|
-| 👤 Sender wallet `DQoGcVse...` | 1.0 | — | System account (holds SOL) |
-| 🪙 Sender ATA `GuDuFKeX...` | — | 100 | Token account (holds USDC) |
-| 🏛️ Deployer `58gFSCTW...` | 3.0 | — | Paid for program + funding |
-
-#### Act 3: 📤 Escrow Deposit ($25 USDC)
-
-> The sender sends $25 to India. The Temporal workflow kicks off and deposits USDC into an on-chain escrow.
-
-```
-  🔐 MPC Signing Ceremony
-  ┌─────────────────────────────────────────────────┐
-  │  Backend builds deposit instruction              │
-  │  ├─ 9 accounts: sender, escrow, vault, ATA...   │
-  │  ├─ Data: amount=25,000,000 + deadline           │
-  │                                                   │
-  │  Sidecar 0 + Sidecar 1 co-sign (2-of-2)         │
-  │  ├─ Each uses their key share from DB             │
-  │  ├─ P2P signing rounds over port 7000↔7001       │
-  │  └─ Result: 64-byte Ed25519 signature             │
-  │                                                   │
-  │  Backend builds raw tx: sig_count(1) + sig + msg  │
-  └─────────────────────────────────────────────────┘
-```
-
-```
-  BEFORE DEPOSIT                          AFTER DEPOSIT
-  ══════════════                          ═════════════
-
-  Sender ATA (GuDuFKeX...)                Sender ATA (GuDuFKeX...)
-  ┌─────────────┐                         ┌─────────────┐
-  │ USDC: 100   │                         │ USDC: 75    │  -$25 ✅
-  └─────────────┘                         └─────────────┘
-
-  Escrow PDA                              Escrow PDA (NEW!)
-  ┌─────────────┐                         ┌─────────────┐
-  │ (does not   │                         │ sender: DQo.│
-  │  exist)     │                         │ amount: 25M │
-  └─────────────┘                         │ deadline:48h│
-                                          │ status: ✅   │
-                                          │ Active      │
-                                          └─────────────┘
-
-  Vault PDA                               Vault PDA (NEW!)
-  ┌─────────────┐                         ┌─────────────┐
-  │ (does not   │                         │ USDC: 25    │  Locked! 🔒
-  │  exist)     │                         │ auth: escrow│
-  └─────────────┘                         └─────────────┘
-
-  Sender SOL                              Sender SOL
-  ┌─────────────┐                         ┌─────────────┐
-  │ SOL: 1.000  │                         │ SOL: 0.992  │  -0.008 (rent+fee)
-  └─────────────┘                         └─────────────┘
-```
-
-**On-chain transaction:** [Finalized ✅](https://explorer.solana.com/?cluster=devnet)
-- 🔒 25 USDC locked in vault PDA (only the escrow program can move it)
-- 📋 Escrow PDA stores: sender, claim_authority, mint, amount, deadline
-- 💸 Sender paid ~0.008 SOL for account rent + tx fee
-
-#### Act 4: 📱 SMS Notification
-
-```
-  Temporal Workflow                     Recipient's Phone
-  ┌──────────────┐                     ┌──────────────────┐
-  │ sendClaimSms │────── SMS ─────────►│ 📱 "You have a   │
-  │ activity     │   (via Twilio)      │ StablePay         │
-  └──────────────┘                     │ remittance!       │
-                                       │ Claim: https://..."│
-                                       └──────────────────┘
-  
-  Workflow now waits ⏳ (up to 48 hours for claim signal)
-```
-
-#### Act 5: ✋ Recipient Claims
-
-> The recipient opens the SMS link, sees ₹2,336 (at 93.44 rate), enters UPI ID, and submits.
-
-```
-  POST /api/claims/{token}  { "upiId": "raj@upi" }
-  
-  ┌───────────────────────────────────────────────────────┐
-  │  SubmitClaimHandler                                    │
-  │  ├─ ✅ Token exists                                    │
-  │  ├─ ✅ Not already claimed                             │
-  │  ├─ ✅ Not expired (within 48h)                        │
-  │  ├─ ✅ Remittance status == ESCROWED                   │
-  │  └─ Signal Temporal workflow: claimSubmitted!           │
-  └───────────────────────────────────────────────────────┘
-
-  TemporalRemittanceClaimSignaler:
-  ├─ Derives claim authority ATA: PublicKey.findProgramDerivedAddress(
-  │      claimAuthority, usdcMint) → 2KKehH5e...
-  └─ Sends ClaimSignal to workflow (wakes it up!)
-```
-
-#### Act 6: 💸 Escrow Release (Claim Transaction)
-
-> The Temporal workflow wakes up and submits the claim transaction on-chain.
-
-```
-  🔐 Claim Authority signs (NOT MPC — this is the backend's own keypair)
-
-  Claim Transaction (single instruction, 6 accounts):
-  ┌──────────────────────────────────────────────────────────────┐
-  │  Account 0: 🔐 Claim Authority (signer)     3LZh792t...    │
-  │  Account 1: 📦 Escrow PDA (mut, close)      4f5fxvV4...    │
-  │  Account 2: 🏦 Vault PDA (mut)              FaRgcuRb...    │
-  │  Account 3: 💰 Recipient Token ATA (mut)    2KKehH5e...    │
-  │  Account 4: 👤 Sender wallet (mut)          DQoGcVse...    │
-  │  Account 5: ⚙️  Token Program               TokenkegQ...   │
-  └──────────────────────────────────────────────────────────────┘
-```
-
-```
-  BEFORE CLAIM                            AFTER CLAIM
-  ════════════                            ═══════════
-
-  Vault PDA (FaRgcuRb...)                 Vault PDA
-  ┌─────────────┐                         ┌─────────────┐
-  │ USDC: 25    │────── 25 USDC ─────────►│ CLOSED ❌    │  Rent → sender
-  └─────────────┘                         └─────────────┘
-                          │
-                          ▼
-  Claim Auth ATA (2KKehH5e...)            Claim Auth ATA (2KKehH5e...)
-  ┌─────────────┐                         ┌─────────────┐
-  │ USDC: 0     │                         │ USDC: 25    │  +$25 ✅
-  └─────────────┘                         └─────────────┘
-
-  Escrow PDA (4f5fxvV4...)                Escrow PDA
-  ┌─────────────┐                         ┌─────────────┐
-  │ status:     │                         │ CLOSED ❌    │  Rent → sender
-  │ Active      │                         └─────────────┘
-  └─────────────┘
-
-  Sender SOL (DQoGcVse...)                Sender SOL (DQoGcVse...)
-  ┌─────────────┐                         ┌─────────────┐
-  │ SOL: 0.992  │                         │ SOL: 0.996  │  +0.004 (rent back!)
-  └─────────────┘                         └─────────────┘
-
-  Claim Auth SOL (3LZh792t...)            Claim Auth SOL (3LZh792t...)
-  ┌─────────────┐                         ┌─────────────┐
-  │ SOL: 5.000  │                         │ SOL: 4.999  │  -0.001 (tx fee)
-  └─────────────┘                         └─────────────┘
-```
-
-**What happens on-chain (2 CPI calls inside the escrow program):**
-1. 🔄 **Transfer**: Vault PDA → Claim Authority ATA (25 USDC)
-2. 🗑️ **Close vault**: Account deleted, rent SOL → sender
-3. 🗑️ **Close escrow**: Account deleted, rent SOL → sender
-
-**On-chain transaction:** [Finalized ✅](https://explorer.solana.com/?cluster=devnet)
-
-#### Act 7: 🏦 INR Disbursement
-
-```
-  Temporal Workflow                     Razorpay API
-  ┌──────────────┐                     ┌──────────────────┐
-  │ disburseInr  │────── API call ────►│ Create Payout    │
-  │ activity     │                     │ Send ₹2,336 to   │
-  └──────────────┘                     │ raj@upi via UPI  │
-                                       └──────────────────┘
-  Status: CLAIMED → DELIVERED ✅
-```
-
-### 📊 Final Ledger
-
-```
-  ┌──────────────────────────────────────────────────────────────┐
-  │                   FINAL STATE ($25 remittance)                │
-  ├──────────────────────────────────────────────────────────────┤
-  │                                                                │
-  │  👤 Sender MPC Wallet (DQoGcVse...)                            │
-  │  ├─ SOL:  0.996  (started 1.000, paid rent, got rent back)    │
-  │  ├─ USDC: 75     (started 100, sent 25)                       │
-  │  └─ DB balance: 0 (reserved on send)                           │
-  │                                                                │
-  │  🔐 Claim Authority (3LZh792t...)                              │
-  │  ├─ SOL:  4.999  (paid claim tx fee)                           │
-  │  └─ USDC: 25     (received from escrow vault)                  │
-  │                                                                │
-  │  📦 Escrow PDA: CLOSED ❌ (rent returned to sender)             │
-  │  🏦 Vault PDA:  CLOSED ❌ (rent returned to sender)             │
-  │                                                                │
-  │  📱 Recipient:                                                  │
-  │  └─ ₹2,336 received in bank via UPI                            │
-  │                                                                │
-  │  💰 Net cost to sender: $25.00 USDC + ~$0.001 SOL              │
-  │  💰 Net cost to platform: ~$0.001 SOL (claim tx fee)            │
-  │                                                                │
-  └──────────────────────────────────────────────────────────────┘
-```
-
-### 🔄 Alternative Path: Refund (No Claim Within 48h)
-
-```
-  BEFORE REFUND                           AFTER REFUND
-  ═════════════                           ════════════
-
-  Vault PDA                               Vault PDA
-  ┌─────────────┐                         ┌─────────────┐
-  │ USDC: 25    │────── 25 USDC ─────────►│ CLOSED ❌    │
-  └─────────────┘          │              └─────────────┘
-                           ▼
-  Sender ATA (GuDuFKeX...) ◄──────────    Sender ATA (GuDuFKeX...)
-  ┌─────────────┐                         ┌─────────────┐
-  │ USDC: 75    │                         │ USDC: 100   │  Full refund! ✅
-  └─────────────┘                         └─────────────┘
-
-  Escrow PDA: CLOSED ❌ (rent → sender)
-  Vault PDA:  CLOSED ❌ (rent → sender)
-  Status: ESCROWED → REFUNDED
-```
-
-### 🔑 Key Insight: Why PDAs?
-
-```
-  Regular wallet:  "I have the private key, I control the funds"
-  PDA (escrow):    "The PROGRAM controls the funds — rules are code"
-
-  ┌──────────────────────────────────────────────────────────┐
-  │  Only the escrow program can sign for the escrow PDA     │
-  │  ├─ deposit: anyone (if they're the sender)              │
-  │  ├─ claim:   ONLY claim authority can trigger             │
-  │  ├─ refund:  anyone, but ONLY after deadline passes       │
-  │  └─ cancel:  ONLY the original sender                     │
-  │                                                            │
-  │  Seeds are deterministic — anyone can derive the PDA      │
-  │  address, but NOBODY can sign for it except the program   │
-  └──────────────────────────────────────────────────────────┘
-```
+Covers: account types (wallets, ATAs, PDAs, mints), the full lifecycle of a $25 remittance (8 acts), final ledger state, the refund path, and why PDAs enable trustless escrow.
 
 ---
 
@@ -1202,6 +839,12 @@ Now the actual wallets involved in StablePay:
 | SP-0022 | 409 | FundingAlreadyInProgressException | Funding already in progress for wallet |
 | SP-0026 | 400 | InvalidWebhookSignatureException | Stripe webhook signature invalid |
 | SP-0031 | 500 | SolanaTransactionException | Transaction failed on-chain |
+| SP-0032 | 401 | InvalidIdTokenException | Invalid Google ID token |
+| SP-0033 | 401 | EmailNotVerifiedException | Google email not verified |
+| SP-0034 | 400 | UnsupportedAuthProviderException | Unsupported auth provider (only GOOGLE) |
+| SP-0035 | 401 | InvalidRefreshTokenException | Invalid refresh token |
+| SP-0036 | 401 | RefreshTokenExpiredException | Refresh token expired |
+| SP-0040 | 401 | SecurityAuthenticationEntryPoint | Authentication required (missing/invalid JWT) |
 
 ---
 
@@ -1260,7 +903,7 @@ cd mpc-sidecar && go build ./... && go test ./... -v -count=1 -timeout 120s
 
 | Target | Description |
 |---|---|
-| `make up` | Build backend + start full Docker Compose stack (7 services) |
+| `make up` | Build backend + start full Docker Compose stack (8 services) |
 | `make down` | Stop all services |
 | `make infra` | Start infrastructure only (for local backend dev) |
 | `make logs` | Follow Docker Compose logs |
@@ -1341,6 +984,7 @@ stablepay-hackathon/
 │       ├── main/java/com/stablepay/
 │       │   ├── application/          # Controllers, DTOs, config
 │       │   ├── domain/               # Models, handlers, ports
+│       │   │   ├── auth/             #   Social login, JWT, refresh tokens
 │       │   │   ├── wallet/           #   MPC wallet management
 │       │   │   ├── remittance/       #   Core remittance flow
 │       │   │   ├── funding/          #   Stripe funding orders
@@ -1348,7 +992,8 @@ stablepay-hackathon/
 │       │   │   ├── fx/               #   FX rate quotes
 │       │   │   └── common/           #   Shared ports (SMS, disbursement)
 │       │   └── infrastructure/       # Adapters
-│       │       ├── db/               #   JPA + Flyway (7 migrations)
+│       │       ├── db/               #   JPA + Flyway (8 migrations)
+│       │       ├── auth/             #   Google ID token verifier + JWT issuer
 │       │       ├── temporal/         #   Workflows + activities
 │       │       ├── mpc/              #   gRPC client to sidecars
 │       │       ├── solana/           #   RPC + escrow instruction builder + tx confirmation
@@ -1356,8 +1001,8 @@ stablepay-hackathon/
 │       │       ├── razorpay/         #   Razorpay UPI disbursement
 │       │       ├── fx/               #   ExchangeRate-API + Redis cache
 │       │       └── sms/              #   Twilio + logging fallback
-│       ├── test/                     # 61 unit test files
-│       └── integration-test/         # 18 integration test files
+│       ├── test/                     # 65 unit test files
+│       └── integration-test/         # 23 integration test files
 ├── programs/stablepay-escrow/        # Anchor program (Rust)
 │   └── src/
 │       ├── lib.rs                    # 4 instructions
@@ -1375,7 +1020,7 @@ stablepay-hackathon/
 │   └── proto/                        # Protobuf definitions (sidecar + p2p)
 ├── tests/                            # Anchor E2E tests (TypeScript, 799 lines)
 ├── docs/                             # Architecture, standards, ADRs
-├── docker-compose.yml                # 7 services
+├── docker-compose.yml                # 8 services
 ├── Makefile                          # Build + orchestration
 └── Anchor.toml
 ```

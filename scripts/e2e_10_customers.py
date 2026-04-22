@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Full E2E run for N customers: create wallet -> fund -> remit -> claim."""
+import base64
+import hashlib
+import hmac
 import json
 import os
 import subprocess
 import sys
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 import urllib.request
@@ -16,16 +20,30 @@ USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 CLAIM_AUTHORITY = "3LZh792tEakavG2FJPJKocXUZSfBgmiLtapj5hNMTZkr"
 RECIPIENT_PHONE = "+919876543210"
 UPI_ID = "test@upi"
+JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-at-least-32-characters-long!!")
 
 
-def http(method: str, path: str, body: dict | None = None) -> tuple[int, dict | str]:
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def mint_jwt(user_id: str, ttl_secs: int = 900) -> str:
+    header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
+    now = int(time.time())
+    payload = _b64url(json.dumps({"sub": user_id, "iat": now, "exp": now + ttl_secs}).encode())
+    signing_input = f"{header}.{payload}"
+    sig = hmac.new(JWT_SECRET.encode(), signing_input.encode(), hashlib.sha256).digest()
+    return f"{signing_input}.{_b64url(sig)}"
+
+
+def http(method: str, path: str, body: dict | None = None,
+         token: str | None = None) -> tuple[int, dict | str]:
     url = f"{BASE}{path}"
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method,
-                                 headers={"Content-Type": "application/json"})
-    # 180s window covers up to 3 MPC DKG retries (30s each + backoff). STA-85
-    # makes the server side fail-fast at ~30s per attempt; the harness must
-    # wait longer than the longest legitimate server attempt.
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=180) as r:
             raw = r.read().decode()
@@ -39,10 +57,11 @@ def http(method: str, path: str, body: dict | None = None) -> tuple[int, dict | 
         return code, raw
 
 
-def poll(path: str, predicate, max_secs: int = 120, interval: float = 3.0) -> tuple[int, Any]:
+def poll(path: str, predicate, max_secs: int = 120, interval: float = 3.0,
+         token: str | None = None) -> tuple[int, Any]:
     start = time.time()
     while time.time() - start < max_secs:
-        code, body = http("GET", path)
+        code, body = http("GET", path, token=token)
         if code == 200 and predicate(body):
             return code, body
         time.sleep(interval)
@@ -90,11 +109,18 @@ def redact(value: Any) -> Any:
     return value
 
 
+def seed_user(user_id: str) -> bool:
+    email = f"e2e-{user_id[:8]}@test.stablepay.app"
+    r = subprocess.run(
+        ["docker", "exec", "stablepay-hackathon-postgres-1",
+         "psql", "-U", "stablepay", "-d", "stablepay", "-tAc",
+         f"INSERT INTO users (id, email) VALUES ('{user_id}', '{email}') "
+         "ON CONFLICT (id) DO NOTHING;"],
+        capture_output=True, text=True)
+    return r.returncode == 0
+
+
 def create_wallet(user_id: str, log_fn) -> tuple[int, str] | None:
-    """Create a wallet in exactly one backend call. STA-85 guarantees the server
-    either returns a fully-formed wallet (both key shares persisted, DB NOT NULL
-    enforced) or fails with 5xx. Never silently retry a half-formed 201 — that
-    would mask the exact regression STA-85 is designed to catch."""
     req = {"userId": user_id}
     code, body = http("POST", "/api/wallets", req)
     log_fn("1-create-wallet", "POST", "/api/wallets", req, code, body)
@@ -129,21 +155,26 @@ class RunResult:
 
 
 def run_one(idx: int) -> RunResult:
-    user_id = f"e2e-10x-{int(time.time()*1000)}-{idx}"
+    user_id = str(uuid.uuid4())
     r = RunResult(index=idx, user_id=user_id)
+    token = mint_jwt(user_id)
     t0 = time.time()
     try:
-        # 1. Create wallet — STA-85 guarantees the server never returns a
-        # half-formed wallet. One attempt, fail the run on 5xx.
+        # 0. Seed user row (wallets FK requires it)
+        if not seed_user(user_id):
+            r.error = "failed to seed user row in DB"
+            return r
+
+        # 1. Create wallet (permitAll — no auth required)
         result = create_wallet(user_id, r.log)
         if result is None:
             r.error = "create wallet failed — expected 201, see detail log"
             return r
         r.wallet_id, r.solana_address = result
 
-        # 2. Fund $2
+        # 2. Fund
         req = {"amount": float(AMOUNT_USDC)}
-        code, body = http("POST", f"/api/wallets/{r.wallet_id}/fund", req)
+        code, body = http("POST", f"/api/wallets/{r.wallet_id}/fund", req, token=token)
         r.log("2-initiate-fund", "POST", f"/api/wallets/{r.wallet_id}/fund", req, code, body)
         if code != 201:
             r.error = f"fund HTTP {code}"
@@ -155,7 +186,8 @@ def run_one(idx: int) -> RunResult:
         code, body = poll(
             f"/api/funding-orders/{r.funding_id}",
             lambda b: b.get("status") == "FUNDED",
-            max_secs=90)
+            max_secs=90,
+            token=token)
         r.log("3-poll-funded", "GET", f"/api/funding-orders/{r.funding_id}", None, code, body)
         if body.get("status") != "FUNDED":
             r.error = f"fund not FUNDED: status={body.get('status')}"
@@ -167,10 +199,9 @@ def run_one(idx: int) -> RunResult:
             r.error = f"on-chain USDC after fund = {r.on_chain_usdc_after_fund}, expected 1"
             return r
 
-        # 5. Create remittance
-        req = {"senderId": r.user_id, "recipientPhone": RECIPIENT_PHONE,
-               "amountUsdc": float(AMOUNT_USDC)}
-        code, body = http("POST", "/api/remittances", req)
+        # 5. Create remittance (senderId from JWT principal, not request body)
+        req = {"recipientPhone": RECIPIENT_PHONE, "amountUsdc": float(AMOUNT_USDC)}
+        code, body = http("POST", "/api/remittances", req, token=token)
         r.log("4-create-remittance", "POST", "/api/remittances", req, code, body)
         if code != 201 and code != 200:
             r.error = f"remittance HTTP {code}"
@@ -182,20 +213,21 @@ def run_one(idx: int) -> RunResult:
         code, body = poll(
             f"/api/remittances/{r.remittance_id}",
             lambda b: b.get("status") in ("ESCROWED", "CLAIMED", "DELIVERED"),
-            max_secs=120)
+            max_secs=120,
+            token=token)
         r.log("5-poll-escrowed", "GET", f"/api/remittances/{r.remittance_id}", None, code, body)
         if body.get("status") not in ("ESCROWED", "CLAIMED", "DELIVERED"):
             r.error = f"remittance not ESCROWED: status={body.get('status')}"
             return r
 
-        # 7. Get claim details
+        # 7. Get claim details (permitAll)
         code, body = http("GET", f"/api/claims/{r.claim_token_id}")
         r.log("6-get-claim", "GET", f"/api/claims/{r.claim_token_id}", None, code, body)
         if code != 200:
             r.error = f"get claim HTTP {code}"
             return r
 
-        # 8. Submit claim
+        # 8. Submit claim (permitAll)
         req = {"upiId": UPI_ID}
         code, body = http("POST", f"/api/claims/{r.claim_token_id}", req)
         r.log("7-submit-claim", "POST", f"/api/claims/{r.claim_token_id}", req, code, body)
@@ -207,16 +239,15 @@ def run_one(idx: int) -> RunResult:
         code, body = poll(
             f"/api/remittances/{r.remittance_id}",
             lambda b: b.get("status") == "DELIVERED",
-            max_secs=180)
+            max_secs=180,
+            token=token)
         r.log("8-poll-delivered", "GET", f"/api/remittances/{r.remittance_id}", None, code, body)
         r.final_status = body.get("status")
         if r.final_status != "DELIVERED":
             r.error = f"final status = {r.final_status}, expected DELIVERED"
             return r
 
-        # 10. Final on-chain check — claim authority's ATA must show a numeric
-        # balance >= the amount we just delivered. If spl-token printed an error
-        # string or a value smaller than expected, the claim did not settle.
+        # 10. Final on-chain check
         r.on_chain_usdc_after_claim = spl_balance(CLAIM_AUTHORITY)
         try:
             claim_balance = float(r.on_chain_usdc_after_claim)
@@ -233,11 +264,7 @@ def run_one(idx: int) -> RunResult:
             )
             return r
 
-        # 11. STA-91 — verify RemittancePayoutWriter persisted payout_id +
-        # provider_status during disburseInr. Logging adapter returns
-        # "log_<uuid>" + "SIMULATED"; Razorpay (real or WireMock-stubbed)
-        # returns "pout_..." + "processing". Either shape proves the writer
-        # path ran; any other combination is a regression.
+        # 11. Verify payout persisted in DB
         payout_id, provider_status, _ = fetch_payout_row(r.remittance_id)
         r.payout_id = payout_id
         r.payout_provider_status = provider_status
@@ -316,12 +343,11 @@ def write_report(results: list[RunResult], out_path: str):
 
 
 def run_salvage(idx: int, wallet_id: int, user_id: str, amount_usdc: str) -> RunResult:
-    """Complete remittance + claim for an already-funded wallet from an aborted prior run."""
     r = RunResult(index=idx, user_id=user_id, wallet_id=wallet_id)
     r.funding_id = "(salvaged — fund completed in prior aborted run)"
+    token = mint_jwt(user_id)
     t0 = time.time()
     try:
-        # Look up solana address
         dbr = subprocess.run(
             ["docker", "exec", "stablepay-hackathon-postgres-1",
              "psql", "-U", "stablepay", "-d", "stablepay", "-tAc",
@@ -330,10 +356,8 @@ def run_salvage(idx: int, wallet_id: int, user_id: str, amount_usdc: str) -> Run
         r.solana_address = dbr.stdout.strip()
         r.on_chain_usdc_after_fund = spl_balance(r.solana_address)
 
-        # Remittance
-        req = {"senderId": user_id, "recipientPhone": RECIPIENT_PHONE,
-               "amountUsdc": float(amount_usdc)}
-        code, body = http("POST", "/api/remittances", req)
+        req = {"recipientPhone": RECIPIENT_PHONE, "amountUsdc": float(amount_usdc)}
+        code, body = http("POST", "/api/remittances", req, token=token)
         r.log("4-create-remittance", "POST", "/api/remittances", req, code, body)
         if code not in (200, 201):
             r.error = f"remittance HTTP {code}"
@@ -341,30 +365,28 @@ def run_salvage(idx: int, wallet_id: int, user_id: str, amount_usdc: str) -> Run
         r.remittance_id = body["remittanceId"]
         r.claim_token_id = body["claimTokenId"]
 
-        # Poll to ESCROWED
         code, body = poll(
             f"/api/remittances/{r.remittance_id}",
             lambda b: b.get("status") in ("ESCROWED", "CLAIMED", "DELIVERED"),
-            max_secs=180)
+            max_secs=180,
+            token=token)
         r.log("5-poll-escrowed", "GET", f"/api/remittances/{r.remittance_id}", None, code, body)
         if body.get("status") not in ("ESCROWED", "CLAIMED", "DELIVERED"):
             r.error = f"remittance not ESCROWED: status={body.get('status')}"
             return r
 
-        # Get claim
         code, body = http("GET", f"/api/claims/{r.claim_token_id}")
         r.log("6-get-claim", "GET", f"/api/claims/{r.claim_token_id}", None, code, body)
 
-        # Submit claim
         req = {"upiId": UPI_ID}
         code, body = http("POST", f"/api/claims/{r.claim_token_id}", req)
         r.log("7-submit-claim", "POST", f"/api/claims/{r.claim_token_id}", req, code, body)
 
-        # Poll DELIVERED
         code, body = poll(
             f"/api/remittances/{r.remittance_id}",
             lambda b: b.get("status") == "DELIVERED",
-            max_secs=180)
+            max_secs=180,
+            token=token)
         r.log("8-poll-delivered", "GET", f"/api/remittances/{r.remittance_id}", None, code, body)
         r.final_status = body.get("status")
         if r.final_status != "DELIVERED":
