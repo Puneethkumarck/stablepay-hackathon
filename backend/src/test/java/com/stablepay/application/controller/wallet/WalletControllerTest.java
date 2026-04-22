@@ -125,8 +125,8 @@ class WalletControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(SOME_WALLET_ID))
                 .andExpect(jsonPath("$.solanaAddress").value(SOME_SOLANA_ADDRESS))
-                .andExpect(jsonPath("$.availableBalance").value(SOME_BALANCE.intValue()))
-                .andExpect(jsonPath("$.totalBalance").value(SOME_BALANCE.intValue()));
+                .andExpect(jsonPath("$.availableBalance").value(SOME_BALANCE.doubleValue()))
+                .andExpect(jsonPath("$.totalBalance").value(SOME_BALANCE.doubleValue()));
     }
 
     @Test

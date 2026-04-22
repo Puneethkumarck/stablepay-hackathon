@@ -28,7 +28,7 @@ class WalletTest {
 
             // then
             var expected = wallet.toBuilder()
-                    .availableBalance(BigDecimal.valueOf(40))
+                    .availableBalance(new BigDecimal("40.50"))
                     .build();
 
             assertThat(reserved)
