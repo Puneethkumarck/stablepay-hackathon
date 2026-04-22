@@ -106,8 +106,6 @@ class KeyShareReverseBackfillRunnerTest {
     @Test
     void shouldZeroPlaintextAfterReverse() {
         // given
-        byte[] plaintextKey = {10, 20, 30};
-        byte[] plaintextPeer = {40, 50, 60};
         var entity = WalletEntity.builder()
                 .id(WALLET_ID_1)
                 .keyShareData(ENCRYPTED_KEY_SHARE)
@@ -117,29 +115,22 @@ class KeyShareReverseBackfillRunnerTest {
                 .peerKeyShareIv(PEER_KEY_SHARE_IV)
                 .build();
         var decryptedMaterial = DecryptedKeyMaterial.builder()
-                .keyShareData(plaintextKey)
-                .peerKeyShareData(plaintextPeer)
+                .keyShareData(new byte[]{10, 20, 30})
+                .peerKeyShareData(new byte[]{40, 50, 60})
                 .build();
         given(walletJpaRepository.findById(WALLET_ID_1)).willReturn(Optional.of(entity));
         given(keyShareEncryptor.decrypt(
                 ENCRYPTED_KEY_SHARE, ENCRYPTED_PEER_KEY_SHARE,
                 ENCRYPTED_DEK, KEY_SHARE_IV, PEER_KEY_SHARE_IV))
                 .willReturn(decryptedMaterial);
-        var keyShareRef = new byte[1][];
-        var peerKeyShareRef = new byte[1][];
         given(walletJpaRepository.save(entityCaptor.capture()))
-                .willAnswer(invocation -> {
-                    var saved = invocation.getArgument(0, WalletEntity.class);
-                    keyShareRef[0] = saved.getKeyShareData();
-                    peerKeyShareRef[0] = saved.getPeerKeyShareData();
-                    return saved;
-                });
+                .willAnswer(invocation -> invocation.getArgument(0));
 
         // when
         runner.reverseWallet(WALLET_ID_1);
 
         // then
-        assertThat(keyShareRef[0]).containsOnly(0);
-        assertThat(peerKeyShareRef[0]).containsOnly(0);
+        assertThat(decryptedMaterial.keyShareData()).containsOnly(0);
+        assertThat(decryptedMaterial.peerKeyShareData()).containsOnly(0);
     }
 }

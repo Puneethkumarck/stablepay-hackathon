@@ -45,6 +45,10 @@ class KeyShareBackfillRunner implements ApplicationRunner {
     void migrateWallet(Long walletId) {
         transactionTemplate.executeWithoutResult(status -> {
             var entity = walletJpaRepository.findById(walletId).orElseThrow();
+            if (entity.getKeyShareDek() != null) {
+                log.info("Skipping wallet {} — already encrypted", walletId);
+                return;
+            }
             byte[] keyShareData = entity.getKeyShareData();
             byte[] peerKeyShareData = entity.getPeerKeyShareData();
 

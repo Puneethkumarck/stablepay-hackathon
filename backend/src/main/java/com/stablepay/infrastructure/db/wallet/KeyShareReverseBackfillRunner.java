@@ -45,6 +45,10 @@ class KeyShareReverseBackfillRunner implements ApplicationRunner {
     void reverseWallet(Long walletId) {
         transactionTemplate.executeWithoutResult(status -> {
             var entity = walletJpaRepository.findById(walletId).orElseThrow();
+            if (entity.getKeyShareDek() == null) {
+                log.info("Skipping wallet {} — already decrypted", walletId);
+                return;
+            }
 
             var decrypted = keyShareEncryptor.decrypt(
                     entity.getKeyShareData(), entity.getPeerKeyShareData(),
@@ -54,8 +58,8 @@ class KeyShareReverseBackfillRunner implements ApplicationRunner {
             byte[] peerKeyShareData = decrypted.peerKeyShareData();
 
             try {
-                entity.setKeyShareData(keyShareData);
-                entity.setPeerKeyShareData(peerKeyShareData);
+                entity.setKeyShareData(keyShareData.clone());
+                entity.setPeerKeyShareData(peerKeyShareData.clone());
                 entity.setKeyShareDek(null);
                 entity.setKeyShareIv(null);
                 entity.setPeerKeyShareIv(null);

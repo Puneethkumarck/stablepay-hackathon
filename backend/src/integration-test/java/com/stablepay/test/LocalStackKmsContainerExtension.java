@@ -23,25 +23,32 @@ public class LocalStackKmsContainerExtension implements BeforeAllCallback {
 
     @Override
     public void beforeAll(ExtensionContext context) {
+        ensureStarted();
+    }
+
+    public static String getKeyArn() {
+        ensureStarted();
+        return keyArn;
+    }
+
+    public static String getEndpoint() {
+        ensureStarted();
+        return LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.KMS).toString();
+    }
+
+    public static String getRegion() {
+        ensureStarted();
+        return LOCALSTACK.getRegion();
+    }
+
+    private static synchronized void ensureStarted() {
         if (!LOCALSTACK.isRunning()) {
             LOCALSTACK.start();
             keyArn = createKmsKey();
         }
     }
 
-    public static String getKeyArn() {
-        return keyArn;
-    }
-
-    public static String getEndpoint() {
-        return LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.KMS).toString();
-    }
-
-    public static String getRegion() {
-        return LOCALSTACK.getRegion();
-    }
-
-    private String createKmsKey() {
+    private static String createKmsKey() {
         var endpoint = LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.KMS);
         try (var kmsClient = KmsClient.builder()
                 .endpointOverride(endpoint)

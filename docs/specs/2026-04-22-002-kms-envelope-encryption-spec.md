@@ -45,7 +45,7 @@ After this change, key shares are encrypted with a per-wallet data encryption ke
 
 ### 4.1 Write path (wallet creation — first save only)
 
-```
+```text
 CreateWalletHandler
   → MPC DKG ceremony → GeneratedKey{keyShareData, peerKeyShareData}
   → WalletRepositoryAdapter.save(wallet)
@@ -62,7 +62,7 @@ CreateWalletHandler
 
 ### 4.1.1 Subsequent saves (balance updates)
 
-```
+```text
 FundWalletHandler / other balance mutations
   → WalletRepositoryAdapter.save(wallet)
     → Detect: entity.keyShareDek != null → key shares already encrypted
@@ -74,7 +74,7 @@ This avoids unnecessary KMS calls and DEK regeneration on balance-only updates.
 
 ### 4.2 Read path (transaction signing)
 
-```
+```text
 SolanaTransactionServiceAdapter.depositEscrow()
   → walletRepository.findBySolanaAddress(address)
     → WalletRepositoryAdapter loads WalletEntity from DB
@@ -164,7 +164,7 @@ public record DecryptedKeyMaterial(
 
 ### 7.1 KmsKeyShareEncryptor
 
-```
+```java
 @ConditionalOnProperty(name = "stablepay.kms.enabled", havingValue = "true")
 ```
 
@@ -176,7 +176,7 @@ public record DecryptedKeyMaterial(
 
 ### 7.2 NoOpKeyShareEncryptor (fallback)
 
-```
+```java
 @ConditionalOnProperty(name = "stablepay.kms.enabled", havingValue = "false")
 ```
 
@@ -274,7 +274,7 @@ localstack:
 
 For local development, the `.env` file should contain:
 
-```
+```dotenv
 KMS_ENABLED=true
 KMS_KEY_ARN=arn:aws:kms:us-east-1:000000000000:key/local-dev-key
 KMS_ENDPOINT=http://localhost:4566
@@ -320,9 +320,9 @@ A one-time `ApplicationRunner` bean (conditional on `BACKFILL_KEY_SHARES=true`):
 | `infrastructure/kms/KmsProperties.java` | Config properties |
 | `infrastructure/kms/NoOpKeyShareEncryptor.java` | Passthrough fallback |
 | `db/migration/V10__add_key_share_encryption_columns.sql` | Add DEK + IV columns |
-| `db/migration/V11__enforce_key_share_encryption_not_null.sql` | NOT NULL after backfill |
-| `infrastructure/kms/KeyShareBackfillRunner.java` | One-time migration runner |
-| `infrastructure/kms/KeyShareReverseBackfillRunner.java` | Rollback runner — decrypts shares back to plaintext |
+| `db/migration-pending/V11__enforce_key_share_encryption_not_null.sql` | NOT NULL after backfill (promote manually) |
+| `infrastructure/db/wallet/KeyShareBackfillRunner.java` | One-time migration runner |
+| `infrastructure/db/wallet/KeyShareReverseBackfillRunner.java` | Rollback runner — decrypts shares back to plaintext |
 | `localstack/init/ready.d/create-kms-key.sh` | LocalStack KMS key bootstrap script |
 
 ### Modified files
@@ -379,7 +379,7 @@ A one-time `ApplicationRunner` bean (conditional on `BACKFILL_KEY_SHARES=true`):
 
 ### Rollback procedure (after backfill has run)
 
-1. **Run reverse backfill first:** A `REVERSE_BACKFILL_KEY_SHARES=true` `ApplicationRunner` that:
+1. **Run reverse backfill first:** Set `KMS_REVERSE_BACKFILL_KEY_SHARES=true` to activate the `ApplicationRunner` that:
    - Loads each wallet with `key_share_dek IS NOT NULL`
    - Decrypts key shares using KMS (KMS must still be enabled during reverse backfill)
    - Writes plaintext key shares back and nulls DEK/IV columns

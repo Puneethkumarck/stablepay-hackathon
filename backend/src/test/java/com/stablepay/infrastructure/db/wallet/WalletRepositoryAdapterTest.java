@@ -79,8 +79,10 @@ class WalletRepositoryAdapterTest {
 
         // then
         then(keyShareEncryptor).should().encrypt(SOME_KEY_SHARE_DATA, SOME_PEER_KEY_SHARE_DATA);
-        assertThat(result.keyShareData()).isEqualTo(SOME_KEY_SHARE_DATA);
-        assertThat(result.peerKeyShareData()).isEqualTo(SOME_PEER_KEY_SHARE_DATA);
+        var expected = WalletFixtures.walletBuilder().id(null).build();
+        assertThat(result).usingRecursiveComparison()
+                .ignoringFields("updatedAt")
+                .isEqualTo(expected);
     }
 
     @Test
@@ -127,9 +129,9 @@ class WalletRepositoryAdapterTest {
         var result = adapter.findById(SOME_WALLET_ID);
 
         // then
+        var expected = WalletFixtures.walletBuilder().build();
         assertThat(result).isPresent();
-        assertThat(result.get().keyShareData()).isEqualTo(SOME_KEY_SHARE_DATA);
-        assertThat(result.get().peerKeyShareData()).isEqualTo(SOME_PEER_KEY_SHARE_DATA);
+        assertThat(result.get()).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -142,8 +144,9 @@ class WalletRepositoryAdapterTest {
         var result = adapter.findBySolanaAddress(SOME_SOLANA_ADDRESS);
 
         // then
+        var expected = WalletFixtures.walletBuilder().build();
         assertThat(result).isPresent();
-        assertThat(result.get().keyShareData()).isEqualTo(SOME_KEY_SHARE_DATA);
+        assertThat(result.get()).usingRecursiveComparison().isEqualTo(expected);
         then(keyShareEncryptor).shouldHaveNoInteractions();
     }
 
@@ -165,8 +168,9 @@ class WalletRepositoryAdapterTest {
         var result = adapter.findByUserId(SOME_USER_ID);
 
         // then
+        var expected = WalletFixtures.walletBuilder().build();
         assertThat(result).isPresent();
-        assertThat(result.get().keyShareData()).isEqualTo(SOME_KEY_SHARE_DATA);
+        assertThat(result.get()).usingRecursiveComparison().isEqualTo(expected);
     }
 
     private WalletEntity buildEncryptedEntity() {

@@ -2,7 +2,6 @@ package com.stablepay.infrastructure.db.wallet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
 import java.util.List;
 import java.util.Optional;
@@ -69,8 +68,8 @@ class KeyShareBackfillRunnerTest {
         // given
         var entity = WalletEntity.builder()
                 .id(WALLET_ID_1)
-                .keyShareData(KEY_SHARE)
-                .peerKeyShareData(PEER_KEY_SHARE)
+                .keyShareData(KEY_SHARE.clone())
+                .peerKeyShareData(PEER_KEY_SHARE.clone())
                 .build();
         var encryptedMaterial = EncryptedKeyMaterial.builder()
                 .encryptedKeyShareData(ENCRYPTED_KEY_SHARE)
@@ -80,7 +79,8 @@ class KeyShareBackfillRunnerTest {
                 .peerKeyShareIv(PEER_KEY_SHARE_IV)
                 .build();
         given(walletJpaRepository.findById(WALLET_ID_1)).willReturn(Optional.of(entity));
-        given(keyShareEncryptor.encrypt(KEY_SHARE, PEER_KEY_SHARE)).willReturn(encryptedMaterial);
+        given(keyShareEncryptor.encrypt(entity.getKeyShareData(), entity.getPeerKeyShareData()))
+                .willReturn(encryptedMaterial);
         given(walletJpaRepository.save(entityCaptor.capture()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -88,12 +88,15 @@ class KeyShareBackfillRunnerTest {
         runner.migrateWallet(WALLET_ID_1);
 
         // then
-        var saved = entityCaptor.getValue();
-        assertThat(saved.getKeyShareData()).isEqualTo(ENCRYPTED_KEY_SHARE);
-        assertThat(saved.getPeerKeyShareData()).isEqualTo(ENCRYPTED_PEER_KEY_SHARE);
-        assertThat(saved.getKeyShareDek()).isEqualTo(ENCRYPTED_DEK);
-        assertThat(saved.getKeyShareIv()).isEqualTo(KEY_SHARE_IV);
-        assertThat(saved.getPeerKeyShareIv()).isEqualTo(PEER_KEY_SHARE_IV);
+        var expected = WalletEntity.builder()
+                .id(WALLET_ID_1)
+                .keyShareData(ENCRYPTED_KEY_SHARE)
+                .peerKeyShareData(ENCRYPTED_PEER_KEY_SHARE)
+                .keyShareDek(ENCRYPTED_DEK)
+                .keyShareIv(KEY_SHARE_IV)
+                .peerKeyShareIv(PEER_KEY_SHARE_IV)
+                .build();
+        assertThat(entityCaptor.getValue()).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test
@@ -101,8 +104,8 @@ class KeyShareBackfillRunnerTest {
         // given
         var entity2 = WalletEntity.builder()
                 .id(WALLET_ID_2)
-                .keyShareData(KEY_SHARE)
-                .peerKeyShareData(PEER_KEY_SHARE)
+                .keyShareData(KEY_SHARE.clone())
+                .peerKeyShareData(PEER_KEY_SHARE.clone())
                 .build();
         var encryptedMaterial = EncryptedKeyMaterial.builder()
                 .encryptedKeyShareData(ENCRYPTED_KEY_SHARE)
@@ -114,7 +117,8 @@ class KeyShareBackfillRunnerTest {
         given(walletJpaRepository.findIdsWithNullDek()).willReturn(List.of(WALLET_ID_1, WALLET_ID_2));
         given(walletJpaRepository.findById(WALLET_ID_1)).willReturn(Optional.empty());
         given(walletJpaRepository.findById(WALLET_ID_2)).willReturn(Optional.of(entity2));
-        given(keyShareEncryptor.encrypt(KEY_SHARE, PEER_KEY_SHARE)).willReturn(encryptedMaterial);
+        given(keyShareEncryptor.encrypt(entity2.getKeyShareData(), entity2.getPeerKeyShareData()))
+                .willReturn(encryptedMaterial);
         given(walletJpaRepository.save(entityCaptor.capture()))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -122,10 +126,15 @@ class KeyShareBackfillRunnerTest {
         runner.run(null);
 
         // then
-        then(walletJpaRepository).should().save(entityCaptor.getValue());
-        var saved = entityCaptor.getValue();
-        assertThat(saved.getId()).isEqualTo(WALLET_ID_2);
-        assertThat(saved.getKeyShareDek()).isEqualTo(ENCRYPTED_DEK);
+        var expected = WalletEntity.builder()
+                .id(WALLET_ID_2)
+                .keyShareData(ENCRYPTED_KEY_SHARE)
+                .peerKeyShareData(ENCRYPTED_PEER_KEY_SHARE)
+                .keyShareDek(ENCRYPTED_DEK)
+                .keyShareIv(KEY_SHARE_IV)
+                .peerKeyShareIv(PEER_KEY_SHARE_IV)
+                .build();
+        assertThat(entityCaptor.getValue()).usingRecursiveComparison().isEqualTo(expected);
     }
 
     @Test

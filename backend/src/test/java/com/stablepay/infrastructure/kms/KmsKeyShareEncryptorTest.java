@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.stablepay.domain.wallet.exception.KeyShareEncryptionException;
+import com.stablepay.domain.wallet.model.DecryptedKeyMaterial;
 
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.KmsClient;
@@ -88,8 +89,11 @@ class KmsKeyShareEncryptorTest {
                 encrypted.encryptedDek(), encrypted.keyShareIv(), encrypted.peerKeyShareIv());
 
         // then
-        assertThat(decrypted.keyShareData()).isEqualTo(KEY_SHARE);
-        assertThat(decrypted.peerKeyShareData()).isEqualTo(PEER_KEY_SHARE);
+        var expectedDecrypted = DecryptedKeyMaterial.builder()
+                .keyShareData(KEY_SHARE)
+                .peerKeyShareData(PEER_KEY_SHARE)
+                .build();
+        assertThat(decrypted).usingRecursiveComparison().isEqualTo(expectedDecrypted);
     }
 
     @Test
