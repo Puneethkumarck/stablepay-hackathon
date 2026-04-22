@@ -1,26 +1,26 @@
 package com.stablepay.testutil;
 
-import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+
+import com.stablepay.application.config.AppUserConverter;
+import com.stablepay.application.config.SecurityAuthenticationEntryPoint;
+import com.stablepay.application.config.SecurityConfig;
 
 @TestConfiguration
-@EnableWebSecurity
+@Import({TestClockConfig.class, SecurityConfig.class, AppUserConverter.class, SecurityAuthenticationEntryPoint.class})
 public class TestSecurityConfig {
 
     @Bean
-    public SecurityFilterChain testFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-        return http.build();
-    }
-
-    public static Authentication authenticationFor(UUID userId) {
-        return AuthFixtures.authenticationFor(userId);
+    public JwtDecoder appJwtDecoder() {
+        var secretKey = new SecretKeySpec(
+                AuthFixtures.SOME_JWT_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        return NimbusJwtDecoder.withSecretKey(secretKey).build();
     }
 }
