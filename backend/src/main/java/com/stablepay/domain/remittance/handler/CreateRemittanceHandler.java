@@ -16,7 +16,9 @@ import com.stablepay.domain.fx.model.FxQuote;
 import com.stablepay.domain.fx.port.FxRateProvider;
 import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.RemittanceStatusEvent;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
+import com.stablepay.domain.remittance.port.RemittanceStatusEventRepository;
 import com.stablepay.domain.remittance.port.RemittanceWorkflowStarter;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
 import com.stablepay.domain.wallet.port.WalletRepository;
@@ -37,6 +39,7 @@ public class CreateRemittanceHandler {
     private final FxRateProvider fxRateProvider;
     private final ClaimTokenRepository claimTokenRepository;
     private final Optional<RemittanceWorkflowStarter> workflowStarter;
+    private final RemittanceStatusEventRepository remittanceStatusEventRepository;
 
     public Remittance handle(UUID senderId, String recipientPhone, BigDecimal amountUsdc) {
         var wallet = walletRepository.findByUserId(senderId)
@@ -60,6 +63,13 @@ public class CreateRemittanceHandler {
                 .build();
 
         var saved = remittanceRepository.save(remittance);
+
+        remittanceStatusEventRepository.save(RemittanceStatusEvent.builder()
+                .remittanceId(saved.remittanceId())
+                .status(RemittanceStatus.INITIATED)
+                .message("Payment received")
+                .createdAt(Instant.now())
+                .build());
 
         var claimToken = ClaimToken.builder()
                 .remittanceId(saved.remittanceId())
