@@ -36,11 +36,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablepay.application.controller.remittance.mapper.RemittanceApiMapper;
 import com.stablepay.application.controller.remittance.mapper.RemittanceApiMapperImpl;
+import com.stablepay.application.controller.remittance.mapper.RemittanceTimelineMapper;
+import com.stablepay.application.controller.remittance.mapper.RemittanceTimelineMapperImpl;
 import com.stablepay.application.dto.CreateRemittanceRequest;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.handler.CreateRemittanceHandler;
 import com.stablepay.domain.remittance.handler.GetRemittanceQueryHandler;
+import com.stablepay.domain.remittance.handler.GetRemittanceTimelineHandler;
 import com.stablepay.domain.remittance.handler.ListRemittancesQueryHandler;
+import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.RemittanceTimeline;
+import com.stablepay.domain.remittance.model.RemittanceTimelineStep;
+import com.stablepay.domain.remittance.model.TimelineStepStatus;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 import com.stablepay.testutil.TestClockConfig;
 import com.stablepay.testutil.TestSecurityConfig;
@@ -48,7 +55,7 @@ import com.stablepay.testutil.TestSecurityConfig;
 import lombok.SneakyThrows;
 
 @WebMvcTest(RemittanceController.class)
-@Import({TestClockConfig.class, TestSecurityConfig.class, RemittanceApiMapperImpl.class})
+@Import({TestClockConfig.class, TestSecurityConfig.class, RemittanceApiMapperImpl.class, RemittanceTimelineMapperImpl.class})
 class RemittanceControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -63,10 +70,16 @@ class RemittanceControllerTest {
     private GetRemittanceQueryHandler getRemittanceQueryHandler;
 
     @MockitoBean
+    private GetRemittanceTimelineHandler getRemittanceTimelineHandler;
+
+    @MockitoBean
     private ListRemittancesQueryHandler listRemittancesQueryHandler;
 
     @MockitoSpyBean
     private RemittanceApiMapper remittanceApiMapper;
+
+    @MockitoSpyBean
+    private RemittanceTimelineMapper remittanceTimelineMapper;
 
     @Test
     @SneakyThrows
@@ -200,7 +213,8 @@ class RemittanceControllerTest {
         return Stream.of(
                 Arguments.of("POST", "/api/remittances"),
                 Arguments.of("GET", "/api/remittances/" + SOME_REMITTANCE_ID),
-                Arguments.of("GET", "/api/remittances"));
+                Arguments.of("GET", "/api/remittances"),
+                Arguments.of("GET", "/api/remittances/" + SOME_REMITTANCE_ID + "/timeline"));
     }
 
     @Test
@@ -212,6 +226,67 @@ class RemittanceControllerTest {
 
         // when / then
         mockMvc.perform(get("/api/remittances/{remittanceId}", SOME_REMITTANCE_ID)
+                        .with(asUser(SOME_OTHER_USER_ID)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("SP-0010"));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturnTimelineForRemittance() {
+        // given
+        var timeline = RemittanceTimeline.builder()
+                .steps(List.of(
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.INITIATED)
+                                .status(TimelineStepStatus.COMPLETED)
+                                .message("Payment received")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.ESCROWED)
+                                .status(TimelineStepStatus.CURRENT)
+                                .message("Securing funds on-chain...")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.CLAIMED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("Recipient claimed")
+                                .build(),
+                        RemittanceTimelineStep.builder()
+                                .step(RemittanceStatus.DELIVERED)
+                                .status(TimelineStepStatus.PENDING)
+                                .message("INR deposited to recipient's bank")
+                                .build()
+                ))
+                .failed(false)
+                .build();
+
+        given(getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_SENDER_ID))
+                .willReturn(timeline);
+
+        // when / then
+        mockMvc.perform(get("/api/remittances/{remittanceId}/timeline", SOME_REMITTANCE_ID)
+                        .with(asUser(SOME_SENDER_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.steps").isArray())
+                .andExpect(jsonPath("$.steps.length()").value(4))
+                .andExpect(jsonPath("$.steps[0].step").value("INITIATED"))
+                .andExpect(jsonPath("$.steps[0].status").value("COMPLETED"))
+                .andExpect(jsonPath("$.steps[0].message").value("Payment received"))
+                .andExpect(jsonPath("$.steps[1].step").value("ESCROWED"))
+                .andExpect(jsonPath("$.steps[1].status").value("CURRENT"))
+                .andExpect(jsonPath("$.failed").value(false));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldReturn404WhenTimelineRemittanceBelongsToDifferentUser() {
+        // given
+        given(getRemittanceTimelineHandler.handle(SOME_REMITTANCE_ID, SOME_OTHER_USER_ID))
+                .willThrow(RemittanceNotFoundException.byId(SOME_REMITTANCE_ID));
+
+        // when / then
+        mockMvc.perform(get("/api/remittances/{remittanceId}/timeline", SOME_REMITTANCE_ID)
                         .with(asUser(SOME_OTHER_USER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("SP-0010"));

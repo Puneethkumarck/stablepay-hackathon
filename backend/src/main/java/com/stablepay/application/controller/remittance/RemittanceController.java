@@ -17,12 +17,15 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stablepay.application.controller.remittance.mapper.RemittanceApiMapper;
+import com.stablepay.application.controller.remittance.mapper.RemittanceTimelineMapper;
 import com.stablepay.application.dto.CreateRemittanceRequest;
 import com.stablepay.application.dto.ErrorResponse;
 import com.stablepay.application.dto.RemittanceResponse;
+import com.stablepay.application.dto.RemittanceTimelineResponse;
 import com.stablepay.domain.auth.model.AuthPrincipal;
 import com.stablepay.domain.remittance.handler.CreateRemittanceHandler;
 import com.stablepay.domain.remittance.handler.GetRemittanceQueryHandler;
+import com.stablepay.domain.remittance.handler.GetRemittanceTimelineHandler;
 import com.stablepay.domain.remittance.handler.ListRemittancesQueryHandler;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,8 +44,10 @@ public class RemittanceController {
 
     private final CreateRemittanceHandler createRemittanceHandler;
     private final GetRemittanceQueryHandler getRemittanceQueryHandler;
+    private final GetRemittanceTimelineHandler getRemittanceTimelineHandler;
     private final ListRemittancesQueryHandler listRemittancesQueryHandler;
     private final RemittanceApiMapper remittanceApiMapper;
+    private final RemittanceTimelineMapper remittanceTimelineMapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -84,5 +89,19 @@ public class RemittanceController {
             Pageable pageable) {
         return listRemittancesQueryHandler.handle(principal.id(), pageable)
                 .map(remittanceApiMapper::toResponse);
+    }
+
+    @GetMapping("/{remittanceId}/timeline")
+    @Operation(summary = "Get remittance timeline", description = "Returns a 4-step progress timeline for the remittance")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Timeline retrieved"),
+        @ApiResponse(responseCode = "404", description = "Remittance not found",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public RemittanceTimelineResponse getTimeline(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            @PathVariable UUID remittanceId) {
+        var timeline = getRemittanceTimelineHandler.handle(remittanceId, principal.id());
+        return remittanceTimelineMapper.toResponse(timeline);
     }
 }

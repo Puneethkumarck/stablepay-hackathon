@@ -31,6 +31,7 @@ import com.stablepay.domain.fx.port.FxRateProvider;
 import com.stablepay.domain.remittance.model.Remittance;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
+import com.stablepay.domain.remittance.port.RemittanceStatusEventRepository;
 import com.stablepay.domain.remittance.port.RemittanceWorkflowStarter;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
@@ -54,6 +55,9 @@ class CreateRemittanceHandlerTest {
     @Mock
     private RemittanceWorkflowStarter workflowStarter;
 
+    @Mock
+    private RemittanceStatusEventRepository remittanceStatusEventRepository;
+
     @Captor
     private ArgumentCaptor<Remittance> remittanceCaptor;
 
@@ -69,7 +73,8 @@ class CreateRemittanceHandlerTest {
                 walletRepository,
                 fxRateProvider,
                 claimTokenRepository,
-                Optional.of(workflowStarter));
+                Optional.of(workflowStarter),
+                remittanceStatusEventRepository);
     }
 
     @Test
@@ -130,6 +135,13 @@ class CreateRemittanceHandlerTest {
                 .isEqualTo(expectedClaimToken);
         assertThat(savedClaimToken.expiresAt()).isNotNull();
 
+        then(remittanceStatusEventRepository).should().save(argThat(event ->
+                event.remittanceId().equals(result.remittanceId())
+                        && event.status() == RemittanceStatus.INITIATED
+                        && event.message().equals("Payment received")
+                        && event.createdAt() != null
+        ));
+
         then(workflowStarter).should().startWorkflow(
                 result.remittanceId(),
                 wallet.solanaAddress(),
@@ -183,7 +195,7 @@ class CreateRemittanceHandlerTest {
         // given
         var handler = new CreateRemittanceHandler(
                 remittanceRepository, walletRepository, fxRateProvider,
-                claimTokenRepository, Optional.empty());
+                claimTokenRepository, Optional.empty(), remittanceStatusEventRepository);
 
         var wallet = walletBuilder()
                 .availableBalance(BigDecimal.valueOf(500))
@@ -231,6 +243,8 @@ class CreateRemittanceHandlerTest {
                 SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
                 .isInstanceOf(WalletNotFoundException.class)
                 .hasMessageContaining("SP-0006");
+
+        then(remittanceStatusEventRepository).shouldHaveNoInteractions();
     }
 
     @Test
@@ -248,5 +262,7 @@ class CreateRemittanceHandlerTest {
                 SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
                 .isInstanceOf(InsufficientBalanceException.class)
                 .hasMessageContaining("SP-0002");
+
+        then(remittanceStatusEventRepository).shouldHaveNoInteractions();
     }
 }

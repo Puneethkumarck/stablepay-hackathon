@@ -88,8 +88,14 @@ class RemittanceLifecycleE2EIntegrationTest {
         // Step 5: Get Remittance — verify INITIATED
         getRemittance(remittanceId, "INITIATED");
 
+        // Step 5b: Get Timeline — verify INITIATED=COMPLETED, ESCROWED=CURRENT
+        getTimeline(remittanceId, "COMPLETED", "CURRENT", "PENDING", "PENDING");
+
         // Step 6: Advance to ESCROWED (simulates Temporal workflow deposit activity)
         updateRemittanceStatusHandler.handle(UUID.fromString(remittanceId), RemittanceStatus.ESCROWED);
+
+        // Step 6b: Get Timeline — verify ESCROWED=COMPLETED, CLAIMED=CURRENT
+        getTimeline(remittanceId, "COMPLETED", "COMPLETED", "CURRENT", "PENDING");
 
         // Step 7: Get Claim Details
         getClaimDetails(claimToken, remittanceId);
@@ -229,6 +235,21 @@ class RemittanceLifecycleE2EIntegrationTest {
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].amountUsdc").value(25.00))
                 .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @SneakyThrows
+    private void getTimeline(String remittanceId, String step0, String step1, String step2, String step3) {
+        // when / then
+        mockMvc.perform(get("/api/remittances/{remittanceId}/timeline", remittanceId)
+                        .with(authentication(authenticationFor(E2E_USER_ID))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.steps").isArray())
+                .andExpect(jsonPath("$.steps.length()").value(4))
+                .andExpect(jsonPath("$.steps[0].status").value(step0))
+                .andExpect(jsonPath("$.steps[1].status").value(step1))
+                .andExpect(jsonPath("$.steps[2].status").value(step2))
+                .andExpect(jsonPath("$.steps[3].status").value(step3))
+                .andExpect(jsonPath("$.failed").value(false));
     }
 
     private record RemittanceResult(String remittanceId, String claimTokenId) {}

@@ -2,6 +2,7 @@ package com.stablepay.domain.remittance.handler;
 
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
 import static com.stablepay.testutil.RemittanceFixtures.remittanceBuilder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -10,6 +11,8 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,7 +20,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.remittance.model.RemittanceStatus;
+import com.stablepay.domain.remittance.model.RemittanceStatusEvent;
 import com.stablepay.domain.remittance.port.RemittanceRepository;
+import com.stablepay.domain.remittance.port.RemittanceStatusEventRepository;
 
 @ExtendWith(MockitoExtension.class)
 class UpdateRemittanceStatusHandlerTest {
@@ -25,11 +30,17 @@ class UpdateRemittanceStatusHandlerTest {
     @Mock
     private RemittanceRepository remittanceRepository;
 
+    @Mock
+    private RemittanceStatusEventRepository remittanceStatusEventRepository;
+
     @InjectMocks
     private UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
 
+    @Captor
+    private ArgumentCaptor<RemittanceStatusEvent> eventCaptor;
+
     @Test
-    void shouldUpdateStatusForValidTransition() {
+    void shouldUpdateStatusAndLogEvent() {
         // given
         var remittance = remittanceBuilder().status(RemittanceStatus.INITIATED).build();
         var expectedUpdated = remittance.toBuilder().status(RemittanceStatus.ESCROWED).build();
@@ -42,6 +53,19 @@ class UpdateRemittanceStatusHandlerTest {
 
         // then
         then(remittanceRepository).should().save(expectedUpdated);
+        then(remittanceStatusEventRepository).should().save(eventCaptor.capture());
+
+        var expectedEvent = RemittanceStatusEvent.builder()
+                .remittanceId(SOME_REMITTANCE_ID)
+                .status(RemittanceStatus.ESCROWED)
+                .message("Funds secured on-chain")
+                .build();
+
+        assertThat(eventCaptor.getValue())
+                .usingRecursiveComparison()
+                .ignoringFields("id", "createdAt")
+                .isEqualTo(expectedEvent);
+        assertThat(eventCaptor.getValue().createdAt()).isNotNull();
     }
 
     @Test
@@ -56,6 +80,8 @@ class UpdateRemittanceStatusHandlerTest {
                 .isInstanceOf(RemittanceNotFoundException.class)
                 .hasMessageContaining("SP-0010")
                 .hasMessageContaining(SOME_REMITTANCE_ID.toString());
+
+        then(remittanceStatusEventRepository).shouldHaveNoInteractions();
     }
 
     @Test
@@ -72,5 +98,7 @@ class UpdateRemittanceStatusHandlerTest {
                 .hasMessageContaining("SP-0016")
                 .hasMessageContaining("DELIVERED")
                 .hasMessageContaining("INITIATED");
+
+        then(remittanceStatusEventRepository).shouldHaveNoInteractions();
     }
 }
