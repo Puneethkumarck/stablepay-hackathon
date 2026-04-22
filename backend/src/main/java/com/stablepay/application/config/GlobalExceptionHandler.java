@@ -34,6 +34,7 @@ import com.stablepay.domain.remittance.exception.DisbursementException;
 import com.stablepay.domain.remittance.exception.InvalidRemittanceStateException;
 import com.stablepay.domain.remittance.exception.RemittanceNotFoundException;
 import com.stablepay.domain.wallet.exception.InsufficientBalanceException;
+import com.stablepay.domain.wallet.exception.KeyShareEncryptionException;
 import com.stablepay.domain.wallet.exception.TreasuryDepletedException;
 import com.stablepay.domain.wallet.exception.WalletAlreadyExistsException;
 import com.stablepay.domain.wallet.exception.WalletNotFoundException;
@@ -233,6 +234,14 @@ public class GlobalExceptionHandler {
             InsufficientBalanceForRefundException ex, HttpServletRequest request) {
         log.warn("Insufficient balance for refund: {}", ex.getMessage());
         return buildResponse("SP-0025", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(KeyShareEncryptionException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleKeyShareEncryption(
+            KeyShareEncryptionException ex, HttpServletRequest request) {
+        log.error("Key share encryption failure: {}", ex.getMessage(), ex);
+        return buildResponse("SP-0037", "Wallet temporarily unavailable", request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
