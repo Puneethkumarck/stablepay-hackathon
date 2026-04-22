@@ -2,13 +2,23 @@
 	"info": {
 		"_postman_id": "stablepay-api-collection",
 		"name": "StablePay API",
-		"description": "StablePay — Cross-border stablecoin remittance on Solana.\n\nUSD → INR corridor via USDC on Solana devnet.\n\nBase URL: http://localhost:8080/api",
+		"description": "StablePay — Cross-border stablecoin remittance on Solana.\n\nUSD → INR corridor via USDC on Solana devnet.\n\nBase URL: http://localhost:8080/api\n\n## Authentication\n\nMost endpoints require a Bearer token obtained via social login.\n\nThe collection pre-request script auto-sets the `Authorization` header from `{{accessToken}}`.\n\n### Obtaining a test Google ID token\n\n1. Go to [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground/)\n2. In step 1, select **Google OAuth2 API v2** → check `openid`, `email`, `profile`\n3. Click **Authorize APIs** and sign in with your Google account\n4. In step 2, click **Exchange authorization code for tokens**\n5. Copy the `id_token` from the response\n6. Paste it into the `POST /api/auth/social` request body\n\nAlternatively, use the Google Cloud CLI:\n```\ngcloud auth print-identity-token --audiences=YOUR_CLIENT_ID\n```\n\nThe token expires in ~1 hour. Re-obtain it when it expires.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
 			"key": "baseUrl",
 			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
 			"type": "string"
 		},
 		{
@@ -27,37 +37,74 @@
 			"type": "string"
 		},
 		{
-			"key": "userId",
-			"value": "user-001",
-			"type": "string"
-		},
-		{
 			"key": "fundingId",
 			"value": "",
 			"type": "string"
 		}
 	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"var accessToken = pm.collectionVariables.get('accessToken');",
+					"var noAuthPaths = ['/api/auth/social', '/api/auth/refresh', '/api/claims/', '/webhooks/stripe', '/api/fx/', '/api/wallets'];",
+					"var requestUrl = pm.request.url.toString();",
+					"var method = pm.request.method;",
+					"",
+					"var isPublic = false;",
+					"if (requestUrl.indexOf('/api/auth/social') !== -1 || requestUrl.indexOf('/api/auth/refresh') !== -1) {",
+					"    isPublic = true;",
+					"} else if (requestUrl.indexOf('/api/claims/') !== -1) {",
+					"    isPublic = true;",
+					"} else if (requestUrl.indexOf('/webhooks/stripe') !== -1) {",
+					"    isPublic = true;",
+					"} else if (method === 'POST' && requestUrl.match(/\\/api\\/wallets$/)) {",
+					"    isPublic = true;",
+					"}",
+					"",
+					"if (!isPublic && accessToken) {",
+					"    pm.request.headers.upsert({",
+					"        key: 'Authorization',",
+					"        value: 'Bearer ' + accessToken",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
 	"item": [
 		{
-			"name": "Wallets",
-			"description": "MPC-backed Solana wallet management",
+			"name": "Auth",
+			"description": "Social login, token refresh, and logout.\n\nThe auth flow starts with exchanging a Google ID token for app tokens. The access token (15-min TTL) is auto-applied to all authenticated requests via the collection pre-request script. Use the refresh endpoint to rotate tokens without re-authenticating.",
 			"item": [
 				{
-					"name": "Create Wallet",
+					"name": "Social Login",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"var code = pm.response.code;",
+									"if (code === 200 || code === 201) {",
 									"    var json = pm.response.json();",
-									"    pm.collectionVariables.set('walletId', json.id);",
-									"    pm.collectionVariables.set('userId', json.userId);",
-									"    pm.test('Wallet created successfully', function () {",
-									"        pm.expect(json.id).to.be.a('number');",
-									"        pm.expect(json.solanaAddress).to.be.a('string');",
-									"        pm.expect(json.availableBalance).to.exist;",
+									"    pm.collectionVariables.set('accessToken', json.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    if (json.wallet) {",
+									"        pm.collectionVariables.set('walletId', json.wallet.id);",
+									"    }",
+									"    pm.test('Login successful', function () {",
+									"        pm.expect(json.accessToken).to.be.a('string');",
+									"        pm.expect(json.refreshToken).to.be.a('string');",
+									"        pm.expect(json.tokenType).to.equal('Bearer');",
+									"        pm.expect(json.expiresIn).to.be.a('number');",
+									"        pm.expect(json.user).to.have.property('id');",
+									"        pm.expect(json.user).to.have.property('email');",
+									"    });",
+									"    pm.test('Status is 200 (returning) or 201 (new user)', function () {",
+									"        pm.expect([200, 201]).to.include(code);",
 									"    });",
 									"}"
 								]
@@ -74,19 +121,145 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"userId\": \"{{userId}}\"\n}"
+							"raw": "{\n    \"provider\": \"google\",\n    \"idToken\": \"PASTE_GOOGLE_ID_TOKEN_HERE\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/wallets",
+							"raw": "{{baseUrl}}/api/auth/social",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"api",
-								"wallets"
+								"auth",
+								"social"
 							]
 						},
-						"description": "Creates an MPC-backed Solana wallet for the given user.\n\n**Response:** 201 Created\n\n**Errors:**\n- 400 (SP-0003): Validation error\n- 409 (SP-0008): Wallet already exists for this user"
+						"description": "Exchanges a Google ID token for StablePay access and refresh tokens.\n\nFirst login (201) also provisions an MPC wallet. Returning user login returns 200.\n\nThe test script auto-captures `accessToken`, `refreshToken`, and `walletId`.\n\n**Errors:**\n- 400 (SP-0034): Unsupported auth provider\n- 401 (SP-0032): Invalid ID token\n- 401 (SP-0033): Email not verified"
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Tokens refreshed', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', json.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    pm.expect(json.accessToken).to.be.a('string');",
+									"    pm.expect(json.refreshToken).to.be.a('string');",
+									"    pm.expect(json.tokenType).to.equal('Bearer');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Rotates the refresh token and issues a new access token. The old refresh token is revoked.\n\n**Errors:**\n- 401 (SP-0035): Invalid refresh token\n- 401 (SP-0036): Refresh token expired"
+					}
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Logged out', function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"pm.collectionVariables.set('accessToken', '');",
+									"pm.collectionVariables.set('refreshToken', '');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Revokes all refresh tokens for the authenticated user. The access token remains valid until its natural expiry (≤15 min).\n\nThe test script clears local token variables.\n\n**Errors:**\n- 401: Not authenticated"
+					}
+				}
+			]
+		},
+		{
+			"name": "Wallets",
+			"description": "MPC-backed Solana wallet management.\n\nWallets are auto-provisioned on first login. Use `GET /api/wallets/me` to retrieve the authenticated user's wallet.",
+			"item": [
+				{
+					"name": "Get My Wallet",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Wallet retrieved', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('walletId', json.id);",
+									"    pm.expect(json.id).to.be.a('number');",
+									"    pm.expect(json.solanaAddress).to.be.a('string');",
+									"    pm.expect(json.availableBalance).to.exist;",
+									"    pm.expect(json.totalBalance).to.exist;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wallets/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"wallets",
+								"me"
+							]
+						},
+						"description": "Returns the authenticated user's MPC wallet.\n\n**Errors:**\n- 401: Not authenticated\n- 404 (SP-0006): Wallet not found"
 					}
 				},
 				{
@@ -213,14 +386,14 @@
 								"refund"
 							]
 						},
-						"description": "Refunds a FUNDED order via Stripe. Rejects if the sender's on-chain USDC balance or wallet available balance is below the original funding amount. On-chain USDC is not returned — the sender keeps the SPL tokens they received.\n\n**Errors:**\n- 404 (SP-0020): Funding order not found\n- 409 (SP-0023): Refund not allowed for current status\n- 409 (SP-0025): Insufficient balance for refund\n- 502 (SP-0024): Stripe refund failed"
+						"description": "Refunds a FUNDED order via Stripe.\n\n**Errors:**\n- 404 (SP-0020): Funding order not found\n- 409 (SP-0023): Refund not allowed for current status\n- 409 (SP-0025): Insufficient balance for refund\n- 502 (SP-0024): Stripe refund failed"
 					}
 				}
 			]
 		},
 		{
 			"name": "FX Rates",
-			"description": "Foreign exchange rate lookup",
+			"description": "Foreign exchange rate lookup (public, no auth required)",
 			"item": [
 				{
 					"name": "Get FX Rate (USD-INR)",
@@ -263,7 +436,7 @@
 		},
 		{
 			"name": "Remittances",
-			"description": "Cross-border remittance operations",
+			"description": "Cross-border remittance operations.\n\nAll endpoints require authentication. The sender identity is derived from the JWT — no `senderId` in request bodies or query params.",
 			"item": [
 				{
 					"name": "Create Remittance",
@@ -301,7 +474,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"senderId\": \"{{userId}}\",\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
+							"raw": "{\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances",
@@ -313,7 +486,7 @@
 								"remittances"
 							]
 						},
-						"description": "Initiates a new USD → INR remittance with a locked FX rate.\n\n**Response:** 201 Created\n\n**Errors:**\n- 400 (SP-0003): Validation error\n- 400 (SP-0002): Insufficient balance"
+						"description": "Initiates a new USD → INR remittance with a locked FX rate. Sender is identified from the access token.\n\n**Response:** 201 Created\n\n**Errors:**\n- 400 (SP-0003): Validation error\n- 400 (SP-0002): Insufficient balance"
 					}
 				},
 				{
@@ -348,7 +521,7 @@
 								"{{remittanceId}}"
 							]
 						},
-						"description": "Retrieves a remittance by its unique identifier.\n\n**Errors:**\n- 404 (SP-0010): Remittance not found"
+						"description": "Retrieves a remittance by its unique identifier. Only the owner can access it.\n\n**Errors:**\n- 404 (SP-0010): Remittance not found (or not owned by caller)"
 					}
 				},
 				{
@@ -373,7 +546,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/remittances?senderId={{userId}}&page=0&size=20&sort=createdAt,desc",
+							"raw": "{{baseUrl}}/api/remittances?page=0&size=20&sort=createdAt,desc",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -382,10 +555,6 @@
 								"remittances"
 							],
 							"query": [
-								{
-									"key": "senderId",
-									"value": "{{userId}}"
-								},
 								{
 									"key": "page",
 									"value": "0"
@@ -400,14 +569,14 @@
 								}
 							]
 						},
-						"description": "Returns a paginated list of remittances for a sender.\n\nQuery params `page`, `size`, and `sort` are optional."
+						"description": "Returns a paginated list of remittances for the authenticated sender.\n\nNo `senderId` query param — the server uses the JWT identity."
 					}
 				}
 			]
 		},
 		{
 			"name": "Claims",
-			"description": "Recipient claim flow (SMS link → web page → UPI payout)",
+			"description": "Recipient claim flow (SMS link → web page → UPI payout).\n\nClaim endpoints are public — no auth required. Access is scoped by the cryptographic claim token.",
 			"item": [
 				{
 					"name": "Get Claim Details",
@@ -494,32 +663,28 @@
 		},
 		{
 			"name": "E2E Flow",
-			"description": "Run these requests in order to test the full remittance flow.\nEach step auto-captures variables for the next step.\n\n1. Create Wallet → captures walletId\n2. Fund Wallet (100 USDC)\n3. Check FX Rate (USD-INR)\n4. Create Remittance (25 USDC) → captures remittanceId, claimToken\n5. Poll Remittance Status → verify status progression\n6. Get Claim Details\n7. Submit Claim (UPI)\n8. Verify Final Status\n9. List Remittances",
+			"description": "Run these requests in order to test the full auth-aware remittance flow.\nEach step auto-captures variables for the next step.\n\n**Prerequisites:** Obtain a Google ID token (see collection description for instructions).\n\n1. Social Login → captures accessToken, refreshToken, walletId\n2. Get My Wallet → verify wallet exists\n3. Fund Wallet (100 USDC)\n4. Check FX Rate (USD-INR)\n5. Create Remittance (25 USDC) → captures remittanceId, claimToken\n6. Poll Remittance Status\n7. Get Claim Details\n8. Submit Claim (UPI)\n9. Verify Final Status\n10. List Remittances\n11. Refresh Token → verify token rotation\n12. Logout",
 			"item": [
 				{
-					"name": "1. Create Wallet",
+					"name": "1. Social Login",
 					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"var uniqueUser = 'e2e-' + Date.now();",
-									"pm.collectionVariables.set('userId', uniqueUser);"
-								]
-							}
-						},
 						{
 							"listen": "test",
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"pm.test('Wallet created', function () {",
-									"    pm.response.to.have.status(201);",
+									"var code = pm.response.code;",
+									"pm.test('Login successful (200 or 201)', function () {",
+									"    pm.expect([200, 201]).to.include(code);",
 									"    var json = pm.response.json();",
-									"    pm.collectionVariables.set('walletId', json.id);",
-									"    pm.expect(json.solanaAddress).to.be.a('string');",
-									"    pm.expect(json.availableBalance).to.equal(0);",
+									"    pm.collectionVariables.set('accessToken', json.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    if (json.wallet) {",
+									"        pm.collectionVariables.set('walletId', json.wallet.id);",
+									"    }",
+									"    pm.expect(json.accessToken).to.be.a('string');",
+									"    pm.expect(json.refreshToken).to.be.a('string');",
+									"    pm.expect(json.user).to.have.property('email');",
 									"});"
 								]
 							}
@@ -535,33 +700,72 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"userId\": \"{{userId}}\"\n}"
+							"raw": "{\n    \"provider\": \"google\",\n    \"idToken\": \"PASTE_GOOGLE_ID_TOKEN_HERE\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/wallets",
+							"raw": "{{baseUrl}}/api/auth/social",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"api",
-								"wallets"
+								"auth",
+								"social"
 							]
-						}
+						},
+						"description": "Start here. Paste your Google ID token in the request body.\n\nFirst login provisions an MPC wallet and returns 201. Subsequent logins return 200."
 					}
 				},
 				{
-					"name": "2. Fund Wallet (100 USDC)",
+					"name": "2. Get My Wallet",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"pm.test('Wallet funded with 100 USDC', function () {",
+									"pm.test('Wallet retrieved', function () {",
 									"    pm.response.to.have.status(200);",
 									"    var json = pm.response.json();",
-									"    pm.expect(json.availableBalance).to.equal(100);",
-									"    pm.expect(json.totalBalance).to.equal(100);",
+									"    pm.collectionVariables.set('walletId', json.id);",
+									"    pm.expect(json.solanaAddress).to.be.a('string');",
+									"    pm.expect(json.availableBalance).to.exist;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wallets/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"wallets",
+								"me"
+							]
+						},
+						"description": "Verifies the wallet was provisioned during login."
+					}
+				},
+				{
+					"name": "3. Fund Wallet (100 USDC)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Funding order created', function () {",
+									"    pm.response.to.have.status(201);",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('fundingId', json.fundingId);",
+									"    pm.expect(json.amountUsdc).to.be.a('number');",
+									"    pm.expect(json.stripeClientSecret).to.be.a('string');",
 									"});"
 								]
 							}
@@ -590,11 +794,12 @@
 								"{{walletId}}",
 								"fund"
 							]
-						}
+						},
+						"description": "Initiates a Stripe-backed funding order for 100 USDC."
 					}
 				},
 				{
-					"name": "3. Check FX Rate",
+					"name": "4. Check FX Rate",
 					"event": [
 						{
 							"listen": "test",
@@ -628,7 +833,7 @@
 					}
 				},
 				{
-					"name": "4. Create Remittance (25 USDC)",
+					"name": "5. Create Remittance (25 USDC)",
 					"event": [
 						{
 							"listen": "test",
@@ -662,7 +867,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"senderId\": \"{{userId}}\",\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
+							"raw": "{\n    \"recipientPhone\": \"+919876543210\",\n    \"amountUsdc\": 25.00\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/remittances",
@@ -673,11 +878,12 @@
 								"api",
 								"remittances"
 							]
-						}
+						},
+						"description": "Creates a 25 USDC remittance. No senderId in body — identity from JWT."
 					}
 				},
 				{
-					"name": "5. Poll Remittance Status",
+					"name": "6. Poll Remittance Status",
 					"event": [
 						{
 							"listen": "test",
@@ -713,7 +919,7 @@
 					}
 				},
 				{
-					"name": "6. Get Claim Details",
+					"name": "7. Get Claim Details",
 					"event": [
 						{
 							"listen": "test",
@@ -750,7 +956,7 @@
 					}
 				},
 				{
-					"name": "7. Submit Claim (UPI)",
+					"name": "8. Submit Claim (UPI)",
 					"event": [
 						{
 							"listen": "test",
@@ -793,7 +999,7 @@
 					}
 				},
 				{
-					"name": "8. Verify Final Status",
+					"name": "9. Verify Final Status",
 					"event": [
 						{
 							"listen": "test",
@@ -828,7 +1034,7 @@
 					}
 				},
 				{
-					"name": "9. List Remittances",
+					"name": "10. List Remittances",
 					"event": [
 						{
 							"listen": "test",
@@ -840,7 +1046,6 @@
 									"    var json = pm.response.json();",
 									"    pm.expect(json.content).to.be.an('array');",
 									"    pm.expect(json.content.length).to.be.above(0);",
-									"    pm.expect(json.content[0].senderId).to.equal(pm.collectionVariables.get('userId'));",
 									"});"
 								]
 							}
@@ -850,7 +1055,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/remittances?senderId=demo-user&page=0&size=20",
+							"raw": "{{baseUrl}}/api/remittances?page=0&size=20",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -860,10 +1065,6 @@
 							],
 							"query": [
 								{
-									"key": "senderId",
-									"value": "{{userId}}"
-								},
-								{
 									"key": "page",
 									"value": "0"
 								},
@@ -872,7 +1073,88 @@
 									"value": "20"
 								}
 							]
+						},
+						"description": "Lists the authenticated user's remittances. No senderId param needed."
+					}
+				},
+				{
+					"name": "11. Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Token rotation works', function () {",
+									"    pm.response.to.have.status(200);",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', json.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    pm.expect(json.accessToken).to.be.a('string');",
+									"    pm.expect(json.refreshToken).to.be.a('string');",
+									"});"
+								]
+							}
 						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Verifies token rotation. Old refresh token is revoked, new pair issued."
+					}
+				},
+				{
+					"name": "12. Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Logged out', function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"pm.collectionVariables.set('accessToken', '');",
+									"pm.collectionVariables.set('refreshToken', '');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Ends the session. All refresh tokens for this user are revoked."
 					}
 				}
 			]
