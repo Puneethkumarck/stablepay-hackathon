@@ -11,7 +11,7 @@ export function RecentTransactions({ remittances }: RecentTransactionsProps) {
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center">
         <p className="text-sm text-fg-3">No transfers yet.</p>
-        <p className="text-xs text-fg-4">Send your first remittance!</p>
+        <p className="text-xs text-fg-3">Send your first remittance!</p>
       </div>
     );
   }
