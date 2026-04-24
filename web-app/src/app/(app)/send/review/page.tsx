@@ -64,8 +64,14 @@ export default function SendReviewPage() {
       {
         onSuccess: (data) => {
           submitted.current = true;
+          const params = new URLSearchParams({
+            remittanceId: data.remittanceId,
+            amount: amountUsdc,
+            phone: recipientPhone,
+            fxRate: fxRate ?? "",
+          });
           reset();
-          router.push(`/send/sending?remittanceId=${data.remittanceId}`);
+          router.push(`/send/sending?${params.toString()}`);
         },
         onError: (error) => {
           if (error instanceof CreateRemittanceError) {
@@ -76,7 +82,7 @@ export default function SendReviewPage() {
         },
       },
     );
-  }, [amountUsdc, recipientPhone, recipientName, mutate, reset, router]);
+  }, [amountUsdc, recipientPhone, recipientName, fxRate, mutate, reset, router]);
 
   if (!amountUsdc || !recipientPhone || !fxRate) return null;
 

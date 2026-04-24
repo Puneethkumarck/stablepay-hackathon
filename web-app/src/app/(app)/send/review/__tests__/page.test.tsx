@@ -154,7 +154,13 @@ describe("SendReviewPage", () => {
 
     // then
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/send/sending?remittanceId=rem-uuid-123");
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("/send/sending?"));
+      const url = mockPush.mock.calls[0]?.[0] as string;
+      const params = new URLSearchParams(url.split("?")[1]);
+      expect(params.get("remittanceId")).toBe("rem-uuid-123");
+      expect(params.get("amount")).toBe("100");
+      expect(params.get("phone")).toBe("+919876543210");
+      expect(params.get("fxRate")).toBe("84.50");
     });
     expect(useSendFlowStore.getState().amountUsdc).toBe("");
   });
