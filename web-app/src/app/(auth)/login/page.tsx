@@ -1,14 +1,12 @@
-import { headers } from "next/headers";
 import { Suspense } from "react";
 import { GoogleLoginButton } from "@/features/auth/components/google-login-button";
 import { LiveFeed } from "@/features/auth/components/live-feed";
 import { LoginErrorToast } from "@/features/auth/components/login-error-toast";
 
-export default async function LoginPage() {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "localhost:3000";
-  const protocol = headersList.get("x-forwarded-proto") ?? "http";
-  const callbackUrl = `${protocol}://${host}/auth/callback`;
+const APP_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+
+export default function LoginPage() {
+  const callbackUrl = `${APP_URL}/auth/callback`;
 
   return (
     <div className="relative flex min-h-screen flex-col justify-end pb-7">
