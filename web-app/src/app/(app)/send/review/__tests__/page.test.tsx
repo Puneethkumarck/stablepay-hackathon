@@ -155,7 +155,7 @@ describe("SendReviewPage", () => {
     // then
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("/send/sending?"));
-      const url = mockPush.mock.calls[0]?.[0] as string;
+      const url = String(mockPush.mock.calls[0]?.[0]);
       const params = new URLSearchParams(url.split("?")[1]);
       expect(params.get("remittanceId")).toBe("rem-uuid-123");
       expect(params.get("amount")).toBe("100");

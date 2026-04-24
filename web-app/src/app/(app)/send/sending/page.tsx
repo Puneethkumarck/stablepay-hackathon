@@ -29,7 +29,7 @@ function formatInr(amount: number, rate: number): string {
   }).format(amount * rate);
 }
 
-export default function SendingSendingPage() {
+export default function SendingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const remittanceId = searchParams.get("remittanceId");
@@ -85,7 +85,7 @@ export default function SendingSendingPage() {
       </div>
 
       <div className="flex flex-col rounded-2xl bg-surface-2 p-4">
-        <div className="flex flex-col gap-0">
+        <div className="flex flex-col">
           {STEPS.map((s, i) => {
             const state = step > i ? "done" : step === i ? "live" : "pending";
             const isLast = i === STEPS.length - 1;
@@ -159,8 +159,7 @@ function StepDot({ state }: StepDotProps) {
     <div
       className={cn(
         "flex h-6 w-6 items-center justify-center rounded-full shrink-0",
-        state === "done" && "bg-success",
-        state === "live" && "bg-success",
+        state !== "pending" && "bg-success",
         state === "pending" && "bg-surface-3",
       )}
     >

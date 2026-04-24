@@ -2,7 +2,7 @@ import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test-utils/render";
-import SendingSendingPage from "../page";
+import SendingPage from "../page";
 
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
@@ -25,7 +25,7 @@ const DEFAULT_PARAMS = {
   fxRate: "84.50",
 };
 
-describe("SendingSendingPage", () => {
+describe("SendingPage", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockPush.mockClear();
@@ -42,7 +42,7 @@ describe("SendingSendingPage", () => {
     setSearchParams({});
 
     // when
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // then
     expect(mockReplace).toHaveBeenCalledWith("/home");
@@ -53,7 +53,7 @@ describe("SendingSendingPage", () => {
     setSearchParams(DEFAULT_PARAMS);
 
     // when
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // then
     expect(screen.getByText("Sending…")).toBeInTheDocument();
@@ -68,7 +68,7 @@ describe("SendingSendingPage", () => {
     setSearchParams(DEFAULT_PARAMS);
 
     // when
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // then
     expect(screen.getByText("100.00")).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("SendingSendingPage", () => {
     setSearchParams(DEFAULT_PARAMS);
 
     // when
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // then
     expect(screen.getByRole("button", { name: "Processing…" })).toBeDisabled();
@@ -89,7 +89,7 @@ describe("SendingSendingPage", () => {
   it("should progress through all three steps", () => {
     // given
     setSearchParams(DEFAULT_PARAMS);
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // when
     act(() => vi.advanceTimersByTime(900));
@@ -113,7 +113,7 @@ describe("SendingSendingPage", () => {
   it("should show completion state after all steps", () => {
     // given
     setSearchParams(DEFAULT_PARAMS);
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // when
     act(() => vi.advanceTimersByTime(2700));
@@ -128,7 +128,7 @@ describe("SendingSendingPage", () => {
   it("should show Done button after completion", () => {
     // given
     setSearchParams(DEFAULT_PARAMS);
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // when
     act(() => vi.advanceTimersByTime(2700));
@@ -142,7 +142,7 @@ describe("SendingSendingPage", () => {
     // given
     setSearchParams(DEFAULT_PARAMS);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
     act(() => vi.advanceTimersByTime(2700));
 
     // when
@@ -157,10 +157,22 @@ describe("SendingSendingPage", () => {
     setSearchParams(DEFAULT_PARAMS);
 
     // when
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // then
     expect(screen.getByText("Claim link sent to +919876543210")).toBeInTheDocument();
+  });
+
+  it("should show fallback values when amount and fxRate params are missing", () => {
+    // given
+    setSearchParams({ remittanceId: "rem-uuid-123", phone: "+919876543210" });
+
+    // when
+    renderWithProviders(<SendingPage />);
+
+    // then
+    expect(screen.getByText("0.00")).toBeInTheDocument();
+    expect(screen.getByText(/₹0\.00/)).toBeInTheDocument();
   });
 
   it("should display step subtitles", () => {
@@ -168,7 +180,7 @@ describe("SendingSendingPage", () => {
     setSearchParams(DEFAULT_PARAMS);
 
     // when
-    renderWithProviders(<SendingSendingPage />);
+    renderWithProviders(<SendingPage />);
 
     // then
     expect(screen.getByText("Securely signing your transaction")).toBeInTheDocument();
