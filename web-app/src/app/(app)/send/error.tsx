@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function SendError({
@@ -10,6 +11,10 @@ export default function SendError({
   error: Error & { digest?: string };
   unstable_retry: () => void;
 }) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
       <div className="text-center space-y-4">
@@ -22,12 +27,9 @@ export default function SendError({
         </p>
         <div className="flex flex-col gap-2">
           <Button onClick={() => unstable_retry()}>Retry</Button>
-          <Link
-            href="/send"
-            className="inline-flex items-center justify-center rounded-lg px-2.5 h-8 text-sm font-medium text-fg-2 hover:bg-muted hover:text-fg-1 transition-colors"
-          >
+          <Button variant="ghost" render={<Link href="/send" />}>
             Start over
-          </Link>
+          </Button>
         </div>
       </div>
     </div>

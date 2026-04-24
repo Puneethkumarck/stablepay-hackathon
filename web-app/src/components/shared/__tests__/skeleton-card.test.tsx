@@ -3,25 +3,26 @@ import { describe, expect, it } from "vitest";
 import { SkeletonCard } from "@/components/shared/skeleton-card";
 
 describe("SkeletonCard", () => {
-  it("should render skeleton elements with pulse animation", () => {
+  it("should render with status role and busy state", () => {
     // given
     render(<SkeletonCard />);
 
     // when
-    const skeletons = screen.getAllByRole("generic").filter((el) => el.dataset.slot === "skeleton");
+    const status = screen.getByRole("status");
 
     // then
-    expect(skeletons.length).toBe(3);
+    expect(status).toHaveAttribute("aria-busy", "true");
+    expect(status).toHaveAttribute("aria-label", "Loading");
   });
 
   it("should apply custom className", () => {
     // given
-    const { container } = render(<SkeletonCard className="mt-4" />);
+    render(<SkeletonCard className="mt-4" />);
 
     // when
-    const wrapper = container.firstChild as HTMLElement;
+    const status = screen.getByRole("status");
 
     // then
-    expect(wrapper.className).toContain("mt-4");
+    expect(status.className).toContain("mt-4");
   });
 });

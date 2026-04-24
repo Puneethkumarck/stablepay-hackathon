@@ -7,7 +7,12 @@ interface SkeletonRowProps {
 
 export function SkeletonRow({ className }: SkeletonRowProps) {
   return (
-    <div className={cn("flex items-center gap-3 px-5 py-3", className)}>
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Loading"
+      className={cn("flex items-center gap-3 px-5 py-3", className)}
+    >
       <Skeleton className="h-10 w-10 shrink-0 rounded-full bg-surface-4" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-3 w-28 bg-surface-4" />
