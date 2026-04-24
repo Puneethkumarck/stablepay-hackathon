@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { setupServer } from "msw/node";
 import type { ReactNode } from "react";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { server } from "@/test-utils/msw-server";
 import type { FxRateResponse } from "@/types/api";
 import { useFxRate } from "../use-fx-rate";
 
@@ -13,16 +13,6 @@ const FX_RESPONSE: FxRateResponse = {
   timestamp: "2026-04-24T10:00:00Z",
   expiresAt: "2026-04-24T10:05:00Z",
 };
-
-const server = setupServer(
-  http.get("/api/fx/USD-INR", () => {
-    return HttpResponse.json(FX_RESPONSE);
-  }),
-);
-
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -35,6 +25,9 @@ function createWrapper() {
 
 describe("useFxRate", () => {
   it("should fetch and return FX rate data", async () => {
+    // given
+    server.use(http.get("/api/fx/USD-INR", () => HttpResponse.json(FX_RESPONSE)));
+
     // when
     const { result } = renderHook(() => useFxRate(), {
       wrapper: createWrapper(),
