@@ -149,7 +149,7 @@
 }
 
 /* ───── Light theme (secondary, for onboarding/docs) ───── */
-:root[data-theme="light"] {
+:root.light {
   --surface-0: #ffffff;
   --surface-1: #f8fafc;
   --surface-2: #ffffff;
