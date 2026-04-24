@@ -12,7 +12,8 @@ public record SocialIdentity(
     String provider,
     String subject,
     String email,
-    boolean emailVerified
+    boolean emailVerified,
+    String name
 ) {
     public SocialIdentity {
         requireNonNull(provider, "provider cannot be null");

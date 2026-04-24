@@ -9,6 +9,7 @@ import static com.stablepay.testutil.AuthFixtures.SOME_REFRESH_TOKEN_ID;
 import static com.stablepay.testutil.AuthFixtures.SOME_SOCIAL_EMAIL;
 import static com.stablepay.testutil.AuthFixtures.SOME_SUBJECT;
 import static com.stablepay.testutil.AuthFixtures.SOME_TOKEN_HASH;
+import static com.stablepay.testutil.AuthFixtures.SOME_USER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -34,6 +35,7 @@ class UserMapperTest {
             var domain = AppUser.builder()
                     .id(SOME_AUTH_USER_ID)
                     .email(SOME_EMAIL)
+                    .name(SOME_USER_NAME)
                     .createdAt(SOME_AUTH_CREATED_AT)
                     .build();
 
@@ -44,6 +46,7 @@ class UserMapperTest {
             var expectedEntity = UserEntity.builder()
                     .id(SOME_AUTH_USER_ID)
                     .email(SOME_EMAIL)
+                    .name(SOME_USER_NAME)
                     .createdAt(SOME_AUTH_CREATED_AT)
                     .build();
             assertThat(entity)
@@ -57,6 +60,7 @@ class UserMapperTest {
             var entity = UserEntity.builder()
                     .id(SOME_AUTH_USER_ID)
                     .email(SOME_EMAIL)
+                    .name(SOME_USER_NAME)
                     .createdAt(SOME_AUTH_CREATED_AT)
                     .updatedAt(Instant.parse("2026-04-03T12:00:00Z"))
                     .build();
@@ -68,6 +72,7 @@ class UserMapperTest {
             var expected = AppUser.builder()
                     .id(SOME_AUTH_USER_ID)
                     .email(SOME_EMAIL)
+                    .name(SOME_USER_NAME)
                     .createdAt(SOME_AUTH_CREATED_AT)
                     .build();
 

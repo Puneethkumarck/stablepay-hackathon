@@ -14,6 +14,7 @@ public interface UserMapper {
     @Mapping(target = "updatedAt", ignore = true)
     UserEntity toEntity(AppUser domain);
 
+    @Mapping(target = "name", ignore = true)
     SocialIdentity toDomain(SocialIdentityEntity entity);
 
     @Mapping(target = "id", ignore = true)

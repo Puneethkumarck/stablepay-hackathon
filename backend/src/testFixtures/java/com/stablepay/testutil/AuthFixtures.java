@@ -29,6 +29,7 @@ public final class AuthFixtures {
 
     public static final UUID SOME_AUTH_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000042");
     public static final String SOME_EMAIL = "alice@example.com";
+    public static final String SOME_USER_NAME = "Alice Sharma";
     public static final Instant SOME_AUTH_CREATED_AT = Instant.parse("2026-04-03T10:00:00Z");
 
     public static final String SOME_PROVIDER = "google";
@@ -44,13 +45,14 @@ public final class AuthFixtures {
     public static final String SOME_RAW_REFRESH_TOKEN = "r1_dGVzdC1yZWZyZXNoLXRva2Vu";
     public static final String SOME_ACCESS_TOKEN = "test-access-token";
     public static final Instant SOME_ACCESS_EXPIRES_AT = Instant.parse("2026-04-03T10:15:00Z");
-    public static final String SOME_SENDER_DISPLAY_NAME = "alice";
+    public static final String SOME_SENDER_DISPLAY_NAME = "Alice Sharma";
     public static final UUID SOME_OTHER_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000077");
 
     public static AppUser.AppUserBuilder appUserBuilder() {
         return AppUser.builder()
                 .id(SOME_AUTH_USER_ID)
                 .email(SOME_EMAIL)
+                .name(SOME_USER_NAME)
                 .createdAt(SOME_AUTH_CREATED_AT);
     }
 
@@ -60,7 +62,8 @@ public final class AuthFixtures {
                 .provider(SOME_PROVIDER)
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
-                .emailVerified(true);
+                .emailVerified(true)
+                .name(SOME_USER_NAME);
     }
 
     public static RefreshToken.RefreshTokenBuilder refreshTokenBuilder() {

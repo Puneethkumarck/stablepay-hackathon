@@ -8,6 +8,7 @@ import static com.stablepay.testutil.AuthFixtures.SOME_RAW_REFRESH_TOKEN;
 import static com.stablepay.testutil.AuthFixtures.SOME_SOCIAL_EMAIL;
 import static com.stablepay.testutil.AuthFixtures.SOME_SUBJECT;
 import static com.stablepay.testutil.AuthFixtures.SOME_TOKEN_HASH;
+import static com.stablepay.testutil.AuthFixtures.SOME_USER_NAME;
 import static com.stablepay.testutil.AuthFixtures.appUserBuilder;
 import static com.stablepay.testutil.AuthFixtures.authSessionBuilder;
 import static com.stablepay.testutil.AuthFixtures.socialIdentityBuilder;
@@ -103,6 +104,7 @@ class SocialLoginHandlerTest {
         var appUser = appUserBuilder().build();
         given(userRepository.save(argThat(user ->
                 user.email().equals(SOME_SOCIAL_EMAIL)
+                        && user.name().equals(SOME_USER_NAME)
                         && user.createdAt().equals(SOME_AUTH_CREATED_AT))))
                 .willReturn(appUser);
 
@@ -203,6 +205,7 @@ class SocialLoginHandlerTest {
         var appUser = appUserBuilder().build();
         given(userRepository.save(argThat(user ->
                 user.email().equals(SOME_SOCIAL_EMAIL)
+                        && user.name().equals(SOME_USER_NAME)
                         && user.createdAt().equals(SOME_AUTH_CREATED_AT))))
                 .willReturn(appUser);
 

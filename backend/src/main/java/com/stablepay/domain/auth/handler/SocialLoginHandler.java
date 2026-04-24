@@ -58,6 +58,7 @@ public class SocialLoginHandler {
                         var user = AppUser.builder()
                                 .id(UUID.randomUUID())
                                 .email(identity.email())
+                                .name(identity.name())
                                 .createdAt(now)
                                 .build();
                         var savedUser = userRepository.save(user);
