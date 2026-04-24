@@ -50,14 +50,13 @@ export default function SendRecipientPage() {
   );
 
   const handleContinue = useCallback(() => {
-    setRecipient(recipientPhone);
     router.push("/send/review");
-  }, [recipientPhone, setRecipient, router]);
+  }, [router]);
 
   if (!amountUsdc) return null;
 
   return (
-    <div className="flex flex-col gap-0 px-5 pt-2 pb-6">
+    <div className="flex flex-col px-5 pt-2 pb-6">
       <TopBar
         title="Recipient"
         onBack={() => router.push("/send")}
@@ -87,7 +86,7 @@ export default function SendRecipientPage() {
 
       <div className="mb-2.5 mt-4 text-xs tracking-[0.14em] uppercase text-fg-3">Recent</div>
 
-      <div className="flex flex-col gap-0">
+      <div className="flex flex-col">
         {RECENT_CONTACTS.map((contact) => (
           <button
             key={contact.phone}
