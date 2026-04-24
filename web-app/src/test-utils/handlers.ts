@@ -24,7 +24,7 @@ export const handlers = [
   ),
 
   http.post("/api/remittances", async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json(
       {
         id: 1,
