@@ -1,0 +1,83 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./design-tokens.css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* Surface colors */
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+
+  /* Foreground colors */
+  --color-fg-1: var(--fg-1);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-fg-4: var(--fg-4);
+
+  /* Border colors */
+  --color-border-1: var(--border-1);
+  --color-border-2: var(--border-2);
+  --color-border-3: var(--border-3);
+
+  /* Solana brand */
+  --color-solana-teal: var(--solana-teal);
+  --color-solana-purple: var(--solana-purple);
+  --color-solana-magenta: var(--solana-magenta);
+
+  /* Semantic */
+  --color-usdc: var(--usdc-blue);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-accent: var(--accent);
+
+  /* shadcn/ui semantic mappings */
+  --color-background: var(--surface-1);
+  --color-foreground: var(--fg-1);
+  --color-primary: var(--accent);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--surface-3);
+  --color-secondary-foreground: var(--fg-1);
+  --color-muted: var(--surface-3);
+  --color-muted-foreground: var(--fg-3);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--border-1);
+  --color-input: var(--surface-4);
+  --color-ring: var(--accent);
+  --color-card: var(--surface-2);
+  --color-card-foreground: var(--fg-1);
+  --color-popover: var(--surface-2);
+  --color-popover-foreground: var(--fg-1);
+  --color-accent-ui: var(--accent-soft);
+  --color-accent-foreground: var(--fg-1);
+
+  /* Typography */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+
+  /* Radii */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  /* Shadows */
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --shadow-3: var(--shadow-3);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

@@ -1,0 +1,198 @@
+/* ============================================================
+   StablePay Design System — Colors & Type Tokens
+   Derived from stablepay-design-system/project/colors_and_type.css
+   Fonts loaded via next/font/google — no @import url() needed.
+   Base resets removed — Tailwind handles those.
+   ============================================================ */
+
+:root {
+  /* ───── Surface (dark, default) ───── */
+  --surface-0: #070b1a;
+  --surface-1: #0b1020;
+  --surface-2: #141a2e;
+  --surface-3: #1c2340;
+  --surface-4: #242c4f;
+
+  /* ───── Foreground (on dark) ───── */
+  --fg-1: #ffffff;
+  --fg-2: rgba(255, 255, 255, 0.72);
+  --fg-3: rgba(255, 255, 255, 0.48);
+  --fg-4: rgba(255, 255, 255, 0.28);
+
+  /* ───── Borders / dividers ───── */
+  --border-1: rgba(255, 255, 255, 0.08);
+  --border-2: rgba(255, 255, 255, 0.14);
+  --border-3: rgba(255, 255, 255, 0.24);
+
+  /* ───── Solana brand gradient stops ───── */
+  --solana-teal: #00ffa3;
+  --solana-purple: #9945ff;
+  --solana-magenta: #dc1fff;
+  --solana-gradient: linear-gradient(
+    90deg,
+    var(--solana-teal) 0%,
+    var(--solana-purple) 50%,
+    var(--solana-magenta) 100%
+  );
+  --solana-gradient-45: linear-gradient(
+    45deg,
+    var(--solana-teal) 0%,
+    var(--solana-purple) 50%,
+    var(--solana-magenta) 100%
+  );
+  --solana-gradient-vertical: linear-gradient(
+    180deg,
+    var(--solana-teal) 0%,
+    var(--solana-purple) 50%,
+    var(--solana-magenta) 100%
+  );
+
+  /* ───── Semantic functional colors ───── */
+  --usdc-blue: #2775ca;
+  --usdc-blue-soft: rgba(39, 117, 202, 0.16);
+  --rupee-orange: #ff9933;
+
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.16);
+  --success-border: rgba(34, 197, 94, 0.32);
+
+  --warning: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+  --warning-border: rgba(245, 158, 11, 0.32);
+
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.16);
+  --danger-border: rgba(239, 68, 68, 0.32);
+
+  --info: #38bdf8;
+  --info-soft: rgba(56, 189, 248, 0.16);
+  --info-border: rgba(56, 189, 248, 0.32);
+
+  /* ───── Accent (pulled from Solana purple for single-color uses) ───── */
+  --accent: #9945ff;
+  --accent-soft: rgba(153, 69, 255, 0.16);
+  --accent-border: rgba(153, 69, 255, 0.4);
+
+  /* ───── Typography ───── */
+  --font-sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  /* type scale (fluid optional, fixed values here) */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 17px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 40px;
+  --text-4xl: 56px;
+  --text-5xl: 72px;
+  --text-6xl: 96px;
+
+  /* line heights */
+  --lh-tight: 1.1;
+  --lh-snug: 1.25;
+  --lh-normal: 1.5;
+  --lh-loose: 1.7;
+
+  /* weights */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* letter spacing */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-eyebrow: 0.14em;
+
+  /* ───── Spacing (4px base) ───── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ───── Radii ───── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 999px;
+
+  /* ───── Shadows ───── */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.5);
+  --glow-solana: 0 0 48px rgba(153, 69, 255, 0.35);
+  --glow-solana-soft: 0 0 32px rgba(153, 69, 255, 0.2);
+  --glow-teal: 0 0 40px rgba(0, 255, 163, 0.3);
+  --inner-top: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* ───── Motion ───── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 240ms;
+  --dur-3: 400ms;
+  --dur-4: 600ms;
+}
+
+/* ───── Light theme (secondary, for onboarding/docs) ───── */
+:root[data-theme="light"] {
+  --surface-0: #ffffff;
+  --surface-1: #f8fafc;
+  --surface-2: #ffffff;
+  --surface-3: #f1f5f9;
+  --surface-4: #e2e8f0;
+
+  --fg-1: #0b1020;
+  --fg-2: rgba(11, 16, 32, 0.72);
+  --fg-3: rgba(11, 16, 32, 0.56);
+  --fg-4: rgba(11, 16, 32, 0.32);
+
+  --border-1: rgba(11, 16, 32, 0.08);
+  --border-2: rgba(11, 16, 32, 0.14);
+  --border-3: rgba(11, 16, 32, 0.24);
+}
+
+/* ───── Utility classes ───── */
+
+.sp-gradient-text {
+  background: var(--solana-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.sp-wordmark {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  font-size: var(--text-2xl);
+  color: var(--fg-1);
+}
+.sp-wordmark .pay {
+  background: var(--solana-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ───── Focus ring ───── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
