@@ -16,9 +16,10 @@ function computeRemaining(expiresAt: string): string {
 }
 
 export function ClaimCountdown({ expiresAt }: ClaimCountdownProps) {
-  const [text, setText] = useState(() => computeRemaining(expiresAt));
+  const [text, setText] = useState("");
 
   useEffect(() => {
+    setText(computeRemaining(expiresAt));
     const interval = setInterval(() => {
       setText(computeRemaining(expiresAt));
     }, 60_000);

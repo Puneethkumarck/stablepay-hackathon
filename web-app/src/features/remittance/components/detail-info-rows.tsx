@@ -42,7 +42,7 @@ function CopyButton({ text }: { text: string }) {
 
 export function DetailInfoRows({ remittanceId, escrowPda, fxRate }: DetailInfoRowsProps) {
   return (
-    <div className="flex flex-col gap-0 rounded-2xl bg-surface-2">
+    <div className="flex flex-col rounded-2xl bg-surface-2">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-1">
         <span className="text-sm text-fg-3">Remittance ID</span>
         <CopyButton text={remittanceId} />
@@ -53,7 +53,7 @@ export function DetailInfoRows({ remittanceId, escrowPda, fxRate }: DetailInfoRo
       </div>
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-1">
         <span className="text-sm text-fg-3">On-chain fee</span>
-        <span className={cn("text-sm font-mono", "text-success")}>${NETWORK_FEE}</span>
+        <span className="text-sm font-mono text-success">${NETWORK_FEE}</span>
       </div>
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-sm text-fg-3">FX rate</span>
