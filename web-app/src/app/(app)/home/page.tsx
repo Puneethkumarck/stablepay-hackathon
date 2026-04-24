@@ -1,26 +1,27 @@
-import { Button } from "@/components/ui/button";
+import { TopBar } from "@/components/shared/top-bar";
+import { ActionButtons } from "@/features/home/components/action-buttons";
+import { BalanceCard } from "@/features/home/components/balance-card";
+import { RecentTransactions } from "@/features/home/components/recent-transactions";
+import { apiClient } from "@/lib/api-client";
+import { requireAuth } from "@/lib/auth";
+import type { PageResponse, RemittanceResponse, WalletResponse } from "@/types/api";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const token = await requireAuth();
+
+  const [wallet, remittancePage] = await Promise.all([
+    apiClient.get<WalletResponse>("/api/wallets/me", { token }),
+    apiClient.get<PageResponse<RemittanceResponse>>("/api/remittances?size=3&sort=createdAt,desc", {
+      token,
+    }),
+  ]);
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8">
-      <h1 className="text-2xl font-bold text-fg-1">
-        stable
-        <span className="bg-gradient-to-r from-solana-teal via-solana-purple to-solana-magenta bg-clip-text text-transparent">
-          pay
-        </span>
-      </h1>
-      <p className="text-fg-3 text-center text-sm">Real-time remittances on Solana</p>
-      <Button>Get Started</Button>
-      <div className="flex gap-3 text-xs font-mono text-fg-3">
-        <span className="text-solana-teal">teal</span>
-        <span className="text-solana-purple">purple</span>
-        <span className="text-solana-magenta">magenta</span>
-      </div>
-      <div className="flex gap-2">
-        <div className="w-12 h-8 rounded-md bg-surface-2 border border-border-1" />
-        <div className="w-12 h-8 rounded-md bg-surface-3 border border-border-2" />
-        <div className="w-12 h-8 rounded-md bg-surface-4 border border-border-3" />
-      </div>
+    <div className="flex flex-col gap-6 px-5 pt-2 pb-6">
+      <TopBar title="stablepay" />
+      <BalanceCard wallet={wallet} />
+      <ActionButtons />
+      <RecentTransactions remittances={remittancePage.content} />
     </div>
   );
 }
