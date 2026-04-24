@@ -45,7 +45,7 @@ export default function SendAmountPage() {
   const rate = fxData ? Number.parseFloat(fxData.rate) : 0;
 
   const inrAmount = useMemo(() => {
-    if (!fxData || parsedAmount <= 0) return "0.00";
+    if (!fxData || !(parsedAmount > 0)) return "0.00";
     return formatInr(parsedAmount * rate);
   }, [parsedAmount, rate, fxData]);
 
