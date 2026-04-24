@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StablePay — v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f7f5ef;
+    --white: #ffffff;
+    --ink: #0a0a0a;
+    --ink-2: #3b3b3b;
+    --muted: #8a8a85;
+    --hair: #e3ded2;
+    --hair-2: #efebe2;
+    --accent: #0d5d3b;
+    --accent-soft: #e8f1ec;
+    --warn: #9a6a00;
+    --warn-soft: #faf2de;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: "Instrument Serif", "Times New Roman", serif; font-weight: 400; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 96px 40px 120px; }
+
+  /* Header */
+  header { text-align: center; margin-bottom: 96px; }
+  header .eyebrow {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--muted);
+  }
+  header h1 {
+    font-family: "Instrument Serif", serif;
+    font-size: 92px;
+    line-height: 0.95;
+    font-weight: 400;
+    margin: 20px 0 18px;
+    letter-spacing: -2px;
+  }
+  header h1 em { font-style: italic; color: var(--accent); }
+  header p.lede {
+    font-size: 18px; color: var(--ink-2);
+    max-width: 520px; margin: 0 auto;
+    line-height: 1.55;
+  }
+
+  /* Flow grid — 3 per row on desktop */
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 64px 48px;
+  }
+  @media (max-width: 900px) { .flow { grid-template-columns: repeat(2, 1fr); gap: 48px 32px; } }
+  @media (max-width: 600px) { .flow { grid-template-columns: 1fr; gap: 48px; } }
+
+  .step { display: flex; flex-direction: column; }
+  .step .label {
+    display: flex; align-items: baseline; gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .step .label .num {
+    font-family: "Instrument Serif", serif;
+    font-size: 40px; color: var(--accent);
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+  .step .label .title {
+    font-size: 14px; font-weight: 500;
+    color: var(--ink);
+  }
+  .step .caption {
+    font-size: 13px; color: var(--ink-2);
+    margin-top: 18px; line-height: 1.6;
+  }
+  .step .endpoint {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 10px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 8px;
+    border-radius: 3px;
+  }
+  .step .endpoint.proposed {
+    color: var(--warn); background: var(--warn-soft);
+  }
+
+  /* Device wrapper — centers + caps width */
+  .device { max-width: 280px; margin: 0 auto; width: 100%; }
+
+  /* Phone frame */
+  .phone {
+    background: #111;
+    border-radius: 38px;
+    padding: 8px;
+    aspect-ratio: 9 / 19;
+    position: relative;
+  }
+  .phone::before {
+    content: "";
+    position: absolute; top: 14px; left: 50%;
+    transform: translateX(-50%);
+    width: 82px; height: 20px; border-radius: 11px;
+    background: #000; z-index: 2;
+  }
+  .screen {
+    background: var(--white);
+    border-radius: 30px;
+    height: 100%;
+    display: flex; flex-direction: column;
+    padding: 52px 22px 22px;
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 13px;
+  }
+
+  /* Browser frame — same overall height as phone */
+  .browser {
+    background: #eeeae0;
+    border-radius: 12px;
+    padding: 8px;
+    aspect-ratio: 9 / 19;
+    display: flex; flex-direction: column;
+  }
+  .browser-bar { display: flex; align-items: center; gap: 6px; padding: 4px 6px; margin-bottom: 6px; }
+  .browser-dots { display: flex; gap: 4px; }
+  .browser-dots span { width: 7px; height: 7px; border-radius: 50%; background: #d4cebe; }
+  .browser-url {
+    flex: 1;
+    background: #faf7ef;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .browser-content {
+    background: #fff;
+    border-radius: 8px;
+    flex: 1;
+    padding: 28px 22px 22px;
+    display: flex; flex-direction: column;
+  }
+
+  /* Internals */
+  .tiny { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  .mono { font-family: ui-monospace, "SF Mono", monospace; font-size: 10px; color: var(--muted); }
+  .spacer { flex: 1; }
+
+  .amount-xxl {
+    font-family: "Instrument Serif", serif;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -2px;
+  }
+  .amount-xl {
+    font-family: "Instrument Serif", serif;
+    font-size: 42px;
+    line-height: 1;
+    letter-spacing: -1.2px;
+  }
+
+  .btn {
+    padding: 13px 14px;
+    border-radius: 999px;
+    font-size: 13px; font-weight: 500;
+    text-align: center;
+    background: var(--ink); color: #fff;
+    border: 1px solid var(--ink);
+    margin-top: 8px;
+  }
+  .btn.outline { background: transparent; color: var(--ink); border-color: var(--hair); }
+  .btn.provider {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: transparent; color: var(--ink); border: 1px solid var(--hair);
+  }
+  .btn.provider.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .g-icon {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #4285F4, #EA4335, #FBBC05, #34A853, #4285F4);
+    display: inline-block;
+  }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .pill::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+  }
+
+  .field {
+    border-bottom: 1px solid var(--ink);
+    padding: 10px 0;
+    font-family: "Inter", sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  /* Timeline */
+  .timeline { margin-top: 8px; }
+  .tl-item {
+    display: flex; gap: 12px; align-items: center;
+    padding: 9px 0;
+    font-size: 12px;
+  }
+  .tl-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--hair);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .tl-dot::after {
+    content: ""; position: absolute; top: 9px; left: 3px;
+    width: 1px; height: 28px; background: var(--hair-2);
+  }
+  .tl-item:last-child .tl-dot::after { display: none; }
+  .tl-item.done .tl-dot { background: var(--accent); }
+  .tl-item.active .tl-dot { background: var(--ink); box-shadow: 0 0 0 3px var(--hair-2); }
+  .tl-item .tl-label { color: var(--ink); font-weight: 500; }
+  .tl-item:not(.done):not(.active) .tl-label { color: var(--muted); font-weight: 400; }
+
+  /* Footer */
+  footer {
+    margin-top: 128px;
+    padding-top: 32px;
+    border-top: 1px solid var(--hair);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    font-size: 12px; color: var(--muted);
+  }
+  footer a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--hair); }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header>
+    <div class="eyebrow">StablePay · v3</div>
+    <h1>Six screens.<br/><em>One transfer.</em></h1>
+    <p class="lede">The entire dollar-to-rupees flow, reduced to its essential moments. Backed by real StablePay endpoints.</p>
+  </header>
+
+  <div class="flow">
+
+    <!-- 01 Sign in -->
+    <div class="step">
+      <div class="label"><span class="num">01</span><span class="title">Sign in</span></div>
+      <div class="device">
+        <div class="phone"><div class="screen">
+          <div class="tiny">StablePay</div>
+          <div class="serif" style="font-size:32px;margin-top:10px;line-height:1.05">Create your<br/>wallet.</div>
+          <div class="spacer"></div>
+          <div class="btn provider"><span class="g-icon"></span>Continue with Google</div>
+          <div class="btn provider dark">Continue with Apple</div>
+          <div class="mono" style="text-align:center;margin-top:16px">No seed phrase.</div>
+        </div></div>
+      </div>
+      <div class="caption">Social login provisions a 2-of-2 MPC Solana wallet on first sign-in.</div>
+      <div class="endpoint proposed">POST /api/auth/social · proposed</div>
+    </div>
+
+    <!-- 02 Fund -->
+    <div class="step">
+      <div class="label"><span class="num">02</span><span class="title">Fund</span></div>
+      <div class="device">
+        <div class="phone"><div class="screen">
+          <div class="tiny">Fund wallet</div>
+          <div class="spacer"></div>
+          <div style="text-align:center">
+            <div class="tiny">Amount</div>
+            <div class="amount-xxl" style="margin-top:8px">$250</div>
+            <div class="mono" style="margin-top:10px">min 1 · max 10,000</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn">Pay with Stripe</div>
+        </div></div>
+      </div>
+      <div class="caption">Stripe issues a PaymentIntent; the mobile app confirms with the client secret.</div>
+      <div class="endpoint">POST /api/wallets/{id}/fund</div>
+    </div>
+
+    <!-- 03 Send -->
+    <div class="step">
+      <div class="label"><span class="num">03</span><span class="title">Send</span></div>
+      <div class="device">
+        <div class="phone"><div class="screen">
+          <div class="tiny">Recipient gets</div>
+          <div class="amount-xxl serif" style="color:var(--accent);margin-top:8px">₹8,342</div>
+          <div class="mono" style="margin-top:6px">$100 @ ₹83.42</div>
+          <div style="margin-top:28px">
+            <div class="tiny">To</div>
+            <div class="field">+91 98765 43210</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn">Send money</div>
+        </div></div>
+      </div>
+      <div class="caption">Rate locks at submission. USDC moves into a Solana escrow PDA.</div>
+      <div class="endpoint">POST /api/remittances</div>
+    </div>
+
+    <!-- 04 Track -->
+    <div class="step">
+      <div class="label"><span class="num">04</span><span class="title">Track</span></div>
+      <div class="device">
+        <div class="phone"><div class="screen">
+          <div class="tiny">You sent</div>
+          <div class="amount-xl" style="margin-top:8px">$100<span style="color:var(--muted);font-size:24px">.00</span></div>
+          <div class="mono" style="margin-top:6px">bf0c9e4a…a11b</div>
+          <div class="timeline" style="margin-top:20px">
+            <div class="tl-item done"><div class="tl-dot"></div><div class="tl-label">INITIATED</div></div>
+            <div class="tl-item done"><div class="tl-dot"></div><div class="tl-label">ESCROWED</div></div>
+            <div class="tl-item active"><div class="tl-dot"></div><div class="tl-label">Awaiting claim</div></div>
+            <div class="tl-item"><div class="tl-dot"></div><div class="tl-label">CLAIMED</div></div>
+            <div class="tl-item"><div class="tl-dot"></div><div class="tl-label">DELIVERED</div></div>
+          </div>
+          <div class="spacer"></div>
+        </div></div>
+      </div>
+      <div class="caption">Real <code>RemittanceStatus</code> transitions driven by the Temporal workflow.</div>
+      <div class="endpoint">GET /api/remittances/{id}</div>
+    </div>
+
+    <!-- 05 Claim -->
+    <div class="step">
+      <div class="label"><span class="num">05</span><span class="title">Claim</span></div>
+      <div class="device">
+        <div class="browser">
+          <div class="browser-bar">
+            <div class="browser-dots"><span></span><span></span><span></span></div>
+            <div class="browser-url">claim.stablepay.app/v1_k3n…</div>
+          </div>
+          <div class="browser-content">
+            <div class="tiny">You've got</div>
+            <div class="amount-xxl serif" style="margin-top:8px">₹8,342</div>
+            <div class="mono" style="margin-top:6px">from Priya · $100.00</div>
+            <div style="margin-top:28px">
+              <div class="tiny">Your UPI ID</div>
+              <div class="field">ramesh@okhdfcbank</div>
+            </div>
+            <div class="spacer"></div>
+            <div class="btn">Claim now</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Recipient opens the SMS link, pastes their UPI ID. No app install.</div>
+      <div class="endpoint">POST /api/claims/{token}</div>
+    </div>
+
+    <!-- 06 Delivered -->
+    <div class="step">
+      <div class="label"><span class="num">06</span><span class="title">Delivered</span></div>
+      <div class="device">
+        <div class="browser">
+          <div class="browser-bar">
+            <div class="browser-dots"><span></span><span></span><span></span></div>
+            <div class="browser-url">claim.stablepay.app/v1_k3n…</div>
+          </div>
+          <div class="browser-content">
+            <div class="spacer"></div>
+            <div style="text-align:center">
+              <div class="tiny" style="color:var(--accent)">Delivered</div>
+              <div class="amount-xxl serif" style="margin-top:12px;color:var(--accent)">₹8,342</div>
+              <div class="mono" style="margin-top:8px">ramesh@okhdfcbank</div>
+              <div style="margin-top:20px"><span class="pill">DELIVERED</span></div>
+            </div>
+            <div class="spacer"></div>
+            <div class="mono" style="text-align:center">Razorpay UPI · instant</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Terminal state. End-to-end in under a minute on devnet.</div>
+      <div class="endpoint">GET /api/claims/{token}</div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div>StablePay · v3 · six-screen cut</div>
+    <div>See <a href="complete-flow-v2.html">v2</a> for the full 20-screen flow with edges + contract map.</div>
+  </footer>
+
+</div>
+
+</body>
+</html>

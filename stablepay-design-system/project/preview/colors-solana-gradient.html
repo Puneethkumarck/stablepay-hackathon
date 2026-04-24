@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Colors — Solana gradient</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { padding: 24px; background: var(--surface-1); }
+  .bar { height: 80px; border-radius: var(--radius-md); background: var(--solana-gradient); margin-bottom: 12px; box-shadow: var(--glow-solana-soft); }
+  .stops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stop { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-1); }
+  .stop .chip { height: 48px; }
+  .stop .meta { padding: 8px 10px; background: var(--surface-2); font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); display:flex; justify-content: space-between;}
+  .stop .meta b { color: var(--fg-1); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="bar"></div>
+<div class="stops">
+  <div class="stop"><div class="chip" style="background:var(--solana-teal)"></div><div class="meta"><b>teal</b><span>#00FFA3</span></div></div>
+  <div class="stop"><div class="chip" style="background:var(--solana-purple)"></div><div class="meta"><b>purple</b><span>#9945FF</span></div></div>
+  <div class="stop"><div class="chip" style="background:var(--solana-magenta)"></div><div class="meta"><b>magenta</b><span>#DC1FFF</span></div></div>
+</div>
+</body>
+</html>

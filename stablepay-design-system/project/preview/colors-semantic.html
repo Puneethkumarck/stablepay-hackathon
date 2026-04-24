@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Colors — Semantic</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { padding: 24px; background: var(--surface-1); }
+  .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .row { border-radius: var(--radius-md); border: 1px solid var(--border-1); overflow: hidden; }
+  .chip { height: 56px; display:flex; align-items:center; padding: 0 14px; font-family: var(--font-sans); font-weight: 600; font-size: 13px; }
+  .meta { background: var(--surface-2); padding: 8px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); display:flex; justify-content:space-between; }
+  .meta b { color: var(--fg-1); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="row"><div class="chip" style="background:var(--success);color:#02200E">success</div><div class="meta"><b>--success</b><span>#22C55E</span></div></div>
+  <div class="row"><div class="chip" style="background:var(--warning);color:#2A1800">warning</div><div class="meta"><b>--warning</b><span>#F59E0B</span></div></div>
+  <div class="row"><div class="chip" style="background:var(--danger);color:#FFE5E5">danger</div><div class="meta"><b>--danger</b><span>#EF4444</span></div></div>
+  <div class="row"><div class="chip" style="background:var(--info);color:#001726">info</div><div class="meta"><b>--info</b><span>#38BDF8</span></div></div>
+  <div class="row"><div class="chip" style="background:var(--usdc-blue);color:#fff">usdc-blue</div><div class="meta"><b>--usdc-blue</b><span>#2775CA</span></div></div>
+  <div class="row"><div class="chip" style="background:var(--rupee-orange);color:#2A1800">rupee-orange</div><div class="meta"><b>--rupee-orange</b><span>#FF9933</span></div></div>
+</div>
+</body>
+</html>

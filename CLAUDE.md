@@ -16,10 +16,13 @@ Before writing or modifying any code, read the relevant doc:
 |---|---|
 | Any `backend/` code (Java/Spring Boot) | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) |
 | Any `backend/` test code (Java) | [docs/TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md) |
+| Any `web-app/` code | [web-app/CLAUDE.md](web-app/CLAUDE.md) (start here, links to deep-dive docs) |
 | Any `programs/` code (Rust/Anchor) | [docs/SOLANA_CODING_STANDARDS.md](docs/SOLANA_CODING_STANDARDS.md) |
 | Architecture or design decisions | [docs/ADR.md](docs/ADR.md) |
 | Full requirements | [docs/brainstorms/2026-04-03-stablepay-cross-border-requirements.md](docs/brainstorms/2026-04-03-stablepay-cross-border-requirements.md) |
 | Implementation plan | [docs/plans/2026-04-03-001-feat-cross-border-remittance-plan.md](docs/plans/2026-04-03-001-feat-cross-border-remittance-plan.md) |
+| Sender app design reference | [stablepay-design-system/project/ui_kits/sender_app/](stablepay-design-system/project/ui_kits/sender_app/) |
+| Sender app API gaps | [docs/specs/2026-04-23-001-sender-app-api-gaps-spec.md](docs/specs/2026-04-23-001-sender-app-api-gaps-spec.md) |
 
 These docs are the single source of truth. Do not guess conventions — look them up.
 
@@ -48,6 +51,16 @@ anchor deploy                # deploy to devnet
 ```bash
 cd mpc-sidecar && go build ./...   # compile
 cd mpc-sidecar && go test ./...    # run tests
+```
+
+### Sender Web App (Next.js)
+
+```bash
+cd web-app && bun install          # install dependencies
+cd web-app && bun run dev          # start dev server (Turbopack)
+cd web-app && bun run test         # unit + component tests (Vitest)
+cd web-app && bun run test:e2e     # E2E tests (Playwright)
+cd web-app && bunx biome check .   # lint + format check
 ```
 
 ### Mobile App (React Native/Expo)
@@ -86,6 +99,10 @@ docker compose down                # stop infrastructure
 | Testing | JUnit 5, BDDMockito, AssertJ, MockMvc |
 | Solana Program | Anchor 0.32.x (Rust) |
 | MPC Sidecar | Go 1.26, bnb-chain/tss-lib (fystack fork) |
+| Sender Web App | Next.js 16.2.x, React 19.2.x, TypeScript 6.0.x, Tailwind 4.2.x, shadcn/ui CLI v4 |
+| FE Testing | Vitest 4.1.x, React Testing Library 16.3.x, Playwright 1.59.x, MSW 2.13.x |
+| FE State | TanStack Query 5.100.x, Zustand 5.0.x, React Hook Form 7.73.x + Zod 4.3.x |
+| FE Tooling | Bun, Turbopack, Biome 2.4.x, Motion 12.38.x, Sonner |
 | Mobile | React Native, Expo SDK 52 |
 | Web Claim | Next.js, shadcn/ui |
 | Solana SDK (Java) | sol4k |
@@ -104,6 +121,7 @@ stablepay-hackathon/
 │   │   ├── domain/                # Models, ports, services
 │   │   └── infrastructure/        # Persistence, MPC, Solana, Stripe, Twilio, Temporal
 │   └── src/test/
+├── web-app/                       # Next.js 16.2.x sender app (React 19, TypeScript 6, Tailwind 4)
 ├── mpc-sidecar/                   # Go (forked mpcium EdDSA)
 ├── mobile/                        # React Native + Expo SDK 52
 ├── web-claim/                     # Next.js claim page
@@ -241,6 +259,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full conventions.
 | [docs/BRAINSTORM.md](docs/BRAINSTORM.md) | Full research, competitive analysis |
 | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Backend coding conventions (Java/Spring Boot) |
 | [docs/TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md) | Backend testing rules and patterns |
+| [web-app/CLAUDE.md](web-app/CLAUDE.md) | Frontend entry point (links to coding, testing, architecture docs) |
 | [docs/SOLANA_CODING_STANDARDS.md](docs/SOLANA_CODING_STANDARDS.md) | Solana program standards (Rust/Anchor) |
 | [docs/ADR.md](docs/ADR.md) | Architecture decision records |
 | [docs/brainstorms/](docs/brainstorms/) | Requirements documents |

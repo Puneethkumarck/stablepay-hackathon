@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Type — Mono & Amounts</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { padding: 24px; background: var(--surface-1); color: var(--fg-1); }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .amount-big { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 56px; letter-spacing: -0.02em; line-height: 1; }
+  .amount-big small { color: var(--fg-3); font-size: 24px; font-weight: 400; margin-right: 4px; }
+  .row { display:flex; align-items:center; gap: 16px; }
+  .tag { font-family: var(--font-mono); color: var(--fg-3); font-size: 11px; width: 100px; flex-shrink: 0; }
+  .addr { font-family: var(--font-mono); font-size: 13px; color: var(--fg-2); }
+</style>
+</head>
+<body>
+<div class="stack">
+  <div class="amount-big"><small>$</small>100.00</div>
+  <div class="row"><span class="tag">amount / mono</span><span class="sp-amount" style="font-size:20px">8,450.00 INR</span></div>
+  <div class="row"><span class="tag">wallet addr</span><span class="addr">CrsMdkbkAQRz7srMgeTe9sanoiHkeQBCKnhhVR9DAd18</span></div>
+  <div class="row"><span class="tag">status code</span><code style="background:var(--surface-2);padding:4px 8px;border-radius:6px;">SP-0012</code></div>
+  <div class="row"><span class="tag">fx rate</span><span class="sp-amount" style="font-size:15px;color:var(--fg-2)">84.50 INR / USD</span></div>
+</div>
+</body>
+</html>

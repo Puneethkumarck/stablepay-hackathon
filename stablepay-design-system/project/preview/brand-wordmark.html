@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wordmark & Mark</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { padding: 24px; background: var(--surface-1); display:flex; align-items:center; gap: 40px; }
+  .mark { width: 64px; height: 64px; border-radius: 16px; background: var(--solana-gradient); display: grid; place-items: center; box-shadow: var(--glow-solana); }
+  .mark svg { width: 40px; height: 40px; }
+  .wm { font-family: var(--font-sans); font-weight: 700; font-size: 44px; letter-spacing: -0.03em; line-height: 1; }
+  .wm .pay { background: var(--solana-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
+</style>
+</head>
+<body>
+<div class="mark">
+  <svg viewBox="0 0 40 40" fill="none">
+    <path d="M12 11 Q12 7 16 7 L24 7 Q28 7 28 11 Q28 15 24 15 L16 15 Q12 15 12 19 Q12 23 16 23 L24 23 Q28 23 28 19" stroke="#0B1020" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 29 L28 29" stroke="#0B1020" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+</div>
+<div class="wm">stable<span class="pay">pay</span></div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Radii</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { padding: 24px; background: var(--surface-1); display:flex; gap: 16px; flex-wrap: wrap; }
+  .box { width: 90px; height: 90px; background: var(--surface-2); border: 1px solid var(--border-2); display: grid; place-items:end center; padding-bottom: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--fg-2); }
+</style>
+</head>
+<body>
+<div class="box" style="border-radius: var(--radius-sm)">sm · 8</div>
+<div class="box" style="border-radius: var(--radius-md)">md · 12</div>
+<div class="box" style="border-radius: var(--radius-lg)">lg · 20</div>
+<div class="box" style="border-radius: var(--radius-xl)">xl · 28</div>
+<div class="box" style="border-radius: var(--radius-full)">full · 999</div>
+</body>
+</html>
