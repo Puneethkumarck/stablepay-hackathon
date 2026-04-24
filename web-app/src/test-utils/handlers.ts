@@ -36,4 +36,30 @@ export const handlers = [
       { status: 201 },
     );
   }),
+
+  http.post("/api/wallets/:id/fund", () =>
+    HttpResponse.json(
+      {
+        fundingId: "fund-uuid-123",
+        walletId: 1,
+        amountUsdc: "50.00",
+        status: "PAYMENT_CONFIRMED",
+        stripePaymentIntentId: "pi_123",
+        stripeClientSecret: "pi_123_secret",
+        createdAt: "2026-04-24T10:00:00Z",
+      },
+      { status: 201 },
+    ),
+  ),
+
+  http.get("/api/funding-orders/:fundingId", () =>
+    HttpResponse.json({
+      fundingId: "fund-uuid-123",
+      walletId: 1,
+      amountUsdc: "50.00",
+      status: "FUNDED",
+      stripePaymentIntentId: "pi_123",
+      createdAt: "2026-04-24T10:00:00Z",
+    }),
+  ),
 ];
