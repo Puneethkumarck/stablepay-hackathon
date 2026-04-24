@@ -104,7 +104,7 @@ class SocialLoginHandlerTest {
         var appUser = appUserBuilder().build();
         given(userRepository.save(argThat(user ->
                 user.email().equals(SOME_SOCIAL_EMAIL)
-                        && user.name().equals(SOME_USER_NAME)
+                        && SOME_USER_NAME.equals(user.name())
                         && user.createdAt().equals(SOME_AUTH_CREATED_AT))))
                 .willReturn(appUser);
 
@@ -205,7 +205,7 @@ class SocialLoginHandlerTest {
         var appUser = appUserBuilder().build();
         given(userRepository.save(argThat(user ->
                 user.email().equals(SOME_SOCIAL_EMAIL)
-                        && user.name().equals(SOME_USER_NAME)
+                        && SOME_USER_NAME.equals(user.name())
                         && user.createdAt().equals(SOME_AUTH_CREATED_AT))))
                 .willReturn(appUser);
 

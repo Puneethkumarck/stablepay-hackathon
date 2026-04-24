@@ -2,6 +2,7 @@ package com.stablepay.domain.auth.handler;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -52,8 +53,14 @@ public class SocialLoginHandler {
 
             var newUser = existingIdentity.isEmpty();
             var appUser = existingIdentity
-                    .map(existing -> userRepository.findById(existing.userId())
-                            .orElseThrow(() -> UserNotFoundException.byId(existing.userId())))
+                    .map(existing -> {
+                        var user = userRepository.findById(existing.userId())
+                                .orElseThrow(() -> UserNotFoundException.byId(existing.userId()));
+                        if (!Objects.equals(user.name(), identity.name()) && identity.name() != null) {
+                            return userRepository.save(user.toBuilder().name(identity.name()).build());
+                        }
+                        return user;
+                    })
                     .orElseGet(() -> {
                         var user = AppUser.builder()
                                 .id(UUID.randomUUID())
