@@ -65,6 +65,18 @@ describe("SendReviewPage", () => {
     expect(mockReplace).toHaveBeenCalledWith("/send");
   });
 
+  it("should redirect to /send when fxRate is not set", () => {
+    // given
+    useSendFlowStore.getState().setAmount("100");
+    useSendFlowStore.getState().setRecipient("+919876543210");
+
+    // when
+    renderWithProviders(<SendReviewPage />);
+
+    // then
+    expect(mockReplace).toHaveBeenCalledWith("/send");
+  });
+
   it("should show step indicator", () => {
     // given
     setupStore();

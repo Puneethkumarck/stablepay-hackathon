@@ -31,15 +31,15 @@ export default function SendReviewPage() {
   const fxRate = useSendFlowStore((s) => s.fxRate);
   const fxRateExpiresAt = useSendFlowStore((s) => s.fxRateExpiresAt);
   const reset = useSendFlowStore((s) => s.reset);
-  const mutation = useCreateRemittance();
+  const { mutate, isPending } = useCreateRemittance();
 
   useEffect(() => {
-    if (!amountUsdc || !recipientPhone) {
+    if (!amountUsdc || !recipientPhone || !fxRate) {
       if (!submitted.current) {
         router.replace("/send");
       }
     }
-  }, [amountUsdc, recipientPhone, router]);
+  }, [amountUsdc, recipientPhone, fxRate, router]);
 
   const parsedAmount = Number.parseFloat(amountUsdc || "0");
   const rate = fxRate ? Number.parseFloat(fxRate) : 0;
@@ -55,7 +55,7 @@ export default function SendReviewPage() {
   }, [fxRateExpiresAt]);
 
   const handleConfirm = useCallback(() => {
-    mutation.mutate(
+    mutate(
       {
         recipientPhone,
         amountUsdc,
@@ -76,9 +76,9 @@ export default function SendReviewPage() {
         },
       },
     );
-  }, [amountUsdc, recipientPhone, recipientName, mutation, reset, router]);
+  }, [amountUsdc, recipientPhone, recipientName, mutate, reset, router]);
 
-  if (!amountUsdc || !recipientPhone) return null;
+  if (!amountUsdc || !recipientPhone || !fxRate) return null;
 
   return (
     <div className="flex flex-col px-5 pt-2 pb-6">
@@ -127,10 +127,10 @@ export default function SendReviewPage() {
         <Button
           size="lg"
           className="w-full"
-          disabled={mutation.isPending || isRateExpired}
+          disabled={isPending || isRateExpired}
           onClick={handleConfirm}
         >
-          {mutation.isPending ? "Signing…" : `Confirm & send $${parsedAmount.toFixed(2)}`}
+          {isPending ? "Signing…" : `Confirm & send $${parsedAmount.toFixed(2)}`}
         </Button>
       </div>
     </div>
