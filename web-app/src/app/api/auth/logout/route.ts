@@ -12,9 +12,7 @@ export async function POST() {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch {
-      // Best-effort — clear cookies regardless
-    }
+    } catch {}
   }
 
   await clearAuthCookies();

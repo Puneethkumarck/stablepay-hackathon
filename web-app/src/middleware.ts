@@ -4,15 +4,16 @@ const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasToken = request.cookies.has("accessToken");
+  const hasAccessToken = request.cookies.has("accessToken");
+  const hasRefreshToken = request.cookies.has("refreshToken");
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
-  if (!isPublic && !hasToken) {
+  if (!isPublic && !hasAccessToken && !hasRefreshToken) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (pathname === "/login" && hasToken) {
+  if (pathname === "/login" && (hasAccessToken || hasRefreshToken)) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
 
