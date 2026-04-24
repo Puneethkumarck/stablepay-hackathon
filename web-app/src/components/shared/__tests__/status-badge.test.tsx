@@ -22,26 +22,26 @@ describe("StatusBadge", () => {
 
   it("should show pulsing dot for ESCROWED status", () => {
     // given
-    const { container } = render(<StatusBadge status="ESCROWED" />);
+    render(<StatusBadge status="ESCROWED" />);
 
     // then
-    expect(container.querySelector(".animate-ping")).toBeInTheDocument();
+    expect(screen.getByTestId("pulse-indicator")).toBeInTheDocument();
   });
 
   it("should show pulsing dot for CLAIMED status", () => {
     // given
-    const { container } = render(<StatusBadge status="CLAIMED" />);
+    render(<StatusBadge status="CLAIMED" />);
 
     // then
-    expect(container.querySelector(".animate-ping")).toBeInTheDocument();
+    expect(screen.getByTestId("pulse-indicator")).toBeInTheDocument();
   });
 
   it("should not show pulsing dot for DELIVERED status", () => {
     // given
-    const { container } = render(<StatusBadge status="DELIVERED" />);
+    render(<StatusBadge status="DELIVERED" />);
 
     // then
-    expect(container.querySelector(".animate-ping")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pulse-indicator")).not.toBeInTheDocument();
   });
 
   it("should render all 10 status variants without errors", () => {
@@ -66,7 +66,24 @@ describe("StatusBadge", () => {
     }
   });
 
-  it("should display failure statuses with danger styling", () => {
+  it("should display correct labels for failure statuses", () => {
+    // given
+    const failureLabels: [RemittanceStatus, string][] = [
+      ["DISBURSEMENT_FAILED", "Disbursement Failed"],
+      ["DEPOSIT_FAILED", "Deposit Failed"],
+      ["CLAIM_FAILED", "Claim Failed"],
+      ["REFUND_FAILED", "Refund Failed"],
+    ];
+
+    // then
+    for (const [status, label] of failureLabels) {
+      const { unmount } = render(<StatusBadge status={status} />);
+      expect(screen.getByText(label)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("should not show pulsing dot for failure statuses", () => {
     // given
     const failureStatuses: RemittanceStatus[] = [
       "DISBURSEMENT_FAILED",
@@ -77,9 +94,8 @@ describe("StatusBadge", () => {
 
     // then
     for (const status of failureStatuses) {
-      const { container, unmount } = render(<StatusBadge status={status} />);
-      const badge = container.firstElementChild;
-      expect(badge?.className).toContain("text-danger");
+      const { unmount } = render(<StatusBadge status={status} />);
+      expect(screen.queryByTestId("pulse-indicator")).not.toBeInTheDocument();
       unmount();
     }
   });

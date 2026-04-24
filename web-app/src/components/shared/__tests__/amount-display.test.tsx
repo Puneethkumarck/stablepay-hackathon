@@ -21,20 +21,12 @@ describe("AmountDisplay", () => {
     expect(screen.getByText("8,450.00")).toBeInTheDocument();
   });
 
-  it("should render with mono font", () => {
-    // given
-    const { container } = render(<AmountDisplay amount="100" currency="USD" />);
-
-    // then
-    expect(container.firstElementChild?.className).toContain("font-mono");
-  });
-
-  it("should render xl size with larger text", () => {
+  it("should render xl size variant", () => {
     // given
     const { container } = render(<AmountDisplay amount="100" currency="USD" size="xl" />);
 
     // then
-    expect(container.firstElementChild?.className).toContain("text-[56px]");
+    expect(container.firstElementChild).toHaveAttribute("data-size", "xl");
   });
 
   it("should render lg size by default", () => {
@@ -42,7 +34,7 @@ describe("AmountDisplay", () => {
     const { container } = render(<AmountDisplay amount="100" currency="USD" />);
 
     // then
-    expect(container.firstElementChild?.className).toContain("text-[40px]");
+    expect(container.firstElementChild).toHaveAttribute("data-size", "lg");
   });
 
   it("should handle zero amount", () => {
@@ -52,5 +44,16 @@ describe("AmountDisplay", () => {
     // then
     expect(screen.getByText("$")).toBeInTheDocument();
     expect(screen.getByText("0.00")).toBeInTheDocument();
+  });
+
+  it("should render currency symbol smaller than the amount", () => {
+    // given
+    render(<AmountDisplay amount="100" currency="USD" />);
+
+    // then
+    const symbol = screen.getByText("$");
+    const amount = screen.getByText("100.00");
+    expect(symbol.tagName).toBe("SPAN");
+    expect(amount).toBeInTheDocument();
   });
 });

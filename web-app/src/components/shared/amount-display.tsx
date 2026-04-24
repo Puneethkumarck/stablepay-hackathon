@@ -18,6 +18,7 @@ export function AmountDisplay({ amount, currency, size = "lg" }: AmountDisplayPr
         "font-mono tabular-nums tracking-tight text-fg-1",
         size === "xl" ? "text-[56px] leading-none" : "text-[40px] leading-none",
       )}
+      data-size={size}
     >
       <span className={cn("text-fg-3", size === "xl" ? "text-[36px]" : "text-[28px]")}>
         {symbol}

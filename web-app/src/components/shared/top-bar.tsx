@@ -37,7 +37,9 @@ export function TopBar({ title, onBack, right }: TopBarProps) {
         </button>
       )}
       <div className="text-[15px] font-semibold text-fg-1">{title}</div>
-      {right || (
+      {right !== undefined ? (
+        right
+      ) : (
         <button
           type="button"
           className={cn(
