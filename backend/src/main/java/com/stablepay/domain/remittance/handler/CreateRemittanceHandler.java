@@ -41,7 +41,7 @@ public class CreateRemittanceHandler {
     private final Optional<RemittanceWorkflowStarter> workflowStarter;
     private final RemittanceStatusEventRepository remittanceStatusEventRepository;
 
-    public Remittance handle(UUID senderId, String recipientPhone, BigDecimal amountUsdc) {
+    public Remittance handle(UUID senderId, String recipientPhone, BigDecimal amountUsdc, String recipientName) {
         var wallet = walletRepository.findByUserId(senderId)
                 .orElseThrow(() -> WalletNotFoundException.byUserId(senderId));
 
@@ -60,6 +60,7 @@ public class CreateRemittanceHandler {
                 .fxRate(fxQuote.rate())
                 .status(RemittanceStatus.INITIATED)
                 .smsNotificationFailed(false)
+                .recipientName(recipientName)
                 .build();
 
         var saved = remittanceRepository.save(remittance);

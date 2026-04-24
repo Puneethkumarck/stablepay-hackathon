@@ -36,6 +36,7 @@ class RemittanceApiMapperTest {
                 .smsNotificationFailed(false)
                 .createdAt(remittance.createdAt())
                 .updatedAt(remittance.updatedAt())
+                .recipientName(remittance.recipientName())
                 .build();
 
         assertThat(response)

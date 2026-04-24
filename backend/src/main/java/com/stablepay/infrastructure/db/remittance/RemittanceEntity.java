@@ -83,4 +83,7 @@ public class RemittanceEntity {
 
     @Column(name = "payout_failure_reason", length = 500)
     private String payoutFailureReason;
+
+    @Column(name = "recipient_name", length = 100)
+    private String recipientName;
 }
