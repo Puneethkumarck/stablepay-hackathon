@@ -1,6 +1,12 @@
 "use client";
 
-export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
+export default function GlobalError({
+  error,
+  unstable_retry,
+}: {
+  error: Error & { digest?: string };
+  unstable_retry: () => void;
+}) {
   return (
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-[#070B1A] text-white font-sans">
@@ -11,7 +17,7 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
           </p>
           <button
             type="button"
-            onClick={reset}
+            onClick={() => unstable_retry()}
             className="rounded-xl bg-[#9945FF] px-6 py-3 text-sm font-medium text-white"
           >
             Try again

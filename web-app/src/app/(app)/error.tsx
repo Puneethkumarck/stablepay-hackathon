@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default function AppError({ error, reset }: { error: Error; reset: () => void }) {
+export default function AppError({
+  error,
+  unstable_retry,
+}: {
+  error: Error & { digest?: string };
+  unstable_retry: () => void;
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
       <div className="text-center space-y-4">
@@ -13,7 +19,7 @@ export default function AppError({ error, reset }: { error: Error; reset: () => 
         <h1 className="text-xl font-semibold text-fg-1">Something went wrong</h1>
         <p className="text-sm text-fg-3">{error.message || "We couldn't load this page."}</p>
         <div className="flex flex-col gap-2">
-          <Button onClick={reset}>Try again</Button>
+          <Button onClick={() => unstable_retry()}>Try again</Button>
           <Link
             href="/home"
             className="inline-flex items-center justify-center rounded-lg px-2.5 h-8 text-sm font-medium text-fg-2 hover:bg-muted hover:text-fg-1 transition-colors"
