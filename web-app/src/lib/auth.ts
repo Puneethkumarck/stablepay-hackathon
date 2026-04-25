@@ -4,11 +4,19 @@ import { redirect } from "next/navigation";
 const BACKEND_URL = process.env.STABLEPAY_BACKEND_URL ?? "http://localhost:8080";
 const ACCESS_TOKEN_COOKIE = "accessToken";
 const REFRESH_TOKEN_COOKIE = "refreshToken";
+const USER_DATA_COOKIE = "userData";
 
 interface TokenPair {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+}
+
+export interface UserData {
+  id: string;
+  email: string;
+  name?: string | null;
+  createdAt: string;
 }
 
 export async function getAccessToken(): Promise<string | undefined> {
@@ -73,4 +81,30 @@ export async function clearAuthCookies(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(ACCESS_TOKEN_COOKIE);
   cookieStore.delete(REFRESH_TOKEN_COOKIE);
+  cookieStore.delete(USER_DATA_COOKIE);
+}
+
+export async function setUserDataCookie(user: UserData): Promise<void> {
+  const cookieStore = await cookies();
+  const secure = process.env.NODE_ENV === "production";
+
+  cookieStore.set(USER_DATA_COOKIE, JSON.stringify(user), {
+    httpOnly: true,
+    secure,
+    sameSite: "strict",
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60,
+  });
+}
+
+export async function getUserData(): Promise<UserData | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(USER_DATA_COOKIE)?.value;
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as UserData;
+  } catch {
+    return null;
+  }
 }

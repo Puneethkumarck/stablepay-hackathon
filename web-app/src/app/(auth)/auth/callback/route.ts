@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { setAuthCookies } from "@/lib/auth";
+import { setAuthCookies, setUserDataCookie, type UserData } from "@/lib/auth";
 
 const BACKEND_URL = process.env.STABLEPAY_BACKEND_URL ?? "http://localhost:8080";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -14,6 +14,7 @@ interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  user: UserData | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -67,6 +68,10 @@ export async function GET(request: NextRequest) {
       refreshToken: authData.refreshToken,
       expiresIn: authData.expiresIn,
     });
+
+    if (authData.user) {
+      await setUserDataCookie(authData.user);
+    }
 
     return NextResponse.redirect(new URL("/home", request.url));
   } catch {
