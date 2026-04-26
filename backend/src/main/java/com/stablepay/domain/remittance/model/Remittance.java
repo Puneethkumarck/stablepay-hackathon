@@ -26,7 +26,8 @@ public record Remittance(
     Instant expiresAt,
     String payoutId,
     String payoutProviderStatus,
-    String payoutFailureReason
+    String payoutFailureReason,
+    String recipientName
 ) {
     public Remittance {
         requireNonNull(remittanceId, "remittanceId cannot be null");

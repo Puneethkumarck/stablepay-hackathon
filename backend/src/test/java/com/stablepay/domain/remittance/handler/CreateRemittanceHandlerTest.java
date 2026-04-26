@@ -4,6 +4,7 @@ import static com.stablepay.testutil.FxQuoteFixtures.fxQuoteBuilder;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_FX_RATE;
+import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_NAME;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_PHONE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_SENDER_ID;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
@@ -87,7 +88,7 @@ class CreateRemittanceHandlerTest {
 
         var fxQuote = fxQuoteBuilder().build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
         given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
@@ -101,7 +102,7 @@ class CreateRemittanceHandlerTest {
                 .willAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        var result = createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC);
+        var result = createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC, SOME_RECIPIENT_NAME);
 
         // then
         var expected = result.toBuilder()
@@ -113,6 +114,7 @@ class CreateRemittanceHandlerTest {
                 .fxRate(SOME_FX_RATE)
                 .status(RemittanceStatus.INITIATED)
                 .smsNotificationFailed(false)
+                .recipientName(SOME_RECIPIENT_NAME)
                 .build();
 
         assertThat(result)
@@ -161,7 +163,7 @@ class CreateRemittanceHandlerTest {
 
         var fxQuote = fxQuoteBuilder().build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
         given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
@@ -185,7 +187,7 @@ class CreateRemittanceHandlerTest {
 
         // when / then
         assertThatThrownBy(() -> createRemittanceHandler.handle(
-                SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
+                SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC, SOME_RECIPIENT_NAME))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Temporal unavailable");
     }
@@ -204,7 +206,7 @@ class CreateRemittanceHandlerTest {
 
         var fxQuote = fxQuoteBuilder().build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
         given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
@@ -218,7 +220,7 @@ class CreateRemittanceHandlerTest {
                 .willAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        var result = handler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC);
+        var result = handler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC, SOME_RECIPIENT_NAME);
 
         // then
         var expected = result.toBuilder()
@@ -236,11 +238,11 @@ class CreateRemittanceHandlerTest {
     @Test
     void shouldThrowWhenWalletNotFound() {
         // given
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.empty());
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> createRemittanceHandler.handle(
-                SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
+                SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC, SOME_RECIPIENT_NAME))
                 .isInstanceOf(WalletNotFoundException.class)
                 .hasMessageContaining("SP-0006");
 
@@ -255,11 +257,11 @@ class CreateRemittanceHandlerTest {
                 .totalBalance(BigDecimal.valueOf(50))
                 .build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         // when / then
         assertThatThrownBy(() -> createRemittanceHandler.handle(
-                SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
+                SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC, SOME_RECIPIENT_NAME))
                 .isInstanceOf(InsufficientBalanceException.class)
                 .hasMessageContaining("SP-0002");
 

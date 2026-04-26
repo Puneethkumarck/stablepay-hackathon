@@ -61,7 +61,7 @@ public class RemittanceController {
             @AuthenticationPrincipal AuthPrincipal principal,
             @Valid @RequestBody CreateRemittanceRequest request) {
         var remittance = createRemittanceHandler.handle(
-                principal.id(), request.recipientPhone(), request.amountUsdc());
+                principal.id(), request.recipientPhone(), request.amountUsdc(), request.recipientName());
         return remittanceApiMapper.toResponse(remittance);
     }
 

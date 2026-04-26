@@ -122,6 +122,11 @@ public class EscrowInstructionBuilder {
         return new BaseInstruction(data, keys, solanaProperties.escrowProgramId());
     }
 
+    public PublicKey deriveEscrowPda(UUID remittanceId) {
+        var remittanceIdPubkey = uuidToPublicKey(remittanceId);
+        return deriveEscrowPda(remittanceIdPubkey.bytes());
+    }
+
     public PublicKey deriveEscrowPda(byte[] remittanceIdPubkeyBytes) {
         try {
             return findProgramDerivedAddress(

@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StablePay — Flow v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f7f5ef;
+    --paper-2: #ffffff;
+    --ink: #0a0a0a;
+    --ink-2: #3b3b3b;
+    --muted: #8a8a85;
+    --hair: #e3ded2;
+    --hair-2: #efebe2;
+    --accent: #0d5d3b;
+    --accent-soft: #e8f1ec;
+    --warn: #9a6a00;
+    --warn-soft: #faf2de;
+    --danger: #8f2b2b;
+    --danger-soft: #f7e8e8;
+    --info: #25508f;
+    --info-soft: #e7eef8;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: "Instrument Serif", "Times New Roman", Times, serif; font-weight: 400; }
+
+  /* Layout */
+  .page { max-width: 1280px; margin: 0 auto; padding: 80px 32px 120px; }
+  .hairline { height: 1px; background: var(--hair); width: 100%; margin: 64px 0; }
+
+  /* Header */
+  header .eyebrow {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+  }
+  header h1 {
+    font-family: "Instrument Serif", serif;
+    font-size: 72px;
+    line-height: 1.0;
+    font-weight: 400;
+    margin: 12px 0 20px;
+    letter-spacing: -1.5px;
+  }
+  header h1 em { font-style: italic; color: var(--accent); }
+  header p.lede { font-size: 18px; color: var(--ink-2); max-width: 640px; margin: 0; line-height: 1.55; }
+
+  /* Meta bar */
+  .meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 32px;
+    padding: 32px 0;
+    margin-top: 48px;
+    border-top: 1px solid var(--hair);
+    border-bottom: 1px solid var(--hair);
+  }
+  .meta .k { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  .meta .v { font-size: 14px; color: var(--ink); margin-top: 6px; }
+  .meta .v code {
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 12px; background: var(--paper-2);
+    padding: 2px 6px; border-radius: 3px; border: 1px solid var(--hair);
+  }
+
+  /* TOC */
+  .toc { margin-top: 48px; display: flex; gap: 32px; flex-wrap: wrap; }
+  .toc a {
+    color: var(--ink-2); text-decoration: none;
+    font-size: 13px; font-weight: 500;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .toc a:hover { border-color: var(--ink); color: var(--ink); }
+  .toc .num { font-family: "Instrument Serif", serif; color: var(--muted); margin-right: 4px; }
+
+  /* Section */
+  section { margin-top: 96px; }
+  section .section-eyebrow {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+  }
+  section h2 {
+    font-family: "Instrument Serif", serif;
+    font-size: 44px; font-weight: 400;
+    margin: 8px 0 8px;
+    letter-spacing: -0.8px;
+  }
+  section .section-desc { color: var(--ink-2); max-width: 640px; margin: 0 0 40px; font-size: 15px; }
+
+  /* Flow grid */
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 48px 24px;
+  }
+  .step-head {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--hair);
+    padding-bottom: 10px;
+  }
+  .step-head .id { font-family: "Instrument Serif", serif; font-size: 22px; color: var(--muted); }
+  .step-head .title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .step-caption { font-size: 12px; color: var(--ink-2); margin-top: 10px; line-height: 1.55; }
+  .step-endpoint {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 10px; letter-spacing: 0;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 3px 8px; border-radius: 3px;
+  }
+  .step-endpoint.proposed { color: var(--warn); background: var(--warn-soft); }
+  .step-endpoint.sdk { color: var(--info); background: var(--info-soft); }
+
+  /* Phone frame */
+  .phone {
+    background: #111;
+    border-radius: 38px;
+    padding: 8px;
+    max-width: 240px;
+    margin: 0 auto;
+    aspect-ratio: 9 / 19.5;
+    position: relative;
+  }
+  .phone::before {
+    content: "";
+    position: absolute; top: 13px; left: 50%;
+    transform: translateX(-50%);
+    width: 76px; height: 18px; border-radius: 10px;
+    background: #000; z-index: 2;
+  }
+  .screen {
+    background: var(--paper-2);
+    border-radius: 30px;
+    height: 100%;
+    display: flex; flex-direction: column;
+    padding: 48px 18px 20px;
+    overflow: hidden;
+    position: relative;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .screen.cream { background: var(--paper); }
+  .screen.imessage { background: #f2f2f7; padding-top: 44px; }
+
+  /* Browser frame */
+  .browser {
+    max-width: 340px; margin: 0 auto;
+    background: #eeeae0;
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 1px 0 var(--hair), 0 30px 60px -30px rgba(0,0,0,0.15);
+  }
+  .browser-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 0 4px; }
+  .browser-dots { display: flex; gap: 4px; }
+  .browser-dots span { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: #d4cebe; }
+  .browser-url {
+    flex: 1;
+    background: #faf7ef;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 10px;
+    color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .browser-content {
+    background: #fff;
+    border-radius: 6px;
+    padding: 24px 20px;
+    min-height: 380px;
+    display: flex; flex-direction: column;
+  }
+
+  /* Common inner elements */
+  .tiny { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+  .num-xl { font-family: "Instrument Serif", serif; font-size: 42px; font-weight: 400; letter-spacing: -1px; line-height: 1; }
+  .num-lg { font-family: "Instrument Serif", serif; font-size: 32px; font-weight: 400; letter-spacing: -0.5px; line-height: 1; }
+  .num-md { font-family: "Instrument Serif", serif; font-size: 22px; font-weight: 400; letter-spacing: -0.3px; line-height: 1; }
+  .mono { font-family: ui-monospace, "SF Mono", monospace; font-size: 10px; color: var(--muted); }
+  .spacer { flex: 1; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--hair-2); }
+  .row:last-child { border-bottom: none; }
+  .row .k { font-size: 11px; color: var(--muted); }
+  .row .v { font-size: 12px; color: var(--ink); font-weight: 500; }
+
+  /* Buttons */
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 14px;
+    font-size: 13px; font-weight: 500;
+    border-radius: 999px;
+    margin-top: 8px;
+    cursor: default;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+  }
+  .btn.primary { background: var(--ink); color: var(--paper-2); border-color: var(--ink); }
+  .btn.ghost { border-color: var(--hair); }
+  .btn.provider {
+    border-color: var(--hair);
+    justify-content: flex-start;
+    font-weight: 500;
+  }
+  .btn.provider.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.web {
+    padding: 11px 16px;
+    border-radius: 999px;
+    font-size: 13px; font-weight: 500;
+    margin-top: 12px;
+    background: var(--ink); color: #fff; border: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+  }
+  .btn.web.ghost { background: #fff; color: var(--ink); border: 1px solid var(--hair); }
+
+  /* Pills */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10px; font-weight: 500;
+    border: 1px solid transparent;
+    letter-spacing: 0.3px;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.ok { background: var(--accent-soft); color: var(--accent); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.err { background: var(--danger-soft); color: var(--danger); }
+  .pill.info { background: var(--info-soft); color: var(--info); }
+  .pill.neutral { background: var(--hair-2); color: var(--muted); }
+
+  /* Spinner */
+  .spinner {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--hair);
+    border-top-color: var(--ink);
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Timeline */
+  .timeline { margin-top: 6px; }
+  .tl-item { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; font-size: 11px; position: relative; }
+  .tl-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--hair); margin-top: 4px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .tl-dot::after {
+    content: ""; position: absolute; top: 10px; left: 3px;
+    width: 1px; height: 20px; background: var(--hair-2);
+  }
+  .tl-item:last-child .tl-dot::after { display: none; }
+  .tl-item.done .tl-dot { background: var(--accent); }
+  .tl-item.active .tl-dot { background: var(--ink); box-shadow: 0 0 0 3px var(--hair-2); }
+  .tl-item .tl-label { font-weight: 500; color: var(--ink); letter-spacing: 0; }
+  .tl-item:not(.done):not(.active) .tl-label { color: var(--muted); }
+  .tl-item .tl-time { color: var(--muted); font-size: 10px; margin-top: 2px; font-family: ui-monospace, monospace; }
+
+  /* Input */
+  .input {
+    border: none;
+    border-bottom: 1px solid var(--ink);
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--ink);
+    margin-top: 6px;
+    width: 100%;
+    background: transparent;
+    font-family: inherit;
+  }
+  .input.error { border-color: var(--danger); }
+  .error-msg { color: var(--danger); font-size: 11px; margin-top: 4px; }
+
+  /* SMS */
+  .sms {
+    background: #fff;
+    border-radius: 16px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #111;
+    max-width: 88%;
+    margin: 6px 0;
+    line-height: 1.45;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+  }
+  .sms-link { color: #007aff; word-break: break-all; }
+
+  /* Stripe sheet */
+  .stripe {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    padding: 16px;
+    height: 72%;
+    border-top: 2px solid #635BFF;
+  }
+  .stripe-title { font-size: 13px; font-weight: 700; color: #635BFF; margin-bottom: 10px; font-family: "Inter", sans-serif; }
+  .stripe-field { font-size: 11px; color: #6b7280; margin-top: 10px; }
+  .stripe-input { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; margin-top: 4px; font-size: 12px; color: #111; }
+
+  /* Contract table */
+  .contract {
+    margin-top: 32px;
+    border-top: 1px solid var(--hair);
+    padding-top: 24px;
+  }
+  .contract h3 { font-family: "Instrument Serif", serif; font-size: 28px; font-weight: 400; margin: 0 0 16px; letter-spacing: -0.3px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--hair); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+  td { padding: 12px; border-bottom: 1px solid var(--hair-2); vertical-align: top; }
+  td.method { font-family: ui-monospace, monospace; color: var(--accent); font-weight: 600; width: 60px; font-size: 11px; }
+  td.path { font-family: ui-monospace, monospace; color: var(--ink); font-size: 11px; }
+  td.codes { font-family: ui-monospace, monospace; font-size: 10px; color: var(--muted); }
+  td code { background: var(--hair-2); padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+
+  footer {
+    margin-top: 120px; padding-top: 32px;
+    border-top: 1px solid var(--hair);
+    color: var(--muted); font-size: 12px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+
+  /* Google provider logo */
+  .g-icon {
+    width: 14px; height: 14px; display: inline-block; vertical-align: middle;
+    background: conic-gradient(from 0deg, #4285F4, #EA4335, #FBBC05, #34A853, #4285F4);
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- =========== HEADER =========== -->
+  <header>
+    <div class="eyebrow">StablePay · Flow Mockup · v2.0</div>
+    <h1>Send dollars to India.<br/><em>In seconds.</em></h1>
+    <p class="lede">End-to-end user flows — sender mobile, recipient web. Every screen references a real backend endpoint from the OpenAPI snapshot. Only auth is proposed; the rest is wired and runs on devnet.</p>
+
+    <div class="meta">
+      <div><div class="k">API Spec</div><div class="v"><code>docs/api/openapi.json</code><br/><span class="mono">OpenAPI 3.1.0 · v0.1.0</span></div></div>
+      <div><div class="k">Escrow Program</div><div class="v"><span class="mono">7C2zsbhgDnxQuC1Nd2rzXQfsfnKazQWFpoUJNqS8zWij</span><br/><span class="pill ok">devnet</span></div></div>
+      <div><div class="k">E2E Status</div><div class="v">6 of 10 test customers reached <code>DELIVERED</code><br/><span class="mono">docs/E2E_10_CUSTOMER_RUN.md</span></div></div>
+      <div><div class="k">Blocking Work</div><div class="v">Social login + Spring Security<br/><span class="pill warn">not implemented</span></div></div>
+    </div>
+
+    <nav class="toc">
+      <a href="#s1"><span class="num">01</span> Onboarding</a>
+      <a href="#s2"><span class="num">02</span> Funding</a>
+      <a href="#s3"><span class="num">03</span> Remittance</a>
+      <a href="#s4"><span class="num">04</span> Claim</a>
+      <a href="#s5"><span class="num">05</span> Edges</a>
+      <a href="#s6"><span class="num">06</span> Contract</a>
+    </nav>
+  </header>
+
+
+  <!-- =========== SECTION 1 — ONBOARDING =========== -->
+  <section id="s1">
+    <div class="section-eyebrow">01 — Sender onboarding</div>
+    <h2>Sign in. Wallet appears.</h2>
+    <p class="section-desc">No forms, no seed phrase. On first login, the backend calls the MPC sidecar (2-of-2 Ed25519 threshold keygen) and returns a Solana address. Auth layer is the one piece not yet implemented.</p>
+
+    <div class="flow">
+
+      <!-- A1 Splash -->
+      <div>
+        <div class="step-head"><span class="id">A1</span><span class="title">Splash</span></div>
+        <div class="phone"><div class="screen cream">
+          <div class="spacer"></div>
+          <div style="text-align:center">
+            <div class="serif" style="font-size:36px;letter-spacing:-1px">StablePay</div>
+            <div class="tiny" style="margin-top:10px">Send USD to India</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn primary">Get started →</div>
+        </div></div>
+        <div class="step-caption">Cold-start. Token probe from secure storage.</div>
+      </div>
+
+      <!-- A2 Sign in -->
+      <div>
+        <div class="step-head"><span class="id">A2</span><span class="title">Sign in</span></div>
+        <div class="phone"><div class="screen">
+          <div class="tiny">Sign in to continue</div>
+          <div class="serif" style="font-size:28px;margin-top:8px;line-height:1.1">Create your<br/>wallet.</div>
+          <div class="spacer"></div>
+          <div class="btn provider"><span class="g-icon"></span> Continue with Google</div>
+          <div class="btn provider dark"> Continue with Apple</div>
+          <div class="btn provider">Use phone number</div>
+          <div class="spacer"></div>
+          <div class="mono" style="text-align:center;font-size:9px;color:var(--muted)">By continuing you accept our Terms.</div>
+        </div></div>
+        <div class="step-caption">OAuth via <code>expo-auth-session</code>. Provider returns <code>idToken</code>.</div>
+        <div class="step-endpoint proposed">POST /api/auth/social — proposed</div>
+      </div>
+
+      <!-- A3 Wallet creation -->
+      <div>
+        <div class="step-head"><span class="id">A3</span><span class="title">Creating wallet</span></div>
+        <div class="phone"><div class="screen">
+          <div class="tiny">MPC keygen</div>
+          <div class="serif" style="font-size:28px;margin-top:8px">One moment…</div>
+          <div class="spacer"></div>
+          <div style="display:flex;align-items:center;gap:12px"><div class="spinner"></div><div style="font-size:12px">Generating your keyshares</div></div>
+          <div style="margin-top:20px;font-size:11px;color:var(--muted);line-height:1.8">
+            <div>✓ &nbsp;Signed in with Google</div>
+            <div>✓ &nbsp;Account provisioned</div>
+            <div style="color:var(--ink)">→ Threshold EdDSA · 2-of-2</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="mono" style="font-size:9px;color:var(--muted)">No seed phrase ever leaves your device.</div>
+        </div></div>
+        <div class="step-caption">Backend calls <code>MpcWalletClient</code> over gRPC, persists <code>solanaAddress</code>.</div>
+        <div class="step-endpoint">POST /api/wallets → 201 WalletResponse</div>
+      </div>
+
+      <!-- A4 Home empty -->
+      <div>
+        <div class="step-head"><span class="id">A4</span><span class="title">Home — empty</span></div>
+        <div class="phone"><div class="screen">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="serif" style="font-size:18px">StablePay</div>
+            <div style="width:24px;height:24px;border-radius:50%;background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:11px">P</div>
+          </div>
+          <div class="tiny" style="margin-top:32px">Available balance</div>
+          <div class="num-xl" style="margin-top:4px">$0.00</div>
+          <div class="mono" style="margin-top:6px">USDC · devnet</div>
+          <div style="margin-top:20px;padding:10px 0;border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2)">
+            <div class="tiny">solanaAddress</div>
+            <div class="mono" style="margin-top:4px;color:var(--ink);word-break:break-all">7xKXzd6RgJ9QvmL…9Qvm</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn primary">Fund wallet</div>
+        </div></div>
+        <div class="step-caption">Fields from <code>WalletResponse</code>. Empty state prompts funding.</div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- =========== SECTION 2 — FUNDING =========== -->
+  <section id="s2">
+    <div class="section-eyebrow">02 — Fund wallet</div>
+    <h2>Top up with a card.</h2>
+    <p class="section-desc">Stripe Payment Intents issued server-side. Mobile confirms with the returned <code>stripeClientSecret</code>. Webhook flips the funding order from <code>PAYMENT_CONFIRMED</code> to <code>FUNDED</code> once USDC lands in the user's ATA.</p>
+
+    <div class="flow">
+
+      <!-- B1 -->
+      <div>
+        <div class="step-head"><span class="id">B1</span><span class="title">Enter amount</span></div>
+        <div class="phone"><div class="screen">
+          <div class="tiny">← Back</div>
+          <div class="serif" style="font-size:24px;margin-top:16px">Fund wallet</div>
+          <div class="mono" style="margin-top:4px">Visa •••• 4242</div>
+          <div style="margin-top:32px;text-align:center">
+            <div class="tiny">amount (USD)</div>
+            <div class="num-xl" style="margin-top:6px">$250<span style="color:var(--muted)">.00</span></div>
+            <div class="mono" style="margin-top:6px">min 1 · max 10,000</div>
+          </div>
+          <div style="margin-top:28px">
+            <div class="row"><span class="k">Stripe fee</span><span class="v">$7.55</span></div>
+            <div class="row"><span class="k">Total</span><span class="v">$257.55</span></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn primary">Continue</div>
+        </div></div>
+        <div class="step-caption">Validation <code>min=1.0 max=10000.0</code> from <code>FundWalletRequest</code>.</div>
+        <div class="step-endpoint">POST /api/wallets/{id}/fund → 201 FundingOrderResponse</div>
+      </div>
+
+      <!-- B2 Stripe sheet -->
+      <div>
+        <div class="step-head"><span class="id">B2</span><span class="title">Stripe sheet</span></div>
+        <div class="phone"><div class="screen cream" style="padding:48px 14px 0">
+          <div class="tiny">PaymentIntent</div>
+          <div class="mono" style="font-size:9px;color:var(--muted);word-break:break-all">pi_3PQk…secret_Z8m</div>
+          <div class="stripe">
+            <div class="stripe-title">Stripe</div>
+            <div style="font-size:14px;font-weight:700;color:#111">Pay $257.55</div>
+            <div style="font-size:11px;color:#6b7280">to StablePay Inc.</div>
+            <div class="stripe-field">Card number</div>
+            <div class="stripe-input">4242 4242 4242 4242</div>
+            <div style="display:flex;gap:6px">
+              <div style="flex:1"><div class="stripe-field">Expiry</div><div class="stripe-input">12/28</div></div>
+              <div style="flex:1"><div class="stripe-field">CVC</div><div class="stripe-input">123</div></div>
+            </div>
+            <div style="background:#635BFF;color:#fff;padding:10px;text-align:center;border-radius:999px;margin-top:14px;font-weight:600;font-size:13px">Pay</div>
+          </div>
+        </div></div>
+        <div class="step-caption">Confirmation with native Stripe SDK. No card details hit our server.</div>
+        <div class="step-endpoint sdk">Stripe React Native SDK</div>
+      </div>
+
+      <!-- B3 Processing -->
+      <div>
+        <div class="step-head"><span class="id">B3</span><span class="title">Processing</span></div>
+        <div class="phone"><div class="screen">
+          <div class="tiny">Funding wallet</div>
+          <div class="serif" style="font-size:24px;margin-top:8px">~10 seconds</div>
+          <div style="margin-top:24px">
+            <div class="row"><span class="k">fundingId</span><span class="v mono" style="font-size:10px">a3f0…c12</span></div>
+            <div class="row"><span class="k">amountUsdc</span><span class="v">250.00</span></div>
+          </div>
+          <div class="timeline" style="margin-top:16px">
+            <div class="tl-item done"><div class="tl-dot"></div><div><div class="tl-label">PAYMENT_CONFIRMED</div><div class="tl-time">19:08:04 UTC</div></div></div>
+            <div class="tl-item active"><div class="tl-dot"></div><div><div class="tl-label">Minting to wallet…</div><div class="tl-time">Temporal running</div></div></div>
+            <div class="tl-item"><div class="tl-dot"></div><div><div class="tl-label">FUNDED</div></div></div>
+          </div>
+          <div class="spacer"></div>
+        </div></div>
+        <div class="step-caption">2s poll interval. Webhook drives state.</div>
+        <div class="step-endpoint">GET /api/funding-orders/{fundingId}</div>
+      </div>
+
+      <!-- B4 Funded -->
+      <div>
+        <div class="step-head"><span class="id">B4</span><span class="title">Funded</span></div>
+        <div class="phone"><div class="screen">
+          <div class="spacer"></div>
+          <div style="text-align:center">
+            <div class="tiny">Wallet funded</div>
+            <div class="num-xl serif" style="margin-top:10px;color:var(--accent)">+$250.00</div>
+            <div class="mono" style="margin-top:6px">USDC</div>
+            <div style="margin-top:14px"><span class="pill ok">FUNDED</span></div>
+          </div>
+          <div style="margin-top:32px">
+            <div class="row"><span class="k">stripePaymentIntent</span><span class="v mono" style="font-size:10px">pi_3PQk…</span></div>
+            <div class="row"><span class="k">createdAt</span><span class="v mono" style="font-size:10px">19:08:04</span></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn primary">Send money</div>
+          <div class="btn ghost">Back to home</div>
+        </div></div>
+        <div class="step-caption">Terminal status. <code>FundingStatus</code>: <code>PAYMENT_CONFIRMED → FUNDED</code>.</div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- =========== SECTION 3 — REMITTANCE =========== -->
+  <section id="s3">
+    <div class="section-eyebrow">03 — Create remittance</div>
+    <h2>A recipient, an amount.</h2>
+    <p class="section-desc">FX rate locks at submission. USDC is escrowed in a Solana PDA while the Temporal workflow orchestrates SMS, claim waits, and final UPI payout via Razorpay.</p>
+
+    <div class="flow">
+
+      <!-- C1 FX -->
+      <div>
+        <div class="step-head"><span class="id">C1</span><span class="title">FX rate</span></div>
+        <div class="phone"><div class="screen">
+          <div class="tiny">USD → INR · today</div>
+          <div class="num-xl serif" style="margin-top:10px">₹83.42</div>
+          <div style="margin-top:24px">
+            <div class="row"><span class="k">source</span><span class="v mono" style="font-size:10px">open.er-api.com</span></div>
+            <div class="row"><span class="k">timestamp</span><span class="v mono" style="font-size:10px">19:10:02 UTC</span></div>
+            <div class="row"><span class="k">expiresAt</span><span class="v mono" style="font-size:10px">+60s</span></div>
+          </div>
+          <div style="margin-top:20px;font-size:11px;color:var(--ink-2);line-height:1.55">Rate locks at remittance creation. Redis-cached.</div>
+          <div class="spacer"></div>
+          <div class="btn primary">Use this rate</div>
+        </div></div>
+        <div class="step-caption">Fields from <code>FxRateResponse</code>.</div>
+        <div class="step-endpoint">GET /api/fx/USD-INR → 200</div>
+      </div>
+
+      <!-- C2 Compose -->
+      <div>
+        <div class="step-head"><span class="id">C2</span><span class="title">Compose</span></div>
+        <div class="phone"><div class="screen">
+          <div class="serif" style="font-size:24px">Send money</div>
+          <div style="margin-top:24px">
+            <div class="tiny">recipientPhone</div>
+            <input class="input" value="+91 98765 43210" readonly />
+          </div>
+          <div style="margin-top:14px">
+            <div class="tiny">amountUsdc</div>
+            <input class="input" value="100.00" readonly />
+          </div>
+          <div style="margin-top:20px;padding:14px;background:var(--paper);border-radius:6px">
+            <div class="row" style="border:none;padding:4px 0"><span class="k">Rate</span><span class="v">1 USD = ₹83.42</span></div>
+            <div class="row" style="border:none;padding:4px 0"><span class="k">Recipient gets</span><span class="v serif" style="font-size:18px;color:var(--accent)">₹8,342</span></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn primary">Confirm & send</div>
+        </div></div>
+        <div class="step-caption">Body: <code>senderId</code>, <code>recipientPhone</code>, <code>amountUsdc</code>.</div>
+        <div class="step-endpoint">POST /api/remittances → 201 RemittanceResponse</div>
+      </div>
+
+      <!-- C3 Submitting -->
+      <div>
+        <div class="step-head"><span class="id">C3</span><span class="title">Submitting</span></div>
+        <div class="phone"><div class="screen">
+          <div class="spacer"></div>
+          <div style="text-align:center">
+            <div class="spinner" style="margin:0 auto"></div>
+            <div class="serif" style="font-size:22px;margin-top:16px">Sending</div>
+            <div class="mono" style="margin-top:6px">Funding escrow PDA</div>
+          </div>
+          <div class="spacer"></div>
+        </div></div>
+        <div class="step-caption">Balance reserved, FX locked, Temporal workflow starts.</div>
+      </div>
+
+      <!-- C4 Tracker -->
+      <div>
+        <div class="step-head"><span class="id">C4</span><span class="title">Tracker</span></div>
+        <div class="phone"><div class="screen">
+          <div class="tiny">remittanceId</div>
+          <div class="mono" style="color:var(--ink);word-break:break-all;margin-top:2px">bf0c9e4a-…-a11b</div>
+          <div style="margin-top:14px">
+            <div class="row"><span class="k">amountUsdc</span><span class="v">$100.00</span></div>
+            <div class="row"><span class="k">amountInr</span><span class="v">₹8,342.00</span></div>
+            <div class="row"><span class="k">fxRate</span><span class="v">83.42</span></div>
+            <div class="row"><span class="k">expiresAt</span><span class="v">47h 58m</span></div>
+          </div>
+          <div class="timeline" style="margin-top:10px">
+            <div class="tl-item done"><div class="tl-dot"></div><div><div class="tl-label">INITIATED</div><div class="tl-time">19:12:02</div></div></div>
+            <div class="tl-item done"><div class="tl-dot"></div><div><div class="tl-label">ESCROWED</div><div class="tl-time">19:12:18</div></div></div>
+            <div class="tl-item active"><div class="tl-dot"></div><div><div class="tl-label">Awaiting claim</div><div class="tl-time">SMS sent ✓</div></div></div>
+            <div class="tl-item"><div class="tl-dot"></div><div><div class="tl-label">CLAIMED</div></div></div>
+            <div class="tl-item"><div class="tl-dot"></div><div><div class="tl-label">DELIVERED</div></div></div>
+          </div>
+          <div class="spacer"></div>
+        </div></div>
+        <div class="step-caption"><code>RemittanceStatus</code>: INITIATED → ESCROWED → CLAIMED → DELIVERED.</div>
+        <div class="step-endpoint">GET /api/remittances/{remittanceId}</div>
+      </div>
+
+      <!-- C5 History -->
+      <div>
+        <div class="step-head"><span class="id">C5</span><span class="title">History</span></div>
+        <div class="phone"><div class="screen">
+          <div class="serif" style="font-size:22px">Transfers</div>
+          <div class="mono" style="margin-top:2px">page 0</div>
+          <div style="margin-top:16px">
+            <div class="row"><div><div style="font-size:12px">+91 98765 43210</div><div class="mono" style="color:var(--muted)">Today</div></div><div style="text-align:right"><div class="v serif" style="font-size:16px">$100</div><span class="pill warn" style="font-size:9px">CLAIMED</span></div></div>
+            <div class="row"><div><div style="font-size:12px">+91 90000 12345</div><div class="mono" style="color:var(--muted)">Apr 18</div></div><div style="text-align:right"><div class="v serif" style="font-size:16px">$50</div><span class="pill ok" style="font-size:9px">DELIVERED</span></div></div>
+            <div class="row"><div><div style="font-size:12px">+91 87777 22222</div><div class="mono" style="color:var(--muted)">Apr 12</div></div><div style="text-align:right"><div class="v serif" style="font-size:16px">$200</div><span class="pill err" style="font-size:9px">REFUNDED</span></div></div>
+          </div>
+          <div class="spacer"></div>
+        </div></div>
+        <div class="step-caption">Paged list. Real status enum pills.</div>
+        <div class="step-endpoint">GET /api/remittances?senderId=X</div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- =========== SECTION 4 — CLAIM (WEB) =========== -->
+  <section id="s4">
+    <div class="section-eyebrow">04 — Recipient claim · web</div>
+    <h2>A link arrives.</h2>
+    <p class="section-desc">Recipient gets an SMS, opens the link in any browser, pastes their UPI ID, receives rupees via Razorpay. No app install. No crypto literacy required. Token scope only — no social login on this side.</p>
+
+    <div class="flow">
+
+      <!-- D1 SMS -->
+      <div>
+        <div class="step-head"><span class="id">D1</span><span class="title">SMS</span></div>
+        <div class="phone"><div class="screen imessage">
+          <div style="text-align:center"><div class="serif" style="font-size:14px">Messages</div><div class="mono" style="font-size:10px">+1 (555) 012 0000</div></div>
+          <div style="margin-top:14px">
+            <div class="sms">Priya sent you <b>₹8,342</b> via StablePay. Claim in 48h:</div>
+            <div class="sms"><span class="sms-link">claim.stablepay.app/v1_k3n9_aX8m…</span></div>
+          </div>
+        </div></div>
+        <div class="step-caption">Twilio triggered after <code>ESCROWED</code>. URL = <code>claim-base-url + claimTokenId</code>.</div>
+      </div>
+
+      <!-- D2 Claim landing -->
+      <div>
+        <div class="step-head"><span class="id">D2</span><span class="title">Claim landing</span></div>
+        <div class="browser">
+          <div class="browser-bar"><div class="browser-dots"><span></span><span></span><span></span></div><div class="browser-url">claim.stablepay.app/v1_k3n9…</div></div>
+          <div class="browser-content">
+            <div class="tiny">StablePay</div>
+            <div class="serif" style="font-size:28px;line-height:1.1;margin-top:10px">You've got<br/><em style="color:var(--accent);font-style:italic">money.</em></div>
+            <div style="margin-top:20px;padding:16px 0;border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2)">
+              <div class="tiny">You receive</div>
+              <div class="num-xl serif" style="margin-top:6px">₹8,342<span style="color:var(--muted);font-size:24px">.00</span></div>
+              <div class="mono" style="margin-top:4px">from $100.00 @ 83.42</div>
+            </div>
+            <div style="margin-top:14px">
+              <div class="row"><span class="k">From</span><span class="v">Priya S.</span></div>
+              <div class="row"><span class="k">Expires</span><span class="v">47h 46m</span></div>
+            </div>
+            <div class="spacer"></div>
+            <div class="btn web">Claim now →</div>
+          </div>
+        </div>
+        <div class="step-caption">Fields from <code>ClaimResponse</code>: <code>amountInr, fxRate, expiresAt</code>.</div>
+        <div class="step-endpoint">GET /api/claims/{token} → 200</div>
+      </div>
+
+      <!-- D3 UPI -->
+      <div>
+        <div class="step-head"><span class="id">D3</span><span class="title">UPI</span></div>
+        <div class="browser">
+          <div class="browser-bar"><div class="browser-dots"><span></span><span></span><span></span></div><div class="browser-url">claim.stablepay.app/v1_k3n9…</div></div>
+          <div class="browser-content">
+            <div class="serif" style="font-size:22px">Where should<br/>we send it?</div>
+            <div class="mono" style="margin-top:6px;color:var(--ink-2)">₹8,342 to your UPI</div>
+            <div style="margin-top:24px">
+              <div class="tiny">upiId</div>
+              <input class="input" value="ramesh@okhdfcbank" readonly />
+              <div class="mono" style="margin-top:8px">must contain @ · max 100 chars</div>
+            </div>
+            <div style="margin-top:20px;padding:12px 0;border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2)">
+              <div class="row" style="border:none;padding:3px 0"><span class="k">Amount</span><span class="v">₹8,342.00</span></div>
+              <div class="row" style="border:none;padding:3px 0"><span class="k">Network fee</span><span class="v">₹0</span></div>
+              <div class="row" style="border:none;padding:3px 0"><span class="k">Arrives</span><span class="v" style="color:var(--accent)">Instant · Razorpay</span></div>
+            </div>
+            <div class="spacer"></div>
+            <div class="btn web">Submit & claim</div>
+          </div>
+        </div>
+        <div class="step-caption">Validation from <code>SubmitClaimRequest</code>: pattern <code>.*@.*</code>, max 100.</div>
+        <div class="step-endpoint">POST /api/claims/{token} → 200</div>
+      </div>
+
+      <!-- D4 Disbursing -->
+      <div>
+        <div class="step-head"><span class="id">D4</span><span class="title">Disbursing</span></div>
+        <div class="browser">
+          <div class="browser-bar"><div class="browser-dots"><span></span><span></span><span></span></div><div class="browser-url">claim.stablepay.app/v1_k3n9…</div></div>
+          <div class="browser-content">
+            <div class="spacer"></div>
+            <div style="text-align:center">
+              <div class="spinner" style="margin:0 auto"></div>
+              <div class="serif" style="font-size:22px;margin-top:16px">Sending to<br/>your UPI…</div>
+              <div class="mono" style="margin-top:8px">ramesh@okhdfcbank</div>
+            </div>
+            <div style="margin-top:24px;font-size:11px;text-align:left;line-height:1.9">
+              <div style="color:var(--accent)">✓ Claim submitted</div>
+              <div style="color:var(--accent)">✓ Escrow released on Solana</div>
+              <div style="color:var(--ink)">→ Razorpay payout processing</div>
+            </div>
+            <div class="spacer"></div>
+          </div>
+        </div>
+        <div class="step-caption">Polls claim endpoint for transition to <code>DELIVERED</code>.</div>
+        <div class="step-endpoint">GET /api/claims/{token} (polled)</div>
+      </div>
+
+      <!-- D5 Delivered -->
+      <div>
+        <div class="step-head"><span class="id">D5</span><span class="title">Delivered</span></div>
+        <div class="browser">
+          <div class="browser-bar"><div class="browser-dots"><span></span><span></span><span></span></div><div class="browser-url">claim.stablepay.app/v1_k3n9…</div></div>
+          <div class="browser-content">
+            <div class="spacer"></div>
+            <div style="text-align:center">
+              <div class="tiny" style="color:var(--accent)">Delivered</div>
+              <div class="num-xl serif" style="margin-top:10px;color:var(--accent)">₹8,342</div>
+              <div class="mono" style="margin-top:8px">to ramesh@okhdfcbank</div>
+              <div style="margin-top:14px"><span class="pill ok">DELIVERED</span></div>
+            </div>
+            <div style="margin-top:32px">
+              <div class="row"><span class="k">claimed</span><span class="v">true</span></div>
+              <div class="row"><span class="k">remittanceId</span><span class="v mono" style="font-size:10px">bf0c…a11b</span></div>
+            </div>
+            <div class="spacer"></div>
+            <div class="btn web ghost">Get the app</div>
+          </div>
+        </div>
+        <div class="step-caption">Terminal state. End of happy path.</div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- =========== SECTION 5 — EDGES =========== -->
+  <section id="s5">
+    <div class="section-eyebrow">05 — Edge cases</div>
+    <h2>When things go sideways.</h2>
+    <p class="section-desc">Real failure paths wired in the backend. HTTP codes and error codes match the <code>ErrorResponse</code> shape and <code>GlobalExceptionHandler</code> mappings.</p>
+
+    <div class="flow">
+
+      <!-- E1 Expired -->
+      <div>
+        <div class="step-head"><span class="id">E1</span><span class="title">Claim expired · 410</span></div>
+        <div class="browser">
+          <div class="browser-bar"><div class="browser-dots"><span></span><span></span><span></span></div><div class="browser-url">claim.stablepay.app/v1_old…</div></div>
+          <div class="browser-content">
+            <div class="spacer"></div>
+            <div style="text-align:center">
+              <div class="tiny" style="color:var(--warn)">Expired</div>
+              <div class="serif" style="font-size:26px;margin-top:10px;line-height:1.15">Link expired.<br/>Ask Priya to resend.</div>
+              <div class="mono" style="margin-top:14px">Links valid for 48h</div>
+              <div style="margin-top:16px"><span class="pill warn">SP-0013</span></div>
+            </div>
+            <div class="spacer"></div>
+          </div>
+        </div>
+        <div class="step-caption">Needs BE fix — currently GET skips expiry; POST enforces it.</div>
+        <div class="step-endpoint proposed">add check in GetClaimQueryHandler.java:22</div>
+      </div>
+
+      <!-- E2 Already claimed -->
+      <div>
+        <div class="step-head"><span class="id">E2</span><span class="title">Already claimed · 409</span></div>
+        <div class="browser">
+          <div class="browser-bar"><div class="browser-dots"><span></span><span></span><span></span></div><div class="browser-url">claim.stablepay.app/v1_k3n…</div></div>
+          <div class="browser-content">
+            <div class="spacer"></div>
+            <div style="text-align:center">
+              <div class="tiny" style="color:var(--info)">Already received</div>
+              <div class="serif" style="font-size:26px;margin-top:10px;line-height:1.15">You claimed this<br/>on Apr 19.</div>
+              <div style="margin-top:14px"><span class="pill info">SP-0012</span></div>
+            </div>
+            <div style="margin-top:32px">
+              <div class="row"><span class="k">claimed</span><span class="v">true</span></div>
+              <div class="row"><span class="k">status</span><span class="v">DELIVERED</span></div>
+            </div>
+            <div class="spacer"></div>
+          </div>
+        </div>
+        <div class="step-caption"><code>ClaimAlreadyClaimedException</code> · SubmitClaimHandler:37.</div>
+      </div>
+
+      <!-- E3 Insufficient balance -->
+      <div>
+        <div class="step-head"><span class="id">E3</span><span class="title">Insufficient balance · 400</span></div>
+        <div class="phone"><div class="screen">
+          <div class="serif" style="font-size:22px">Send money</div>
+          <div style="margin-top:24px">
+            <div class="tiny">recipientPhone</div>
+            <input class="input" value="+91 98765 43210" readonly />
+          </div>
+          <div style="margin-top:14px">
+            <div class="tiny">amountUsdc</div>
+            <input class="input error" value="500.00" readonly />
+            <div class="error-msg">You have $250.00 USDC.</div>
+          </div>
+          <div style="margin-top:16px"><span class="pill err">SP-0002</span></div>
+          <div class="spacer"></div>
+          <div class="btn primary" style="opacity:0.35">Confirm & send</div>
+        </div></div>
+        <div class="step-caption"><code>InsufficientBalanceException</code> · CreateRemittanceHandler:45.</div>
+      </div>
+
+      <!-- E4 SMS failed -->
+      <div>
+        <div class="step-head"><span class="id">E4</span><span class="title">SMS failed · non-blocking</span></div>
+        <div class="phone"><div class="screen">
+          <div class="tiny">remittanceId</div>
+          <div class="mono" style="color:var(--ink);word-break:break-all;margin-top:2px">bf0c9e4a…a11b</div>
+          <div style="margin-top:16px;padding:12px;background:var(--warn-soft);border-radius:6px">
+            <div class="tiny" style="color:var(--warn)">smsNotificationFailed: true</div>
+            <div style="font-size:11px;margin-top:6px;line-height:1.5">Recipient didn't receive the SMS. Share the link yourself:</div>
+            <div class="mono" style="margin-top:8px;padding:6px;background:#fff;border-radius:3px;word-break:break-all;color:var(--ink)">claim.stablepay.app/v1_k3n9…</div>
+          </div>
+          <div style="margin-top:12px"><div class="btn ghost">Copy link</div></div>
+          <div class="timeline" style="margin-top:12px">
+            <div class="tl-item done"><div class="tl-dot"></div><div><div class="tl-label">INITIATED</div></div></div>
+            <div class="tl-item done"><div class="tl-dot"></div><div><div class="tl-label">ESCROWED</div></div></div>
+            <div class="tl-item active"><div class="tl-dot"></div><div><div class="tl-label">Awaiting claim</div></div></div>
+          </div>
+          <div class="spacer"></div>
+        </div></div>
+        <div class="step-caption">Workflow continues — <code>smsNotificationFailed=true</code> is surfaced on <code>RemittanceResponse</code>.</div>
+      </div>
+
+      <!-- E5 Wallet exists -->
+      <div>
+        <div class="step-head"><span class="id">E5</span><span class="title">Returning user · 409</span></div>
+        <div class="phone"><div class="screen">
+          <div class="spacer"></div>
+          <div style="text-align:center">
+            <div class="tiny" style="color:var(--info)">Welcome back</div>
+            <div class="serif" style="font-size:26px;margin-top:10px">Loading your<br/>wallet…</div>
+            <div class="mono" style="margin-top:16px">409 → fetch existing WalletResponse</div>
+            <div style="margin-top:14px"><span class="pill info">SP-0008</span></div>
+          </div>
+          <div class="spacer"></div>
+        </div></div>
+        <div class="step-caption"><code>WalletAlreadyExistsException</code>. Client handles by reading existing wallet.</div>
+      </div>
+
+      <!-- E6 Disbursement failed -->
+      <div>
+        <div class="step-head"><span class="id">E6</span><span class="title">Disbursement failed · 502</span></div>
+        <div class="browser">
+          <div class="browser-bar"><div class="browser-dots"><span></span><span></span><span></span></div><div class="browser-url">claim.stablepay.app/v1_k3n…</div></div>
+          <div class="browser-content">
+            <div class="spacer"></div>
+            <div style="text-align:center">
+              <div class="tiny" style="color:var(--danger)">Payout failed</div>
+              <div class="serif" style="font-size:24px;margin-top:10px;line-height:1.15">Razorpay couldn't<br/>deliver to your UPI.</div>
+              <div class="mono" style="margin-top:12px">Auto-refund initiated</div>
+              <div style="margin-top:14px"><span class="pill err">SP-0018</span></div>
+            </div>
+            <div style="margin-top:24px">
+              <div class="row"><span class="k">status</span><span class="v">DISBURSEMENT_FAILED</span></div>
+              <div class="row"><span class="k">next</span><span class="v">REFUNDED</span></div>
+            </div>
+            <div class="spacer"></div>
+          </div>
+        </div>
+        <div class="step-caption">Temporal workflow retries, then triggers refund path.</div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- =========== SECTION 6 — CONTRACT =========== -->
+  <section id="s6">
+    <div class="section-eyebrow">06 — Contract map</div>
+    <h2>One screen, one endpoint.</h2>
+    <p class="section-desc">Every screen above is backed by a real endpoint from the current OpenAPI snapshot. No invented fields, no phantom endpoints.</p>
+
+    <div class="contract">
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Request</th><th>Response</th><th>Codes</th><th>Screens</th></tr></thead>
+        <tbody>
+          <tr><td class="method">POST</td><td class="path">/api/wallets</td><td><code>CreateWalletRequest</code></td><td><code>WalletResponse</code></td><td class="codes">201 · 409 · 400</td><td>A3 · E5</td></tr>
+          <tr><td class="method">GET</td><td class="path">/api/fx/{from}-{to}</td><td>—</td><td><code>FxRateResponse</code></td><td class="codes">200 · 400</td><td>C1</td></tr>
+          <tr><td class="method">POST</td><td class="path">/api/remittances</td><td><code>CreateRemittanceRequest</code></td><td><code>RemittanceResponse</code></td><td class="codes">201 · 400 · 502</td><td>C2 · E3</td></tr>
+          <tr><td class="method">GET</td><td class="path">/api/remittances/{id}</td><td>—</td><td><code>RemittanceResponse</code></td><td class="codes">200 · 404</td><td>C4</td></tr>
+          <tr><td class="method">GET</td><td class="path">/api/remittances?senderId=X</td><td><code>Pageable</code></td><td><code>PageRemittanceResponse</code></td><td class="codes">200</td><td>C5</td></tr>
+          <tr><td class="method">POST</td><td class="path">/api/wallets/{id}/fund</td><td><code>FundWalletRequest</code></td><td><code>FundingOrderResponse</code></td><td class="codes">201 · 400 · 409 · 502</td><td>B1</td></tr>
+          <tr><td class="method">GET</td><td class="path">/api/funding-orders/{id}</td><td>—</td><td><code>FundingOrderResponse</code></td><td class="codes">200 · 404</td><td>B3</td></tr>
+          <tr><td class="method">POST</td><td class="path">/api/funding-orders/{id}/refund</td><td>—</td><td><code>FundingOrderResponse</code></td><td class="codes">200 · 409 · 502</td><td>—</td></tr>
+          <tr><td class="method">GET</td><td class="path">/api/claims/{token}</td><td>—</td><td><code>ClaimResponse</code></td><td class="codes">200 · 404 · 410</td><td>D2 · D4 · E1 · E2</td></tr>
+          <tr><td class="method">POST</td><td class="path">/api/claims/{token}</td><td><code>SubmitClaimRequest</code></td><td><code>ClaimResponse</code></td><td class="codes">200 · 400 · 409 · 410 · 502</td><td>D3 · E6</td></tr>
+          <tr><td class="method">POST</td><td class="path">/webhooks/stripe</td><td>(signed)</td><td>—</td><td class="codes">200 · 400</td><td>B3 (server)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <div>StablePay · v2 · Snapshot 2026-04-20</div>
+    <div>OpenAPI 3.1.0 · <code style="background:var(--hair-2);padding:2px 6px;border-radius:3px">docs/api/openapi.json</code></div>
+  </footer>
+
+</div>
+
+</body>
+</html>

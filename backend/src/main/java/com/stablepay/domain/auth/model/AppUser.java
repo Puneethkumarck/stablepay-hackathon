@@ -11,6 +11,7 @@ import lombok.Builder;
 public record AppUser(
     UUID id,
     String email,
+    String name,
     Instant createdAt
 ) {
     public AppUser {

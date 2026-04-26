@@ -39,6 +39,10 @@ public class UpdateRemittanceStatusHandler {
     private final RemittanceStatusEventRepository remittanceStatusEventRepository;
 
     public void handle(UUID remittanceId, RemittanceStatus targetStatus) {
+        handle(remittanceId, targetStatus, null);
+    }
+
+    public void handle(UUID remittanceId, RemittanceStatus targetStatus, String escrowPda) {
         var remittance = remittanceRepository.findByRemittanceId(remittanceId)
                 .orElseThrow(() -> RemittanceNotFoundException.byId(remittanceId));
 
@@ -46,8 +50,11 @@ public class UpdateRemittanceStatusHandler {
             throw InvalidRemittanceStateException.forTransition(remittance.status(), targetStatus);
         }
 
-        var updated = remittance.toBuilder().status(targetStatus).build();
-        remittanceRepository.save(updated);
+        var builder = remittance.toBuilder().status(targetStatus);
+        if (escrowPda != null) {
+            builder.escrowPda(escrowPda);
+        }
+        remittanceRepository.save(builder.build());
 
         remittanceStatusEventRepository.save(RemittanceStatusEvent.builder()
                 .remittanceId(remittanceId)

@@ -75,7 +75,9 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
             return failedResult(RemittanceStatus.DEPOSIT_FAILED, depositSignature);
         }
 
-        statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.ESCROWED);
+        var escrowPdaAddress = statusActivities.deriveEscrowPda(remittanceId.toString());
+        statusActivities.updateRemittanceStatusWithEscrowPda(
+                remittanceId.toString(), RemittanceStatus.ESCROWED, escrowPdaAddress);
         currentStatus = RemittanceStatus.ESCROWED;
         log.info("Remittance {} escrowed with tx={}", remittanceId, depositSignature);
 
@@ -103,7 +105,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         return RemittanceWorkflowStatus.builder()
                 .remittanceId(remittanceId)
                 .currentStatus(currentStatus != null ? currentStatus.name() : null)
-                .escrowPda(escrowTxSignature)
+                .depositTxSignature(escrowTxSignature)
                 .smsNotificationFailed(smsNotificationFailed)
                 .build();
     }
@@ -165,7 +167,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
             return RemittanceWorkflowResult.builder()
                     .remittanceId(remittanceId)
                     .finalStatus(RemittanceStatus.DISBURSEMENT_FAILED.name())
-                    .escrowPda(escrowTxSignature)
+                    .depositTxSignature(escrowTxSignature)
                     .txSignature(releaseSignature)
                     .build();
         }
@@ -177,7 +179,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         return RemittanceWorkflowResult.builder()
                 .remittanceId(remittanceId)
                 .finalStatus(RemittanceStatus.DELIVERED.name())
-                .escrowPda(escrowTxSignature)
+                .depositTxSignature(escrowTxSignature)
                 .txSignature(releaseSignature)
                 .build();
     }
@@ -214,7 +216,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         return RemittanceWorkflowResult.builder()
                 .remittanceId(remittanceId)
                 .finalStatus(RemittanceStatus.REFUNDED.name())
-                .escrowPda(escrowTxSignature)
+                .depositTxSignature(escrowTxSignature)
                 .txSignature(refundSignature)
                 .build();
     }
@@ -304,7 +306,7 @@ public class RemittanceLifecycleWorkflowImpl implements RemittanceLifecycleWorkf
         return RemittanceWorkflowResult.builder()
                 .remittanceId(remittanceId)
                 .finalStatus(status.name())
-                .escrowPda(escrowTxSignature)
+                .depositTxSignature(escrowTxSignature)
                 .txSignature(txSignature)
                 .build();
     }

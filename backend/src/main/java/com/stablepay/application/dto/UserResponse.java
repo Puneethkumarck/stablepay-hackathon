@@ -9,5 +9,6 @@ import lombok.Builder;
 public record UserResponse(
     UUID id,
     String email,
+    String name,
     Instant createdAt
 ) {}

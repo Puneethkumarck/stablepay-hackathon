@@ -2,6 +2,7 @@ package com.stablepay.application.controller.remittance;
 
 import static com.stablepay.testutil.AuthFixtures.SOME_OTHER_USER_ID;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_AMOUNT_USDC;
+import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_NAME;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_RECIPIENT_PHONE;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_DB_ID;
 import static com.stablepay.testutil.RemittanceFixtures.SOME_REMITTANCE_ID;
@@ -87,12 +88,13 @@ class RemittanceControllerTest {
         // given
         var domain = remittanceBuilder().build();
 
-        given(createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
+        given(createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC, SOME_RECIPIENT_NAME))
                 .willReturn(domain);
 
         var request = CreateRemittanceRequest.builder()
                 .recipientPhone(SOME_RECIPIENT_PHONE)
                 .amountUsdc(SOME_AMOUNT_USDC)
+                .recipientName(SOME_RECIPIENT_NAME)
                 .build();
 
         // when / then
@@ -104,6 +106,7 @@ class RemittanceControllerTest {
                 .andExpect(jsonPath("$.id").value(SOME_REMITTANCE_DB_ID))
                 .andExpect(jsonPath("$.remittanceId").value(SOME_REMITTANCE_ID.toString()))
                 .andExpect(jsonPath("$.recipientPhone").value(SOME_RECIPIENT_PHONE))
+                .andExpect(jsonPath("$.recipientName").value(SOME_RECIPIENT_NAME))
                 .andExpect(jsonPath("$.status").value("INITIATED"));
     }
 
@@ -161,7 +164,7 @@ class RemittanceControllerTest {
     @SneakyThrows
     void shouldReturn400WhenInsufficientBalance() {
         // given
-        given(createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC))
+        given(createRemittanceHandler.handle(SOME_SENDER_ID, SOME_RECIPIENT_PHONE, SOME_AMOUNT_USDC, null))
                 .willThrow(InsufficientBalanceException.forAmount(SOME_AMOUNT_USDC, BigDecimal.valueOf(50)));
 
         var request = CreateRemittanceRequest.builder()
