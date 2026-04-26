@@ -148,8 +148,8 @@ dependencies {
     implementation("org.apache.commons:commons-pool2")
 
     // Lombok
-    compileOnly("org.projectlombok:lombok:1.18.44")
-    annotationProcessor("org.projectlombok:lombok:1.18.44")
+    compileOnly("org.projectlombok:lombok:1.18.46")
+    annotationProcessor("org.projectlombok:lombok:1.18.46")
 
     // MapStruct
     implementation("org.mapstruct:mapstruct:1.6.3")
@@ -191,8 +191,8 @@ dependencies {
     implementation("com.stripe:stripe-java:28.4.0")
 
     // Test
-    testCompileOnly("org.projectlombok:lombok:1.18.44")
-    testAnnotationProcessor("org.projectlombok:lombok:1.18.44")
+    testCompileOnly("org.projectlombok:lombok:1.18.46")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.46")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-webmvc-test")
     testImplementation("org.springframework.security:spring-security-test")
