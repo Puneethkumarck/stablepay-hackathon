@@ -1,10 +1,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  REFRESH_TOKEN_MAX_AGE,
+  USER_DATA_COOKIE,
+} from "@/lib/constants";
 
 const BACKEND_URL = process.env.STABLEPAY_BACKEND_URL ?? "http://localhost:8080";
-const ACCESS_TOKEN_COOKIE = "accessToken";
-const REFRESH_TOKEN_COOKIE = "refreshToken";
-const USER_DATA_COOKIE = "userData";
 
 interface TokenPair {
   accessToken: string;
@@ -25,6 +28,13 @@ export async function getAccessToken(): Promise<string | undefined> {
 }
 
 export async function requireAuth(): Promise<string> {
+  const token = await getAccessToken();
+  if (token) return token;
+
+  redirect("/login");
+}
+
+export async function requireAuthWithRefresh(): Promise<string> {
   const token = await getAccessToken();
   if (token) return token;
 
@@ -74,7 +84,7 @@ export async function setAuthCookies(tokens: TokenPair): Promise<void> {
     secure,
     sameSite: "lax",
     path: "/",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: REFRESH_TOKEN_MAX_AGE,
   });
 }
 
@@ -94,7 +104,7 @@ export async function setUserDataCookie(user: UserData): Promise<void> {
     secure,
     sameSite: "strict",
     path: "/",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: REFRESH_TOKEN_MAX_AGE,
   });
 }
 

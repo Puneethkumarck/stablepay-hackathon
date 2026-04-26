@@ -88,7 +88,7 @@ class CreateRemittanceHandlerTest {
 
         var fxQuote = fxQuoteBuilder().build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
         given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
@@ -163,7 +163,7 @@ class CreateRemittanceHandlerTest {
 
         var fxQuote = fxQuoteBuilder().build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
         given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
@@ -206,7 +206,7 @@ class CreateRemittanceHandlerTest {
 
         var fxQuote = fxQuoteBuilder().build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         var reservedWallet = wallet.reserveBalance(SOME_AMOUNT_USDC);
         given(walletRepository.save(reservedWallet)).willReturn(reservedWallet);
@@ -238,7 +238,7 @@ class CreateRemittanceHandlerTest {
     @Test
     void shouldThrowWhenWalletNotFound() {
         // given
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.empty());
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> createRemittanceHandler.handle(
@@ -257,7 +257,7 @@ class CreateRemittanceHandlerTest {
                 .totalBalance(BigDecimal.valueOf(50))
                 .build();
 
-        given(walletRepository.findByUserId(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
+        given(walletRepository.findByUserIdForUpdate(SOME_SENDER_ID)).willReturn(Optional.of(wallet));
 
         // when / then
         assertThatThrownBy(() -> createRemittanceHandler.handle(

@@ -1,5 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import type { UserData } from "@/lib/auth";
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  REFRESH_TOKEN_MAX_AGE,
+  USER_DATA_COOKIE,
+} from "@/lib/constants";
 
 const BACKEND_URL = process.env.STABLEPAY_BACKEND_URL ?? "http://localhost:8080";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -66,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL("/home", request.url));
 
-    response.cookies.set("accessToken", authData.accessToken, {
+    response.cookies.set(ACCESS_TOKEN_COOKIE, authData.accessToken, {
       httpOnly: true,
       secure,
       sameSite: "lax",
@@ -74,21 +80,21 @@ export async function GET(request: NextRequest) {
       maxAge: authData.expiresIn,
     });
 
-    response.cookies.set("refreshToken", authData.refreshToken, {
+    response.cookies.set(REFRESH_TOKEN_COOKIE, authData.refreshToken, {
       httpOnly: true,
       secure,
       sameSite: "lax",
       path: "/",
-      maxAge: 30 * 24 * 60 * 60,
+      maxAge: REFRESH_TOKEN_MAX_AGE,
     });
 
     if (authData.user) {
-      response.cookies.set("userData", JSON.stringify(authData.user), {
+      response.cookies.set(USER_DATA_COOKIE, JSON.stringify(authData.user), {
         httpOnly: true,
         secure,
         sameSite: "lax",
         path: "/",
-        maxAge: 30 * 24 * 60 * 60,
+        maxAge: REFRESH_TOKEN_MAX_AGE,
       });
     }
 

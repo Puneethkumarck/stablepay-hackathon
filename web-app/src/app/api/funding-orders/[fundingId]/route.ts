@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiError, apiClient } from "@/lib/api-client";
-import { requireAuth } from "@/lib/auth";
+import { requireAuthWithRefresh } from "@/lib/auth";
 import type { FundingOrderResponse } from "@/types/api";
 
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ fundingId: string }> },
 ) {
   try {
-    const token = await requireAuth();
+    const token = await requireAuthWithRefresh();
     const { fundingId } = await params;
     const data = await apiClient.get<FundingOrderResponse>(`/api/funding-orders/${fundingId}`, {
       token,
