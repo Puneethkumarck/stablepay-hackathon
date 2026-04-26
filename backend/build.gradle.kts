@@ -185,7 +185,7 @@ dependencies {
     implementation("org.sol4k:sol4k:0.7.0")
 
     // Twilio SMS
-    implementation("com.twilio.sdk:twilio:11.3.6")
+    implementation("com.twilio.sdk:twilio:11.4.0")
 
     // Stripe
     implementation("com.stripe:stripe-java:28.2.0")
