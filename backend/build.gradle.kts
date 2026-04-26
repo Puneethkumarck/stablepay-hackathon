@@ -157,8 +157,8 @@ dependencies {
 
     // Flyway
     implementation("org.springframework.boot:spring-boot-flyway")
-    implementation("org.flywaydb:flyway-core:12.3.0")
-    implementation("org.flywaydb:flyway-database-postgresql:12.3.0")
+    implementation("org.flywaydb:flyway-core:12.4.0")
+    implementation("org.flywaydb:flyway-database-postgresql:12.4.0")
 
     // Temporal
     implementation("io.temporal:temporal-spring-boot-starter:1.34.0")
