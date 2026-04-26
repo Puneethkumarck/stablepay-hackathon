@@ -97,6 +97,17 @@ export type FundingStatus =
   | "REFUNDED"
   | "REFUND_FAILED";
 
+export interface ClaimResponse {
+  remittanceId: string;
+  senderDisplayName: string;
+  amountUsdc: string;
+  amountInr: string;
+  fxRate: string;
+  status: RemittanceStatus;
+  claimed: boolean;
+  expiresAt: string;
+}
+
 export interface ErrorResponse {
   errorCode: string;
   message: string;

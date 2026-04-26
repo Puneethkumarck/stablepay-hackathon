@@ -62,4 +62,17 @@ export const handlers = [
       createdAt: "2026-04-24T10:00:00Z",
     }),
   ),
+
+  http.post("/api/claims/:token", () =>
+    HttpResponse.json({
+      remittanceId: "rem-uuid-123",
+      senderDisplayName: "Test Sender",
+      amountUsdc: "1.00",
+      amountInr: "94.26",
+      fxRate: "94.26",
+      status: "CLAIMED",
+      claimed: true,
+      expiresAt: "2026-12-31T23:59:59Z",
+    }),
+  ),
 ];
