@@ -31,6 +31,7 @@ export async function requireAuth(): Promise<string> {
   const refreshed = await refreshAccessToken();
   if (refreshed) return refreshed;
 
+  await clearAuthCookies();
   redirect("/login");
 }
 
@@ -63,7 +64,7 @@ export async function setAuthCookies(tokens: TokenPair): Promise<void> {
   cookieStore.set(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
     httpOnly: true,
     secure,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: tokens.expiresIn,
   });
@@ -71,7 +72,7 @@ export async function setAuthCookies(tokens: TokenPair): Promise<void> {
   cookieStore.set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
     httpOnly: true,
     secure,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: 30 * 24 * 60 * 60,
   });

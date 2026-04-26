@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { setAuthCookies, setUserDataCookie, type UserData } from "@/lib/auth";
+import type { UserData } from "@/lib/auth";
 
 const BACKEND_URL = process.env.STABLEPAY_BACKEND_URL ?? "http://localhost:8080";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -62,18 +62,37 @@ export async function GET(request: NextRequest) {
     }
 
     const authData = (await authRes.json()) as AuthResponse;
+    const secure = process.env.NODE_ENV === "production";
 
-    await setAuthCookies({
-      accessToken: authData.accessToken,
-      refreshToken: authData.refreshToken,
-      expiresIn: authData.expiresIn,
+    const response = NextResponse.redirect(new URL("/home", request.url));
+
+    response.cookies.set("accessToken", authData.accessToken, {
+      httpOnly: true,
+      secure,
+      sameSite: "lax",
+      path: "/",
+      maxAge: authData.expiresIn,
+    });
+
+    response.cookies.set("refreshToken", authData.refreshToken, {
+      httpOnly: true,
+      secure,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60,
     });
 
     if (authData.user) {
-      await setUserDataCookie(authData.user);
+      response.cookies.set("userData", JSON.stringify(authData.user), {
+        httpOnly: true,
+        secure,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 30 * 24 * 60 * 60,
+      });
     }
 
-    return NextResponse.redirect(new URL("/home", request.url));
+    return response;
   } catch {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("error", "unexpected");
