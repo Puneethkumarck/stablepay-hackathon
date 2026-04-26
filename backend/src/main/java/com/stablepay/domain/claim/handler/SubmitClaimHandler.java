@@ -52,7 +52,7 @@ public class SubmitClaimHandler {
         }
 
         var senderDisplayName = userRepository.findById(remittance.senderId())
-                .map(user -> user.email().split("@")[0])
+                .map(user -> user.name() != null ? user.name() : user.email().split("@")[0])
                 .orElse("Unknown");
 
         var updatedClaim = claimToken.toBuilder()

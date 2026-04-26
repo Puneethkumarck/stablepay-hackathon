@@ -4,6 +4,7 @@ import static com.stablepay.testutil.AuthFixtures.SOME_ID_TOKEN;
 import static com.stablepay.testutil.AuthFixtures.SOME_PROVIDER;
 import static com.stablepay.testutil.AuthFixtures.SOME_SOCIAL_EMAIL;
 import static com.stablepay.testutil.AuthFixtures.SOME_SUBJECT;
+import static com.stablepay.testutil.AuthFixtures.SOME_USER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
@@ -43,6 +44,7 @@ class GoogleIdTokenVerifierAdapterTest {
                 .claim("sub", SOME_SUBJECT)
                 .claim("email", SOME_SOCIAL_EMAIL)
                 .claim("email_verified", true)
+                .claim("name", SOME_USER_NAME)
                 .build();
         given(googleJwtDecoder.decode(SOME_ID_TOKEN)).willReturn(jwt);
 
@@ -55,6 +57,7 @@ class GoogleIdTokenVerifierAdapterTest {
                 .subject(SOME_SUBJECT)
                 .email(SOME_SOCIAL_EMAIL)
                 .emailVerified(true)
+                .name(SOME_USER_NAME)
                 .build();
         assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }

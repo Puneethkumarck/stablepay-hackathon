@@ -68,6 +68,32 @@ class GetClaimQueryHandlerTest {
     }
 
     @Test
+    void shouldFallBackToEmailPrefixWhenNameIsNull() {
+        // given
+        var claimToken = claimTokenBuilder().build();
+        var remittance = remittanceBuilder().build();
+        var appUser = appUserBuilder().name(null).build();
+
+        given(claimTokenRepository.findByToken(SOME_TOKEN)).willReturn(Optional.of(claimToken));
+        given(remittanceRepository.findByRemittanceId(SOME_REMITTANCE_ID)).willReturn(Optional.of(remittance));
+        given(userRepository.findById(SOME_SENDER_ID)).willReturn(Optional.of(appUser));
+
+        // when
+        var result = getClaimQueryHandler.handle(SOME_TOKEN);
+
+        // then
+        var expected = ClaimDetails.builder()
+                .claimToken(claimToken)
+                .remittance(remittance)
+                .senderDisplayName("alice")
+                .build();
+
+        assertThat(result)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
+    }
+
+    @Test
     void shouldReturnUnknownWhenSenderUserNotFound() {
         // given
         var claimToken = claimTokenBuilder().build();

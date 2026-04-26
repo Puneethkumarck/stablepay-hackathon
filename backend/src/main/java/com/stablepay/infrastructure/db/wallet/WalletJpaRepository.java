@@ -14,9 +14,13 @@ import org.springframework.data.repository.query.Param;
 
 interface WalletJpaRepository extends JpaRepository<WalletEntity, Long> {
 
+    @Lock(LockModeType.NONE)
+    Optional<WalletEntity> findByUserId(UUID userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "4000")})
-    Optional<WalletEntity> findByUserId(UUID userId);
+    @Query("select w from WalletEntity w where w.userId = :userId")
+    Optional<WalletEntity> findByUserIdForUpdate(@Param("userId") UUID userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "4000")})

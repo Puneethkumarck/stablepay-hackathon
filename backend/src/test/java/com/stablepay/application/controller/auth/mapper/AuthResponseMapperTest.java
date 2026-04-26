@@ -5,6 +5,7 @@ import static com.stablepay.testutil.AuthFixtures.SOME_AUTH_CREATED_AT;
 import static com.stablepay.testutil.AuthFixtures.SOME_AUTH_USER_ID;
 import static com.stablepay.testutil.AuthFixtures.SOME_EMAIL;
 import static com.stablepay.testutil.AuthFixtures.SOME_RAW_REFRESH_TOKEN;
+import static com.stablepay.testutil.AuthFixtures.SOME_USER_NAME;
 import static com.stablepay.testutil.AuthFixtures.authSessionBuilder;
 import static com.stablepay.testutil.WalletFixtures.SOME_SOLANA_ADDRESS;
 import static com.stablepay.testutil.WalletFixtures.walletBuilder;
@@ -45,6 +46,7 @@ class AuthResponseMapperTest {
                 .user(UserResponse.builder()
                         .id(SOME_AUTH_USER_ID)
                         .email(SOME_EMAIL)
+                        .name(SOME_USER_NAME)
                         .createdAt(SOME_AUTH_CREATED_AT)
                         .build())
                 .wallet(WalletResponse.builder()

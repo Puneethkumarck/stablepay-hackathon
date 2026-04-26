@@ -30,6 +30,9 @@ public class UserEntity {
     @Column(name = "email", nullable = false)
     private String email;
 
+    @Column(name = "name", length = 200)
+    private String name;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

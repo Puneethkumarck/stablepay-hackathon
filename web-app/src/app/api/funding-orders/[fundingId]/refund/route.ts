@@ -1,0 +1,27 @@
+import { NextResponse } from "next/server";
+import { ApiError, apiClient } from "@/lib/api-client";
+import { requireAuthWithRefresh } from "@/lib/auth";
+import type { FundingOrderResponse } from "@/types/api";
+
+export async function POST(
+  _request: Request,
+  { params }: { params: Promise<{ fundingId: string }> },
+) {
+  try {
+    const token = await requireAuthWithRefresh();
+    const { fundingId } = await params;
+    const data = await apiClient.post<FundingOrderResponse>(
+      `/api/funding-orders/${fundingId}/refund`,
+      { token },
+    );
+    return NextResponse.json(data);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(
+        { errorCode: error.errorCode, message: error.message },
+        { status: error.status },
+      );
+    }
+    throw error;
+  }
+}

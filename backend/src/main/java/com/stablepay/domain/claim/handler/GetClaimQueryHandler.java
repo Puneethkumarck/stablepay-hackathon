@@ -29,7 +29,7 @@ public class GetClaimQueryHandler {
                 .orElseThrow(() -> RemittanceNotFoundException.byId(claimToken.remittanceId()));
 
         var senderDisplayName = userRepository.findById(remittance.senderId())
-                .map(user -> user.email().split("@")[0])
+                .map(user -> user.name() != null ? user.name() : user.email().split("@")[0])
                 .orElse("Unknown");
 
         return ClaimDetails.builder()

@@ -20,6 +20,7 @@ public final class RemittanceFixtures {
     public static final BigDecimal SOME_FX_RATE = new BigDecimal("83.25");
     public static final Instant SOME_CREATED_AT = Instant.parse("2026-04-03T10:00:00Z");
     public static final Instant SOME_UPDATED_AT = Instant.parse("2026-04-03T10:00:00Z");
+    public static final String SOME_RECIPIENT_NAME = "Raj Patel";
 
     public static Remittance.RemittanceBuilder remittanceBuilder() {
         return Remittance.builder()
@@ -32,6 +33,7 @@ public final class RemittanceFixtures {
                 .fxRate(SOME_FX_RATE)
                 .status(RemittanceStatus.INITIATED)
                 .smsNotificationFailed(false)
+                .recipientName(SOME_RECIPIENT_NAME)
                 .createdAt(SOME_CREATED_AT)
                 .updatedAt(SOME_UPDATED_AT);
     }

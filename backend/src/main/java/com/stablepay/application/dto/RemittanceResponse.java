@@ -22,5 +22,6 @@ public record RemittanceResponse(
     boolean smsNotificationFailed,
     Instant createdAt,
     Instant updatedAt,
-    Instant expiresAt
+    Instant expiresAt,
+    String recipientName
 ) {}
