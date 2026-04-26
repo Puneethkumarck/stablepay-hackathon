@@ -7,7 +7,7 @@
 - `docs/specs/2026-04-23-001-sender-app-api-gaps-spec.md` — API gaps
 - `stablepay-design-system/project/ui_kits/sender_app/` — design reference
 
-**Total:** 17 issues
+**Total:** 18 issues
 **Dependency chain:** STA-116, STA-119, STA-120 are foundational (scaffold, auth, API client). STA-121–STA-131 are screens (can be parallelized after foundation). STA-117, STA-118, STA-132 are backend API gaps.
 
 ---
@@ -998,6 +998,7 @@ Backend (independent):
 STA-117: GAP-2 recipient name
 STA-118: GAP-7 user display name
 STA-132: GAP-5 recent recipients (depends on STA-117)
+STA-133: Persist escrow PDA on deposit confirmation (independent)
 ```
 
 ## Recommended Implementation Order
@@ -1019,3 +1020,192 @@ Detail, activity, add funds, me — can all be parallelized.
 
 **Phase 6 — Backend gap (STA-132) — after STA-117:**
 Recent recipients endpoint. Depends on GAP-2 (recipient name).
+
+**Phase 7 — Backend fix (STA-133) — independent:**
+Persist escrow PDA on deposit confirmation.
+
+---
+
+## STA-133: Backend — Persist escrow PDA on deposit confirmation
+
+**Labels:** `backend`, `bug`, `solana`
+**Size:** M
+**Depends on:** —
+
+### Business context
+
+When a sender initiates a remittance, the Temporal workflow deposits USDC into a Solana escrow PDA on devnet and transitions the remittance to ESCROWED. The escrow PDA address is derived on-chain and the deposit transaction succeeds, but the PDA address is **never persisted** to the `remittances.escrow_pda` column. As a result:
+
+- The **remittance detail screen** shows "—" for the Escrow PDA instead of the actual on-chain address (frontend guard prevents crash, but data is missing).
+- Users and support **cannot verify the on-chain escrow** via Solana Explorer.
+- The **Solana Explorer link** cannot be generated for audit/transparency — a key hackathon demo requirement ("prove funds are on-chain").
+
+This affects all remittances on devnet. The `Remittance` domain model has an `escrowPda` field (`Remittance.java:21`) that is never populated.
+
+### Root cause
+
+The workflow calls `depositEscrow()` which returns the **transaction signature**, confirms it on-chain, then calls `updateRemittanceStatus(ESCROWED)`. The `UpdateRemittanceStatusHandler` only writes the `status` column — there is no mechanism to write the escrow PDA back to the database.
+
+Additionally, `RemittanceWorkflowResult.escrowPda` is a misnomer — it stores the **deposit transaction signature**, not the PDA address. These are different values.
+
+**Evidence (current flow):**
+
+```
+RemittanceLifecycleWorkflowImpl.execute()
+  → depositEscrow() returns tx signature              ✓ on-chain tx succeeds
+  → awaitTransactionConfirmation() confirms tx         ✓ tx confirmed
+  → updateRemittanceStatus(ESCROWED)                   ✗ only writes status, not escrowPda
+  → escrowTxSignature stored in workflow memory         ✗ never persisted to DB
+```
+
+**Evidence (naming confusion):**
+
+```java
+// RemittanceLifecycleWorkflowImpl.java:106
+.escrowPda(escrowTxSignature)  // ← stores tx signature, NOT the PDA address
+```
+
+### Description
+
+Extend the existing `updateRemittanceStatus` flow to persist the escrow PDA atomically with the ESCROWED status transition — one transaction, one DB round-trip, no inconsistent intermediate state. The PDA computation happens in a dedicated activity (Temporal determinism requires crypto/hashing to run inside activities, not workflows), but persistence piggybacks on the existing status update.
+
+**Key insight:** The PDA is deterministic — `EscrowInstructionBuilder.deriveEscrowPda()` derives it from `remittanceId` + program seeds. The PDA cannot be computed inside the workflow (Temporal workflows must be deterministic — no SHA-256 hashing). It must be computed inside an activity.
+
+**Design decision: single atomic update, not separate handler.** Both `escrowPda` and `status` live on the same `remittances` row. A separate `UpdateEscrowPdaHandler` would mean two DB round-trips (load → save → load → save) and a window where `escrowPda` is set but status is still INITIATED — an inconsistent state. Instead, the activity computes the PDA, then passes it to `updateRemittanceStatus` which sets both fields in one transaction.
+
+**Files to modify:**
+
+1. **`infrastructure/solana/EscrowInstructionBuilder.java`** — add public convenience method that accepts a `UUID` directly (the existing `uuidToPublicKey` is package-private, so cross-package callers cannot use it):
+   ```java
+   public PublicKey deriveEscrowPda(UUID remittanceId) {
+       var remittanceIdPubkey = uuidToPublicKey(remittanceId);
+       return deriveEscrowPda(remittanceIdPubkey.bytes());
+   }
+   ```
+
+2. **`domain/remittance/handler/UpdateRemittanceStatusHandler.java`** — add overloaded `handle` method accepting optional escrow PDA:
+   ```java
+   public void handle(UUID remittanceId, RemittanceStatus targetStatus, String escrowPda) {
+       var remittance = remittanceRepository.findByRemittanceId(remittanceId)
+               .orElseThrow(() -> RemittanceNotFoundException.byId(remittanceId));
+
+       if (!remittance.status().canTransitionTo(targetStatus)) {
+           throw InvalidRemittanceStateException.forTransition(remittance.status(), targetStatus);
+       }
+
+       var builder = remittance.toBuilder().status(targetStatus);
+       if (escrowPda != null) {
+           builder.escrowPda(escrowPda);
+       }
+       remittanceRepository.save(builder.build());
+
+       remittanceStatusEventRepository.save(RemittanceStatusEvent.builder()
+               .remittanceId(remittanceId)
+               .status(targetStatus)
+               .message(STATUS_MESSAGES.getOrDefault(targetStatus, "Status updated"))
+               .createdAt(Instant.now())
+               .build());
+   }
+
+   public void handle(UUID remittanceId, RemittanceStatus targetStatus) {
+       handle(remittanceId, targetStatus, null);
+   }
+   ```
+
+3. **`infrastructure/temporal/RemittanceLifecycleActivities.java`** — add activity methods:
+   ```java
+   String deriveEscrowPda(String remittanceId);
+
+   void updateRemittanceStatusWithEscrowPda(
+           String remittanceId, RemittanceStatus status, String escrowPda);
+   ```
+
+4. **`infrastructure/temporal/RemittanceLifecycleActivitiesImpl.java`** — implement:
+   ```java
+   @Override
+   public String deriveEscrowPda(String remittanceId) {
+       requireNonNull(remittanceId, "remittanceId must not be null");
+       var uuid = UUID.fromString(remittanceId);
+       var pda = escrowInstructionBuilder.deriveEscrowPda(uuid);
+       log.info("Derived escrow PDA {} for remittance {}", pda.toBase58(), remittanceId);
+       return pda.toBase58();
+   }
+
+   @Override
+   public void updateRemittanceStatusWithEscrowPda(
+           String remittanceId, RemittanceStatus status, String escrowPda) {
+       requireNonNull(remittanceId, "remittanceId must not be null");
+       requireNonNull(status, "status must not be null");
+       requireNonNull(escrowPda, "escrowPda must not be null");
+       var uuid = UUID.fromString(remittanceId);
+       updateRemittanceStatusHandler.handle(uuid, status, escrowPda);
+   }
+   ```
+   Inject `EscrowInstructionBuilder` into the constructor.
+
+5. **`infrastructure/temporal/RemittanceLifecycleWorkflowImpl.java`** — compute PDA in activity, pass to status update:
+   ```java
+   awaitTransactionConfirmation(depositSignature);
+
+   var escrowPdaAddress = statusActivities.deriveEscrowPda(remittanceId.toString());
+   statusActivities.updateRemittanceStatusWithEscrowPda(
+           remittanceId.toString(), RemittanceStatus.ESCROWED, escrowPdaAddress);
+   currentStatus = RemittanceStatus.ESCROWED;
+   ```
+   Remove the old `statusActivities.updateRemittanceStatus(remittanceId.toString(), RemittanceStatus.ESCROWED)` call at this point.
+
+6. **`infrastructure/temporal/RemittanceWorkflowResult.java`** — rename misleading field:
+   ```java
+   public record RemittanceWorkflowResult(
+       UUID remittanceId,
+       String finalStatus,
+       String depositTxSignature,  // was: escrowPda (misnomer — stored tx sig, not PDA)
+       String txSignature
+   ) {}
+   ```
+
+7. **`infrastructure/temporal/RemittanceWorkflowStatus.java`** — rename corresponding field to match.
+
+8. **`RemittanceLifecycleWorkflowImpl.java`** — update all result builder references from `.escrowPda(escrowTxSignature)` to `.depositTxSignature(escrowTxSignature)`.
+
+### Files changed summary
+
+| File | Change |
+|---|---|
+| `infrastructure/solana/EscrowInstructionBuilder.java` | Add public `deriveEscrowPda(UUID)` convenience overload |
+| `domain/remittance/handler/UpdateRemittanceStatusHandler.java` | Add overloaded `handle(id, status, escrowPda)` method |
+| `infrastructure/temporal/RemittanceLifecycleActivities.java` | Add `deriveEscrowPda` and `updateRemittanceStatusWithEscrowPda` |
+| `infrastructure/temporal/RemittanceLifecycleActivitiesImpl.java` | Implement both; inject `EscrowInstructionBuilder` |
+| `infrastructure/temporal/RemittanceLifecycleWorkflowImpl.java` | Compute PDA via activity, pass to status update; rename field references |
+| `infrastructure/temporal/RemittanceWorkflowResult.java` | Rename `escrowPda` → `depositTxSignature` |
+| `infrastructure/temporal/RemittanceWorkflowStatus.java` | Rename field |
+
+### Test plan
+
+| Test | Type | Validates |
+|---|---|---|
+| `UpdateRemittanceStatusHandler.handle(id, ESCROWED, pda)` unit test | Unit | Status + escrowPda set atomically in one save |
+| `UpdateRemittanceStatusHandler.handle(id, DELIVERED, null)` unit test | Unit | Non-escrow transitions still work (escrowPda unchanged) |
+| `RemittanceLifecycleActivitiesImpl.deriveEscrowPda` unit test | Unit | PDA derived correctly from remittance ID |
+| `RemittanceLifecycleActivitiesImpl.updateRemittanceStatusWithEscrowPda` unit test | Unit | Delegates to handler with all 3 params |
+| Verify `GET /api/remittances/{id}` returns non-null `escrowPda` after ESCROWED | Manual/E2E | API returns PDA for display |
+| Detail screen shows truncated PDA (e.g., `7Ksw2…xR4pN`) instead of "—" | Manual | Frontend renders correctly |
+
+### Acceptance criteria
+
+- [ ] After a remittance transitions to ESCROWED, `remittances.escrow_pda` contains the base58-encoded Solana PDA address
+- [ ] The PDA and status are set in a **single atomic transaction** (one `save()` call, no inconsistent intermediate state)
+- [ ] The PDA is derived deterministically from `remittanceId` using `EscrowInstructionBuilder.deriveEscrowPda()` inside a Temporal activity
+- [ ] PDA computation runs in an activity (not the workflow) to preserve Temporal determinism
+- [ ] Non-escrow status transitions (`CLAIMED`, `DELIVERED`, `REFUNDED`, etc.) are unaffected — `handle(id, status)` still works
+- [ ] `GET /api/remittances/{remittanceId}` returns a non-null `escrowPda` for ESCROWED/CLAIMED/DELIVERED remittances
+- [ ] The remittance detail screen displays the truncated escrow PDA (e.g., `7Ksw2…xR4pN`) instead of "—"
+- [ ] `RemittanceWorkflowResult.escrowPda` field is renamed to `depositTxSignature` to eliminate naming confusion
+- [ ] Unit tests cover the overloaded handler and both new activities
+- [ ] Existing tests continue to pass
+
+### Out of scope
+
+- Adding a clickable Solana Explorer link for the escrow PDA (separate enhancement)
+- Backfilling `escrow_pda` for existing remittances (PDA is deterministic — can be derived from `remittance_id` if needed)
+- Persisting deposit/release/refund tx signatures to the remittance (separate tracking concern)
