@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sol4k.PublicKey;
 
 import com.stablepay.domain.common.PiiMasking;
 import com.stablepay.domain.common.port.SmsProvider;
@@ -37,6 +38,7 @@ import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
+import com.stablepay.infrastructure.solana.EscrowInstructionBuilder;
 
 @ExtendWith(MockitoExtension.class)
 class RemittanceLifecycleActivitiesImplTest {
@@ -66,6 +68,9 @@ class RemittanceLifecycleActivitiesImplTest {
 
     @Mock
     private RemittancePayoutWriter remittancePayoutWriter;
+
+    @Mock
+    private EscrowInstructionBuilder escrowInstructionBuilder;
 
     @InjectMocks
     private RemittanceLifecycleActivitiesImpl activities;
@@ -259,6 +264,34 @@ class RemittanceLifecycleActivitiesImplTest {
                 SOME_UPI_ID, SOME_DISBURSEMENT_AMOUNT, SOME_AMOUNT_INR, SOME_REMITTANCE_ID.toString()))
                 .isSameAs(failure);
         then(remittancePayoutWriter).should().writeFailureReason(SOME_REMITTANCE_ID, failure.getMessage());
+    }
+
+    @Test
+    void shouldDeriveEscrowPdaFromRemittanceId() {
+        // given
+        var expectedPda = new PublicKey(new byte[32]);
+        given(escrowInstructionBuilder.deriveEscrowPda(SOME_REMITTANCE_ID))
+                .willReturn(expectedPda);
+
+        // when
+        var result = activities.deriveEscrowPda(SOME_REMITTANCE_ID.toString());
+
+        // then
+        assertThat(result).isEqualTo(expectedPda.toBase58());
+    }
+
+    @Test
+    void shouldDelegateStatusUpdateWithEscrowPdaToDomainHandler() {
+        // given
+        var escrowPda = "7Ksw2AbCdEfGhIjKlMnOpQrStUvWxYz12345xR4pN";
+
+        // when
+        activities.updateRemittanceStatusWithEscrowPda(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED, escrowPda);
+
+        // then
+        then(updateRemittanceStatusHandler).should().handle(
+                SOME_REMITTANCE_ID, RemittanceStatus.ESCROWED, escrowPda);
     }
 
     @Test

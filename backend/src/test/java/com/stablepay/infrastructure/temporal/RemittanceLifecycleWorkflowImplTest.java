@@ -7,6 +7,7 @@ import static com.stablepay.testutil.WorkflowFixtures.SOME_CLAIM_TOKEN;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DEPOSIT_TX_SIGNATURE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_ESCROW_EXPIRY_TIMESTAMP;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_ESCROW_PDA;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_RECIPIENT_PHONE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_REFUND_TX_SIGNATURE;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_RELEASE_TX_SIGNATURE;
@@ -62,6 +63,8 @@ class RemittanceLifecycleWorkflowImplTest {
                 .willReturn(TransactionConfirmationStatus.FINALIZED);
         given(activities.checkTransactionStatus(SOME_REFUND_TX_SIGNATURE))
                 .willReturn(TransactionConfirmationStatus.FINALIZED);
+        given(activities.deriveEscrowPda(SOME_REMITTANCE_ID.toString()))
+                .willReturn(SOME_ESCROW_PDA);
         worker.registerActivitiesImplementations(activities);
 
         client = testEnv.getWorkflowClient();
@@ -121,7 +124,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DELIVERED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_RELEASE_TX_SIGNATURE)
                 .build();
 
@@ -135,8 +138,8 @@ class RemittanceLifecycleWorkflowImplTest {
                 SOME_AMOUNT_USDC,
                 SOME_ESCROW_EXPIRY_TIMESTAMP);
 
-        then(activities).should().updateRemittanceStatus(
-                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED);
+        then(activities).should().updateRemittanceStatusWithEscrowPda(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED, SOME_ESCROW_PDA);
 
         then(activities).should().sendClaimSms(
                 SOME_RECIPIENT_PHONE,
@@ -189,7 +192,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.REFUNDED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_REFUND_TX_SIGNATURE)
                 .build();
 
@@ -203,8 +206,8 @@ class RemittanceLifecycleWorkflowImplTest {
                 SOME_AMOUNT_USDC,
                 SOME_ESCROW_EXPIRY_TIMESTAMP);
 
-        then(activities).should().updateRemittanceStatus(
-                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED);
+        then(activities).should().updateRemittanceStatusWithEscrowPda(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED, SOME_ESCROW_PDA);
 
         then(activities).should().refundEscrow(
                 SOME_REMITTANCE_ID.toString(),
@@ -256,7 +259,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.REFUNDED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_REFUND_TX_SIGNATURE)
                 .build();
 
@@ -264,8 +267,8 @@ class RemittanceLifecycleWorkflowImplTest {
                 .usingRecursiveComparison()
                 .isEqualTo(expected);
 
-        then(activities).should().updateRemittanceStatus(
-                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED);
+        then(activities).should().updateRemittanceStatusWithEscrowPda(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED, SOME_ESCROW_PDA);
     }
 
     @Test
@@ -322,7 +325,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DELIVERED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_RELEASE_TX_SIGNATURE)
                 .build();
 
@@ -385,7 +388,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowStatus.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .currentStatus(RemittanceStatus.ESCROWED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .smsNotificationFailed(false)
                 .build();
 
@@ -450,7 +453,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DISBURSEMENT_FAILED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_RELEASE_TX_SIGNATURE)
                 .build();
 
@@ -522,7 +525,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DELIVERED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_RELEASE_TX_SIGNATURE)
                 .build();
 
@@ -615,7 +618,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DELIVERED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_RELEASE_TX_SIGNATURE)
                 .build();
 
@@ -689,7 +692,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DISBURSEMENT_FAILED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_RELEASE_TX_SIGNATURE)
                 .build();
 
@@ -739,7 +742,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DEPOSIT_FAILED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .build();
 
@@ -750,8 +753,8 @@ class RemittanceLifecycleWorkflowImplTest {
         then(activities).should().updateRemittanceStatus(
                 SOME_REMITTANCE_ID.toString(), RemittanceStatus.DEPOSIT_FAILED);
 
-        then(activities).should(never()).updateRemittanceStatus(
-                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED);
+        then(activities).should(never()).updateRemittanceStatusWithEscrowPda(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED, SOME_ESCROW_PDA);
     }
 
     @Test
@@ -784,7 +787,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.DEPOSIT_FAILED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .build();
 
@@ -848,7 +851,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.CLAIM_FAILED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_RELEASE_TX_SIGNATURE)
                 .build();
 
@@ -898,7 +901,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.REFUND_FAILED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_REFUND_TX_SIGNATURE)
                 .build();
 
@@ -954,7 +957,7 @@ class RemittanceLifecycleWorkflowImplTest {
         var expected = RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus(RemittanceStatus.REFUNDED.name())
-                .escrowPda(SOME_DEPOSIT_TX_SIGNATURE)
+                .depositTxSignature(SOME_DEPOSIT_TX_SIGNATURE)
                 .txSignature(SOME_REFUND_TX_SIGNATURE)
                 .build();
 
@@ -963,8 +966,8 @@ class RemittanceLifecycleWorkflowImplTest {
                 .isEqualTo(expected);
         assertThat(attempts.get()).isGreaterThanOrEqualTo(3);
 
-        then(activities).should().updateRemittanceStatus(
-                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED);
+        then(activities).should().updateRemittanceStatusWithEscrowPda(
+                SOME_REMITTANCE_ID.toString(), RemittanceStatus.ESCROWED, SOME_ESCROW_PDA);
     }
     }
 }

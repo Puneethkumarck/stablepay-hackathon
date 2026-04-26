@@ -47,7 +47,7 @@ public final class WorkflowFixtures {
         return RemittanceWorkflowResult.builder()
                 .remittanceId(SOME_REMITTANCE_ID)
                 .finalStatus("DELIVERED")
-                .escrowPda(SOME_ESCROW_PDA)
+                .depositTxSignature(SOME_ESCROW_PDA)
                 .txSignature(SOME_TX_SIGNATURE);
     }
 

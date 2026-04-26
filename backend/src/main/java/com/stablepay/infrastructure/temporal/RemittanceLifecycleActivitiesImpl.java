@@ -17,6 +17,7 @@ import com.stablepay.domain.remittance.model.RemittanceStatus;
 import com.stablepay.domain.remittance.model.TransactionConfirmationStatus;
 import com.stablepay.domain.remittance.port.FiatDisbursementProvider;
 import com.stablepay.domain.remittance.port.SolanaTransactionService;
+import com.stablepay.infrastructure.solana.EscrowInstructionBuilder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
     private final FiatDisbursementProvider fiatDisbursementProvider;
     private final UpdateRemittanceStatusHandler updateRemittanceStatusHandler;
     private final RemittancePayoutWriter remittancePayoutWriter;
+    private final EscrowInstructionBuilder escrowInstructionBuilder;
 
     @Override
     public TransactionConfirmationStatus checkTransactionStatus(String transactionSignature) {
@@ -158,6 +160,24 @@ public class RemittanceLifecycleActivitiesImpl implements RemittanceLifecycleAct
         log.info("Updating remittance {} status to {}", remittanceId, status);
         var uuid = UUID.fromString(remittanceId);
         updateRemittanceStatusHandler.handle(uuid, status);
+    }
+
+    @Override
+    public String deriveEscrowPda(String remittanceId) {
+        requireNonNull(remittanceId, "remittanceId must not be null");
+        var uuid = UUID.fromString(remittanceId);
+        var pda = escrowInstructionBuilder.deriveEscrowPda(uuid);
+        log.info("Derived escrow PDA {} for remittance {}", pda.toBase58(), remittanceId);
+        return pda.toBase58();
+    }
+
+    @Override
+    public void updateRemittanceStatusWithEscrowPda(String remittanceId, RemittanceStatus status, String escrowPda) {
+        requireNonNull(remittanceId, "remittanceId must not be null");
+        requireNonNull(status, "status must not be null");
+        requireNonNull(escrowPda, "escrowPda must not be null");
+        var uuid = UUID.fromString(remittanceId);
+        updateRemittanceStatusHandler.handle(uuid, status, escrowPda);
     }
 
     private String maskPhone(String phone) {

@@ -8,6 +8,6 @@ import lombok.Builder;
 public record RemittanceWorkflowResult(
     UUID remittanceId,
     String finalStatus,
-    String escrowPda,
+    String depositTxSignature,
     String txSignature
 ) {}

@@ -32,4 +32,8 @@ public interface RemittanceLifecycleActivities {
             String remittanceId);
 
     void updateRemittanceStatus(String remittanceId, RemittanceStatus status);
+
+    String deriveEscrowPda(String remittanceId);
+
+    void updateRemittanceStatusWithEscrowPda(String remittanceId, RemittanceStatus status, String escrowPda);
 }
