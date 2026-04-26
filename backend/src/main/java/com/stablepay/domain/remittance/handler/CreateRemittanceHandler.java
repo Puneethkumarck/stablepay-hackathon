@@ -42,7 +42,7 @@ public class CreateRemittanceHandler {
     private final RemittanceStatusEventRepository remittanceStatusEventRepository;
 
     public Remittance handle(UUID senderId, String recipientPhone, BigDecimal amountUsdc, String recipientName) {
-        var wallet = walletRepository.findByUserId(senderId)
+        var wallet = walletRepository.findByUserIdForUpdate(senderId)
                 .orElseThrow(() -> WalletNotFoundException.byUserId(senderId));
 
         var reserved = wallet.reserveBalance(amountUsdc);

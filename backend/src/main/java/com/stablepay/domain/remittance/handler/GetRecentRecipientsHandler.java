@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 public class GetRecentRecipientsHandler {
 
     private static final int MAX_LIMIT = 50;
-    private static final int DEFAULT_LIMIT = 10;
 
     private final RemittanceRepository remittanceRepository;
 
