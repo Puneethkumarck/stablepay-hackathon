@@ -4,6 +4,7 @@ import static com.stablepay.infrastructure.temporal.TaskQueue.Constants.TASK_QUE
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_INR;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_AMOUNT_USDC;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DEPOSIT_TX_SIGNATURE;
+import static com.stablepay.testutil.WorkflowFixtures.SOME_DERIVED_ESCROW_PDA;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_DESTINATION_ADDRESS;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_ESCROW_EXPIRY_TIMESTAMP;
 import static com.stablepay.testutil.WorkflowFixtures.SOME_REFUND_TX_SIGNATURE;
@@ -76,6 +77,8 @@ class RemittanceLifecycleWorkflowIntegrationTest {
                 .willReturn(TransactionConfirmationStatus.FINALIZED);
         given(activities.checkTransactionStatus(SOME_REFUND_TX_SIGNATURE))
                 .willReturn(TransactionConfirmationStatus.FINALIZED);
+        given(activities.deriveEscrowPda(remittanceId.toString()))
+                .willReturn(SOME_DERIVED_ESCROW_PDA);
     }
 
     private RemittanceLifecycleWorkflow startWorkflow() {
@@ -116,13 +119,16 @@ class RemittanceLifecycleWorkflowIntegrationTest {
 
             assertThat(result)
                     .usingRecursiveComparison()
-                    .ignoringFields("escrowPda", "txSignature")
+                    .ignoringFields("depositTxSignature", "txSignature")
                     .isEqualTo(expected);
 
             then(activities)
                     .should()
-                    .updateRemittanceStatus(
-                            remittanceId.toString(), RemittanceStatus.ESCROWED);
+                    .deriveEscrowPda(remittanceId.toString());
+            then(activities)
+                    .should()
+                    .updateRemittanceStatusWithEscrowPda(
+                            remittanceId.toString(), RemittanceStatus.ESCROWED, SOME_DERIVED_ESCROW_PDA);
             then(activities)
                     .should()
                     .updateRemittanceStatus(
@@ -159,13 +165,16 @@ class RemittanceLifecycleWorkflowIntegrationTest {
 
             assertThat(result)
                     .usingRecursiveComparison()
-                    .ignoringFields("escrowPda", "txSignature")
+                    .ignoringFields("depositTxSignature", "txSignature")
                     .isEqualTo(expected);
 
             then(activities)
                     .should()
-                    .updateRemittanceStatus(
-                            remittanceId.toString(), RemittanceStatus.ESCROWED);
+                    .deriveEscrowPda(remittanceId.toString());
+            then(activities)
+                    .should()
+                    .updateRemittanceStatusWithEscrowPda(
+                            remittanceId.toString(), RemittanceStatus.ESCROWED, SOME_DERIVED_ESCROW_PDA);
             then(activities)
                     .should()
                     .updateRemittanceStatus(
@@ -205,7 +214,7 @@ class RemittanceLifecycleWorkflowIntegrationTest {
 
             assertThat(result)
                     .usingRecursiveComparison()
-                    .ignoringFields("escrowPda", "txSignature")
+                    .ignoringFields("depositTxSignature", "txSignature")
                     .isEqualTo(expected);
         }
     }
@@ -236,7 +245,7 @@ class RemittanceLifecycleWorkflowIntegrationTest {
 
             assertThat(result)
                     .usingRecursiveComparison()
-                    .ignoringFields("escrowPda", "txSignature")
+                    .ignoringFields("depositTxSignature", "txSignature")
                     .isEqualTo(expected);
 
             then(activities)
@@ -281,7 +290,7 @@ class RemittanceLifecycleWorkflowIntegrationTest {
 
             assertThat(status)
                     .usingRecursiveComparison()
-                    .ignoringFields("escrowPda")
+                    .ignoringFields("depositTxSignature")
                     .isEqualTo(expected);
 
             WorkflowStub.fromTyped(workflow).cancel();

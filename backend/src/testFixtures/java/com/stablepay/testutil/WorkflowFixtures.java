@@ -29,6 +29,7 @@ public final class WorkflowFixtures {
     public static final String SOME_DEPOSIT_TX_SIGNATURE = "DepositTx1234567890AbCdEfGhIjKlMnOp";
     public static final String SOME_RELEASE_TX_SIGNATURE = "ReleaseTx1234567890AbCdEfGhIjKlMnOp";
     public static final String SOME_REFUND_TX_SIGNATURE = "RefundTx1234567890AbCdEfGhIjKlMnOpQr";
+    public static final String SOME_DERIVED_ESCROW_PDA = "7Ksw2xR4pN1234567890AbCdEfGhIjKlMnOpQr";
 
     public static RemittanceWorkflowRequest.RemittanceWorkflowRequestBuilder workflowRequestBuilder() {
         return RemittanceWorkflowRequest.builder()
