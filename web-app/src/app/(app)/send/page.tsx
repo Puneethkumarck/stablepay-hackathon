@@ -133,8 +133,7 @@ export default function SendAmountPage() {
           )}
           {fxData && !fxError && (
             <span className="text-xs text-fg-3">
-              Rate locked · {Number.parseFloat(fxData.rate).toFixed(2)} INR / USD · from{" "}
-              {fxData.source}
+              Rate locked · {Number.parseFloat(fxData.rate).toFixed(2)} INR / USD
             </span>
           )}
           {isExpired && !fxLoading && (
