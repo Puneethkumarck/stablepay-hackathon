@@ -108,6 +108,12 @@ export interface ClaimResponse {
   expiresAt: string;
 }
 
+export interface RecentRecipient {
+  name: string;
+  phone: string;
+  lastSentAt: string;
+}
+
 export interface ErrorResponse {
   errorCode: string;
   message: string;
