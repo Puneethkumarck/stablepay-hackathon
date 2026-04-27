@@ -18,10 +18,10 @@ describe("DetailInfoRows", () => {
 
     // then
     expect(screen.getByText("8ce3a…6bcde")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy remittance ID" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^Copy / })).toHaveLength(2);
   });
 
-  it("should render copy button that is clickable", async () => {
+  it("should render copy buttons for remittance ID and escrow PDA", async () => {
     // given
     const user = userEvent.setup();
     renderWithProviders(
@@ -33,10 +33,11 @@ describe("DetailInfoRows", () => {
     );
 
     // when
-    await user.click(screen.getByRole("button", { name: "Copy remittance ID" }));
+    const buttons = screen.getAllByRole("button", { name: /^Copy / });
+    await user.click(buttons[0]!);
 
     // then
-    expect(screen.getByRole("button", { name: "Copy remittance ID" })).toBeInTheDocument();
+    expect(buttons).toHaveLength(2);
   });
 
   it("should display truncated escrow PDA", () => {

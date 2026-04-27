@@ -32,7 +32,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={handleCopy}
       className="flex items-center gap-1.5 text-sm font-mono text-fg-2 hover:text-fg-1 transition-colors"
-      aria-label="Copy remittance ID"
+      aria-label={`Copy ${text}`}
     >
       {truncateAddress(text)}
       <Copy size={12} className={cn("text-fg-3", copied && "text-success")} />
@@ -49,7 +49,7 @@ export function DetailInfoRows({ remittanceId, escrowPda, fxRate }: DetailInfoRo
       </div>
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-1">
         <span className="text-sm text-fg-3">Escrow PDA</span>
-        <span className="text-sm font-mono text-fg-2">{truncateAddress(escrowPda)}</span>
+        <CopyButton text={escrowPda} />
       </div>
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-1">
         <span className="text-sm text-fg-3">On-chain fee</span>
