@@ -23,8 +23,8 @@ RUN bun run build
 
 FROM base AS runner
 ENV NODE_ENV=production
-RUN addgroup --system --gid 1001 appgroup && \
-    adduser --system --uid 1001 --ingroup appgroup appuser
+RUN groupadd --system --gid 1001 appgroup && \
+    useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 COPY --from=builder --chown=appuser:appgroup /app/.next/standalone ./
 COPY --from=builder --chown=appuser:appgroup /app/.next/static ./app/.next/static
 COPY --from=builder --chown=appuser:appgroup /app/public ./app/public
