@@ -1,6 +1,8 @@
-.PHONY: up down restart logs ps infra urls clean build-backend help stripe-listen
+.PHONY: up down restart restart-clean logs ps infra urls clean build-backend help stripe-listen
 
 COMPOSE := docker compose
+STRIPE_LOG := /tmp/stablepay-stripe-listen.log
+STRIPE_PID := /tmp/stablepay-stripe-listen.pid
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -9,19 +11,61 @@ build-backend: ## Build backend JAR (required before 'make up')
 	@echo "Building backend JAR..."
 	@cd backend && ./gradlew assemble -q
 
-up: build-backend ## Start the full stack (build + docker compose up)
+define start_stripe
+	@echo "Starting Stripe webhook listener..."
+	@if command -v stripe >/dev/null 2>&1; then \
+		if [ -f $(STRIPE_PID) ] && kill -0 $$(cat $(STRIPE_PID)) 2>/dev/null; then \
+			echo "  Stripe listener already running (PID $$(cat $(STRIPE_PID)))"; \
+		else \
+			nohup stripe listen --forward-to localhost:8080/webhooks/stripe > $(STRIPE_LOG) 2>&1 & \
+			echo $$! > $(STRIPE_PID); \
+			echo "  Stripe listener PID: $$!"; \
+			echo "  Stripe logs: $(STRIPE_LOG)"; \
+		fi; \
+	else \
+		echo "  ⚠ stripe CLI not found — install it or run 'make stripe-listen' separately"; \
+	fi
+endef
+
+define stop_stripe
+	@if [ -f $(STRIPE_PID) ] && kill -0 $$(cat $(STRIPE_PID)) 2>/dev/null; then \
+		kill $$(cat $(STRIPE_PID)) && echo "Stripe listener stopped (PID $$(cat $(STRIPE_PID)))."; \
+		rm -f $(STRIPE_PID); \
+	else \
+		rm -f $(STRIPE_PID); \
+		echo "No Stripe listener running."; \
+	fi
+endef
+
+up: build-backend ## Start full stack + Stripe listener
 	@echo "Starting StablePay stack..."
 	@$(COMPOSE) up -d --build
 	@echo ""
 	@echo "Waiting for services to become healthy..."
 	@$(COMPOSE) up -d --wait 2>/dev/null || true
+	$(start_stripe)
 	@$(MAKE) --no-print-directory urls
 
-down: ## Stop all services
+down: ## Stop all services + Stripe listener
+	$(stop_stripe)
 	@$(COMPOSE) down
 	@echo "StablePay stack stopped."
 
-restart: down up ## Restart the full stack
+restart: ## Restart app services only — preserves Postgres data
+	$(stop_stripe)
+	@echo "Rebuilding and restarting app services..."
+	@$(COMPOSE) up -d --build --no-deps backend web-app
+	@echo ""
+	@echo "Waiting for services to become healthy..."
+	@$(COMPOSE) up -d --wait 2>/dev/null || true
+	$(start_stripe)
+	@$(MAKE) --no-print-directory urls
+
+restart-clean: ## Restart full stack from scratch (wipes all data)
+	$(stop_stripe)
+	@$(COMPOSE) down -v
+	@echo "Volumes removed. Starting fresh..."
+	@$(MAKE) --no-print-directory up
 
 logs: ## Follow logs from all services
 	@$(COMPOSE) logs -f
@@ -45,6 +89,7 @@ urls: ## Print all service URLs
 	@echo "============================================"
 	@echo "  StablePay Dev Stack"
 	@echo "============================================"
+	@echo "  Web App:        http://localhost:3000"
 	@echo "  Backend API:    http://localhost:8080"
 	@echo "  Swagger UI:     http://localhost:8080/swagger-ui.html"
 	@echo "  Health:         http://localhost:8080/actuator/health"
@@ -53,6 +98,7 @@ urls: ## Print all service URLs
 	@echo "  Redis:          localhost:6379"
 	@echo "  MPC Sidecar 0:  localhost:50051 (gRPC)"
 	@echo "  MPC Sidecar 1:  localhost:50052 (gRPC)"
+	@echo "  Stripe logs:    $(STRIPE_LOG)"
 	@echo "============================================"
 	@echo ""
 

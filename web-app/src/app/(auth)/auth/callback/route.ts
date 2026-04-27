@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants";
 
 const BACKEND_URL = process.env.STABLEPAY_BACKEND_URL ?? "http://localhost:8080";
+const PUBLIC_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET ?? "";
 
@@ -28,13 +29,13 @@ export async function GET(request: NextRequest) {
   const error = request.nextUrl.searchParams.get("error");
 
   if (error || !code) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", PUBLIC_URL);
     loginUrl.searchParams.set("error", error ?? "missing_code");
     return NextResponse.redirect(loginUrl);
   }
 
   try {
-    const redirectUri = new URL("/auth/callback", request.url).toString();
+    const redirectUri = new URL("/auth/callback", PUBLIC_URL).toString();
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!tokenRes.ok) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/login", PUBLIC_URL);
       loginUrl.searchParams.set("error", "token_exchange_failed");
       return NextResponse.redirect(loginUrl);
     }
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!authRes.ok) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/login", PUBLIC_URL);
       loginUrl.searchParams.set("error", "auth_failed");
       return NextResponse.redirect(loginUrl);
     }
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     const authData = (await authRes.json()) as AuthResponse;
     const secure = process.env.NODE_ENV === "production";
 
-    const response = NextResponse.redirect(new URL("/home", request.url));
+    const response = NextResponse.redirect(new URL("/home", PUBLIC_URL));
 
     response.cookies.set(ACCESS_TOKEN_COOKIE, authData.accessToken, {
       httpOnly: true,
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", PUBLIC_URL);
     loginUrl.searchParams.set("error", "unexpected");
     return NextResponse.redirect(loginUrl);
   }
