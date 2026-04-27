@@ -15,12 +15,19 @@ ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=placeholder
 ENV STABLEPAY_BACKEND_URL=${STABLEPAY_BACKEND_URL}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+RUN if [ "$NEXT_PUBLIC_GOOGLE_CLIENT_ID" = "placeholder" ]; then \
+      echo "ERROR: NEXT_PUBLIC_GOOGLE_CLIENT_ID is 'placeholder'. Set GOOGLE_CLIENT_ID in .env" >&2; \
+      exit 1; \
+    fi
 RUN bun run build
 
 FROM base AS runner
 ENV NODE_ENV=production
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./app/.next/static
-COPY --from=builder /app/public ./app/public
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --ingroup appgroup appuser
+COPY --from=builder --chown=appuser:appgroup /app/.next/standalone ./
+COPY --from=builder --chown=appuser:appgroup /app/.next/static ./app/.next/static
+COPY --from=builder --chown=appuser:appgroup /app/public ./app/public
+USER appuser
 EXPOSE 3000
 CMD ["bun", "app/server.js"]

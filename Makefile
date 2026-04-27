@@ -1,7 +1,8 @@
-.PHONY: up down restart restart-clean logs ps infra urls clean build-backend help stripe-listen
+.PHONY: up down restart restart-quick restart-clean logs ps infra urls clean build-backend help stripe-listen
 
 COMPOSE := docker compose
 STRIPE_LOG := /tmp/stablepay-stripe-listen.log
+STRIPE_PID := /tmp/stablepay-stripe-listen.pid
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -10,32 +11,61 @@ build-backend: ## Build backend JAR (required before 'make up')
 	@echo "Building backend JAR..."
 	@cd backend && ./gradlew assemble -q
 
+define start_stripe
+	@echo "Starting Stripe webhook listener..."
+	@if command -v stripe >/dev/null 2>&1; then \
+		if [ -f $(STRIPE_PID) ] && kill -0 $$(cat $(STRIPE_PID)) 2>/dev/null; then \
+			echo "  Stripe listener already running (PID $$(cat $(STRIPE_PID)))"; \
+		else \
+			nohup stripe listen --forward-to localhost:8080/webhooks/stripe > $(STRIPE_LOG) 2>&1 & \
+			echo $$! > $(STRIPE_PID); \
+			echo "  Stripe listener PID: $$!"; \
+			echo "  Stripe logs: $(STRIPE_LOG)"; \
+		fi; \
+	else \
+		echo "  ⚠ stripe CLI not found — install it or run 'make stripe-listen' separately"; \
+	fi
+endef
+
+define stop_stripe
+	@if [ -f $(STRIPE_PID) ] && kill -0 $$(cat $(STRIPE_PID)) 2>/dev/null; then \
+		kill $$(cat $(STRIPE_PID)) && echo "Stripe listener stopped (PID $$(cat $(STRIPE_PID)))."; \
+		rm -f $(STRIPE_PID); \
+	else \
+		rm -f $(STRIPE_PID); \
+		echo "No Stripe listener running."; \
+	fi
+endef
+
 up: build-backend ## Start full stack + Stripe listener
 	@echo "Starting StablePay stack..."
 	@$(COMPOSE) up -d --build
 	@echo ""
 	@echo "Waiting for services to become healthy..."
 	@$(COMPOSE) up -d --wait 2>/dev/null || true
-	@echo "Starting Stripe webhook listener..."
-	@if command -v stripe >/dev/null 2>&1; then \
-		pkill -f "stripe listen" 2>/dev/null || true; \
-		nohup stripe listen --forward-to localhost:8080/webhooks/stripe > $(STRIPE_LOG) 2>&1 & \
-		echo "  Stripe listener PID: $$!"; \
-		echo "  Stripe logs: $(STRIPE_LOG)"; \
-	else \
-		echo "  ⚠ stripe CLI not found — install it or run 'make stripe-listen' separately"; \
-	fi
+	$(start_stripe)
 	@$(MAKE) --no-print-directory urls
 
 down: ## Stop all services + Stripe listener
-	@pkill -f "stripe listen" 2>/dev/null && echo "Stripe listener stopped." || true
+	$(stop_stripe)
 	@$(COMPOSE) down
 	@echo "StablePay stack stopped."
 
-restart: down up ## Restart full stack (preserves Postgres data)
+restart: down up ## Restart full stack with rebuild (preserves data)
+
+restart-quick: ## Restart containers only — no backend rebuild (preserves data)
+	$(stop_stripe)
+	@$(COMPOSE) down
+	@echo "Restarting containers..."
+	@$(COMPOSE) up -d --build
+	@echo ""
+	@echo "Waiting for services to become healthy..."
+	@$(COMPOSE) up -d --wait 2>/dev/null || true
+	$(start_stripe)
+	@$(MAKE) --no-print-directory urls
 
 restart-clean: ## Restart full stack from scratch (wipes all data)
-	@pkill -f "stripe listen" 2>/dev/null && echo "Stripe listener stopped." || true
+	$(stop_stripe)
 	@$(COMPOSE) down -v
 	@echo "Volumes removed. Starting fresh..."
 	@$(MAKE) --no-print-directory up
