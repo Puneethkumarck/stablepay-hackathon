@@ -1,4 +1,4 @@
-.PHONY: up down restart restart-quick restart-clean logs ps infra urls clean build-backend help stripe-listen
+.PHONY: up down restart restart-clean logs ps infra urls clean build-backend help stripe-listen
 
 COMPOSE := docker compose
 STRIPE_LOG := /tmp/stablepay-stripe-listen.log
@@ -51,13 +51,10 @@ down: ## Stop all services + Stripe listener
 	@$(COMPOSE) down
 	@echo "StablePay stack stopped."
 
-restart: down up ## Restart full stack with rebuild (preserves data)
-
-restart-quick: ## Restart containers only — no backend rebuild (preserves data)
+restart: ## Restart app services only — preserves Postgres data
 	$(stop_stripe)
-	@$(COMPOSE) down
-	@echo "Restarting containers..."
-	@$(COMPOSE) up -d --build
+	@echo "Rebuilding and restarting app services..."
+	@$(COMPOSE) up -d --build --no-deps backend web-app
 	@echo ""
 	@echo "Waiting for services to become healthy..."
 	@$(COMPOSE) up -d --wait 2>/dev/null || true
