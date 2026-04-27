@@ -1,6 +1,7 @@
-.PHONY: up down restart logs ps infra urls clean build-backend help stripe-listen
+.PHONY: up down restart restart-clean logs ps infra urls clean build-backend help stripe-listen
 
 COMPOSE := docker compose
+STRIPE_LOG := /tmp/stablepay-stripe-listen.log
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -9,19 +10,35 @@ build-backend: ## Build backend JAR (required before 'make up')
 	@echo "Building backend JAR..."
 	@cd backend && ./gradlew assemble -q
 
-up: build-backend ## Start the full stack (build + docker compose up)
+up: build-backend ## Start full stack + Stripe listener
 	@echo "Starting StablePay stack..."
 	@$(COMPOSE) up -d --build
 	@echo ""
 	@echo "Waiting for services to become healthy..."
 	@$(COMPOSE) up -d --wait 2>/dev/null || true
+	@echo "Starting Stripe webhook listener..."
+	@if command -v stripe >/dev/null 2>&1; then \
+		pkill -f "stripe listen" 2>/dev/null || true; \
+		nohup stripe listen --forward-to localhost:8080/webhooks/stripe > $(STRIPE_LOG) 2>&1 & \
+		echo "  Stripe listener PID: $$!"; \
+		echo "  Stripe logs: $(STRIPE_LOG)"; \
+	else \
+		echo "  ⚠ stripe CLI not found — install it or run 'make stripe-listen' separately"; \
+	fi
 	@$(MAKE) --no-print-directory urls
 
-down: ## Stop all services
+down: ## Stop all services + Stripe listener
+	@pkill -f "stripe listen" 2>/dev/null && echo "Stripe listener stopped." || true
 	@$(COMPOSE) down
 	@echo "StablePay stack stopped."
 
-restart: down up ## Restart the full stack
+restart: down up ## Restart full stack (preserves Postgres data)
+
+restart-clean: ## Restart full stack from scratch (wipes all data)
+	@pkill -f "stripe listen" 2>/dev/null && echo "Stripe listener stopped." || true
+	@$(COMPOSE) down -v
+	@echo "Volumes removed. Starting fresh..."
+	@$(MAKE) --no-print-directory up
 
 logs: ## Follow logs from all services
 	@$(COMPOSE) logs -f
@@ -45,6 +62,7 @@ urls: ## Print all service URLs
 	@echo "============================================"
 	@echo "  StablePay Dev Stack"
 	@echo "============================================"
+	@echo "  Web App:        http://localhost:3000"
 	@echo "  Backend API:    http://localhost:8080"
 	@echo "  Swagger UI:     http://localhost:8080/swagger-ui.html"
 	@echo "  Health:         http://localhost:8080/actuator/health"
@@ -53,6 +71,7 @@ urls: ## Print all service URLs
 	@echo "  Redis:          localhost:6379"
 	@echo "  MPC Sidecar 0:  localhost:50051 (gRPC)"
 	@echo "  MPC Sidecar 1:  localhost:50052 (gRPC)"
+	@echo "  Stripe logs:    $(STRIPE_LOG)"
 	@echo "============================================"
 	@echo ""
 
