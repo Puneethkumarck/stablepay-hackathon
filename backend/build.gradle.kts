@@ -190,6 +190,9 @@ dependencies {
     // Stripe
     implementation("com.stripe:stripe-java:28.4.0")
 
+    // AWS KMS
+    implementation("software.amazon.awssdk:kms:2.34.0")
+
     // Test
     testCompileOnly("org.projectlombok:lombok:1.18.44")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.44")
@@ -209,5 +212,6 @@ dependencies {
 
     // Integration test dependencies
     "integrationTestImplementation"(testFixtures(project))
+    "integrationTestImplementation"("org.testcontainers:localstack:1.21.4")
     "integrationTestImplementation"("org.wiremock:wiremock-standalone:3.13.2")
 }

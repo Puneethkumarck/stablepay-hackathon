@@ -46,6 +46,15 @@ public class WalletEntity {
     @Column(name = "peer_key_share_data", nullable = false)
     private byte[] peerKeyShareData;
 
+    @Column(name = "key_share_dek")
+    private byte[] keyShareDek;
+
+    @Column(name = "key_share_iv")
+    private byte[] keyShareIv;
+
+    @Column(name = "peer_key_share_iv")
+    private byte[] peerKeyShareIv;
+
     @Column(name = "available_balance", nullable = false, precision = 19, scale = 6)
     private BigDecimal availableBalance;
 
